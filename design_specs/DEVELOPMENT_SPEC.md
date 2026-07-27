@@ -86,21 +86,25 @@ git push origin [你的分支名]
 ## 4. 目录结构规范 (Project Structure)
 
 ```text
-HAKIMI-ERP/
+hakimi-erp/
 ├── backend/            # Python 3.12 后端源码
-│   ├── app/            # 核心逻辑
-│   ├── database/       # SQL 脚本与迁移
-│   ├── .env.example    # 环境变量模板
+│   ├── app/
+│   │   ├── api/v1/     # 路由层
+│   │   ├── core/       # 配置与常量 (config.py, constants.py)
+│   │   ├── models/     # 物理模型 (SQLAlchemy)
+│   │   ├── schemas/    # 数据模型 (Pydantic)
+│   │   ├── services/   # 业务逻辑原子
+│   │   │   └── flows/  # 跨模块业务编排 (Flows)
+│   │   └── main.py     # 应用入口
+│   ├── server.py       # 启动脚本
 │   └── requirements.txt
 ├── frontend/           # Vue 3 前端源码
 │   ├── src/
-│   │   ├── api/        # 对接后端 API
-│   │   ├── components/ # 公共组件
-│   │   └── views/      # 业务页面
-│   └── package.json
-├── refer_docs/         # 原始设计文档 (只读)
-├── CORE_PRINCIPLES.md  # 核心原则 (最高优先级)
-└── DEVELOPMENT_SPEC.md # 本开发规范
+│   │   ├── api/        # Axios 封装
+│   │   ├── components/ # 规范组件 (F4, SuccessModal)
+│   │   ├── layout/     # 布局框架
+│   │   └── views/      # 业务视图
+│   └── vite.config.ts
 ```
 
 ---
