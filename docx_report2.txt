@@ -1,0 +1,1695 @@
+
+
+
+
+系统设计报告
+
+小组成员：
+
+
+
+
+
+
+
+
+
+
+
+日期：2026年7月25日
+
+目录
+第一部分 系统原型报告5
+第1章 引言5
+1.1 编写目的5
+1.2 范围5
+1.3 参考文档5
+第2章 设计概述5
+2.1 设计理念5
+2.2 色彩系统5
+2.3 字体与排版6
+2.4 布局框架7
+第3章 全局架构与导航系统7
+3.1 功能级菜单结构7
+3.2 全局组件7
+第4章 核心页面原型详述8
+4.1 首页（Home / Welcome Page）8
+4.2 创建业务伙伴（Create Business Partner）9
+4.3 未清应收账款列表（Unpaid Accounts Receivable）10
+4.4 交货状态监控（Delivery Status Monitoring）11
+4.5 交货详情页（Delivery Details）12
+4.6 应收账款详情页（Unpaid Receivable Details）13
+4.7 F4 搜索帮助弹窗（Relationship Category）14
+4.8 创建报价单行项目（Create Quotation: Item Data）15
+4.9 成功提示弹窗（Success Modal）17
+第5章 通用交互与前端规范18
+5.1 表单校验规则18
+5.2 表格交互规范18
+5.3 弹窗与抽屉尺寸18
+5.4 消息提示规则19
+5.5 键盘与鼠标适配19
+第6章 原型与逻辑模型的映射关系19
+第7章 附录20
+7.1 配色代码速查20
+7.2 菜单与页面对照表20
+7.3 后续待确认与补充事项20
+第二部分 数据库设计报告21
+第1章 设计概述21
+第2章 总体设计原则22
+第3章 D1 客户主数据设计22
+3.1 business_partner（业务伙伴主记录）22
+3.2 customer_sales_data（客户销售区域数据）23
+3.3 customer_finance_data（客户公司代码财务数据）23
+3.4 contact（联系人）23
+3.5 bp_relationship（业务伙伴关系）24
+3.6 D1 关系结构小结24
+第4章 D2 物料主数据设计24
+4.1 material（物料主记录）24
+第5章 D3 业务单据数据库设计24
+5.1 inquiry（询价单抬头）24
+5.2 inquiry_item（询价单行项目）25
+5.3 quotation（报价单抬头）25
+5.4 quotation_item（报价单行项目）25
+5.5 sales_order（销售订单抬头）25
+5.6 sales_order_item（销售订单行项目）26
+5.7 D3 关系结构小结26
+第6章 D4 物流数据库设计26
+6.1 delivery（交货单抬头）26
+6.2 delivery_item（交货单行项目）26
+6.3 goods_issue（发货过账）27
+6.4 D4 关系结构小结27
+第7章 D5 财务数据库设计27
+7.1 invoice（发票抬头）27
+7.2 invoice_item（发票行项目）27
+7.3 open_account_receivable（未清应收账款）27
+7.4 closed_account_receivable（已清应收账款）28
+7.5 receipt（收款单）28
+7.6 D5 关系结构小结28
+第8章 完整性与约束设计汇总28
+8.1 三类完整性落实方式28
+8.2 外键删除策略设计意图29
+8.3 单据流外键的可空设计29
+第9章 数据类型规范29
+第10章 总结30
+第三部分 RESTful_API接口规范30
+第1章 总则与顶层设计30
+1.1 文档目的30
+1.2 业务全景（O2C）30
+1.3 五库职责31
+1.4 API 分层32
+1.5 关键业务规则32
+第2章 全局约定33
+2.1 基础协议33
+2.2 公共请求头33
+2.3 HTTP 方法33
+2.4 统一响应33
+2.5 错误码（摘要）34
+2.6 幂等34
+2.7 单据参照 DocumentRef35
+2.8 数据类型35
+第3章 D1–D5 接口设计35
+3.1 D1 客户主数据（Customer Master）35
+3.2 D2 物料主数据（Material Master）36
+3.3 D3 业务单据（Business Document）37
+3.4 D4 物流（Logistics）39
+3.5 D5 财务（Financial）40
+3.6 跨域联动42
+第4章 物理模型符合性42
+第5章 定稿决议摘要43
+
+第一部分 系统原型报告
+第1章 引言
+1.1 编写目的
+本文档基于上一阶段完成的《逻辑模型设计报告》，将系统的数据流、实体关系与业务规则转化为可视化的界面原型与交互规范。作为面向开发团队的交接文档，本文档旨在：（1）为前端开发人员提供统一的页面布局、配色与组件规范；（2）为后端开发人员明确各页面的数据接口、字段约束与状态流转；（3）保证后续开发工作与逻辑模型设计的一致性，避免需求漂移。
+1.2 范围
+本报告覆盖简化版 SAP SD 系统的核心界面原型，包括：
+（1）首页（Home）：系统入口与驾驶舱概览；
+（2）客户管理（Customer Management）：以“创建业务伙伴（Create Business Partner）”为代表的多字段表单页；
+（3）销售管理（Sales Management）：以“创建报价单行项目（Create Quotation: Item Data）”为代表的表格式复杂录入页；
+（4）发货管理（Delivery Management）：交货状态监控列表与交货详情页；
+（5）财务管理（Financial Management）：未清应收账款列表与应收详情页；
+（6）通用组件：F4 搜索帮助弹窗、成功提示弹窗等全局组件。
+1.3 参考文档
+本报告编制过程中主要参考以下文档：
+（1）《简化版 SAP SD 系统逻辑模型设计报告》（2026年7月19日）
+（2）《终端适配与通用交互统一规则》（项目组内部规范）
+（3）本报告配套设计图（共8张）
+（4）主题色选色色卡
+第2章 设计概述
+2.1 设计理念
+本系统采用 “专业、克制、自然” 的设计哲学。ERP 系统的核心是效率与准确性，因此界面设计遵循以下原则：
+（1）信息密度优先：在有限屏幕空间内呈现更多有效字段，减少页面跳转；
+（2）状态可视化：通过颜色、标签、进度条将业务状态（如发货进度、收款进度）直观呈现；
+（3）操作可预期：同一类操作在不同模块中保持一致的入口、反馈与快捷键；
+（4）视觉降噪：使用低饱和度的自然色系，降低长时间操作的视觉疲劳。
+2.2 色彩系统
+系统采用四色自然配色方案，灵感来源于“苔藓与纸张”的质感，呼应新拟态（Neumorphism）的柔和光影：
+色彩角色
+色值
+用途
+背景色
+#FBFADA
+页面主背景、卡片底色、弹窗底色，营造纸质温暖感
+辅助色
+#ADBC9F
+次级按钮、悬停状态、边框、成功提示的次要元素
+主色
+#436850
+主按钮、导航栏激活项、状态标签（成功/完成）、关键数据高亮
+深色
+#12372A
+左侧导航栏背景、标题文字、表头文字、图标主色
+色彩使用规则： 
+（1）文字层级：标题 #12372A，正文 #12372A 80%透明度，辅助说明 #12372A 50%透明度；
+（2）状态语义：成功/完成 #436850，警告/部分完成 #ADBC9F 加深，错误/逾期 #D9534F（仅在必要时引入）； 
+（3）首页新拟态卡片：使用 #FBFADA 与 #ADBC9F 的明暗阴影组合，营造凸起/凹陷的物理质感。
+
+2.3 字体与排版
+字体族：系统无衬线字体栈 Inter, -apple-system, "Segoe UI", sans-serif，数字与金额使用等宽字体 SF Mono, Consolas, monospace 以保证对齐；
+字号层级：
+（1）页面标题：20px，加粗，#12372A
+（2）区块标题（Section Title）：14px，加粗，#436850，常带图标前缀
+（3）表单标签：13px，常规，#12372A
+（4）表格正文：13px，常规
+（5）辅助文字：12px，#12372A 60%透明度
+2.4 布局框架
+系统采用经典的 “左侧固定导航 + 右侧自适应内容” 布局：
+（1）左侧导航栏：固定宽度 220px，背景色 #12372A，可折叠；包含 Logo、菜单树、底部机器人助手入口；
+（2）顶部操作栏：高度 56px，包含面包屑/页面标题、全局搜索、通知铃铛、帮助、用户头像与角色切换；
+（3）内容区：背景 #FBFADA，最小宽度 1280px（低于此宽度出现横向滚动），在 1920px 以上时内容区最大宽度 1400px 并居中；
+（4）页脚：极简版权信息，高度 40px。
+第3章 全局架构与导航系统
+3.1 功能级菜单结构
+Home├── Customer Management│   ├── Business Partner│   ├── Material│   ├── Product│   ├── Pricing Conditions│   └── Sales Organization├── Sales Management│   ├── Inquiry Management│   ├── Quotation Management│   └── Sales Orders├── Delivery Management│   ├── Delivery List│   └── Delivery Status Monitoring├── Financial Management│   ├── Invoice Management│   ├── Receivables Management│   └── Unpaid Receivables├── Report Query (待扩展)└── System Settings （待扩展）
+导航交互规则：
+（1）一级菜单默认展开当前所在模块，其余折叠； 
+（2）当前页面所在的二级菜单项高亮（背景 #436850，文字白色）； 
+（3）菜单项带图标前缀，保持图文对齐； 
+（4）鼠标悬停一级菜单时显示 Tooltip（若导航折叠）。
+3.2 全局组件
+3.2.1 顶部全局搜索
+位置：顶部栏右侧，占位文案 “Search orders, invoices, customers…”;
+功能：支持跨模块模糊搜索，回车后跳转结果页；
+快捷键：Ctrl + K 聚焦搜索框。
+3.2.2 通知中心
+入口：顶部栏铃铛图标，带未读数字徽标（红色圆点）；
+内容：审批结果、导入完成、异常预警；
+交互：点击展开下拉面板，支持标记已读与一键清空。
+3.2.3 用户角色切换
+位置：顶部栏最右侧；
+当前截图中显示角色：“Sales Rep”、“Administrator”、“Sales User”；
+交互：下拉选择角色，切换后页面权限与可见菜单动态更新。
+3.2.4 全局操作按钮组
+主按钮：背景 #436850，文字白色，圆角 4px，用于保存、提交、搜索；
+次要按钮：背景 #ADBC9F 20%透明度，边框 1px #ADBC9F，文字 #436850，用于取消、重置、导出；
+危险/警告按钮：仅在删除、作废时使用，边框/文字 #D9534F。
+第4章 核心页面原型详述
+4.1 首页（Home / Welcome Page）
+页面定位：系统登录后的默认落地页，承担驾驶舱与导航入口的双重职责。
+布局结构：（1）左侧导航栏；（2）右侧内容区分为上下两部分：上部：欢迎区 + 3D 插画区；下部：核心指标卡片区+智能助手引导区。
+核心元素说明：
+元素
+说明
+欢迎标题
+“WELCOME TO HAKIMI ERP”，大号无衬线字体，下方副标题说明系统定位
+3D 插画
+右侧放置电脑显示器、数据图表、齿轮、盆栽的 3D 等距插画，采用与系统一致的绿色调，营造“新拟态”的物理质感
+“Go to Dashboard” 按钮
+主按钮 #436850，带箭头图标，点击进入具体业务模块
+指标卡片（5张）
+横向等宽排列，包含：Sales Orders(128)、Delivery Orders(56)、Pending Deliveries(7)、Receivables($256,800)、This Month Profit($128,600)
+指标趋势
+每张卡片底部显示环比（vs. Yesterday / vs. Last Month），绿色上升箭头表示正向，红色下降箭头表示负向
+智能助手区
+底部横幅，左侧机器人头像，右侧文案 “Let’s work smarter, together.”，引导用户使用系统，或者与用户合作使用系统
+交互说明：
+（1）指标卡片支持点击跳转对应模块；
+（2）卡片采用新拟态阴影（浅色背景下的柔和双边阴影），鼠标悬停时阴影加深，产生“按下”反馈； 
+（3）页面整体无滚动条（在 1366×768 及以上分辨率）。
+
+4.2 创建业务伙伴（Create Business Partner）
+页面定位：客户管理模块下的核心录入页，对应逻辑模型中的 P1.1（新建客户）、P1.2（创建联系人）、P1.3（建立BP关系）。
+布局结构： 
+（1）顶部：页面标题 “Create Business Partner” + 右侧 “Exit” 退出按钮； 
+（2）上部表单区：业务伙伴编号（Auto-generated）、Grouping、BP Role；
+（3）中部：Tab 标签页（Address / Address Overview / Identification / Control Data / Payment Transactions / Status / Technical ID），默认激活 “Address”；
+（4）下部：分区块表单。
+核心元素说明：
+Address Tab 内容： 
+（1）Basic Information 区块：Salutation、Last Name、First Name、Search Term； 
+（2）Standard Address 区块：Street/House No.、Country/Region、City、Postal Code*、Region；其中 Postal Code 右侧带有地址校验状态指示条（Format Error / Format OK / Available 的三色渐变条）； 
+（3）PO Box Address 区块：PO Box、PO Box Postal Code； 
+（4）Communication 区块：Phone、Email、Fax、Website。
+交互说明： 
+（1）字段校验：Postal Code 输入时实时校验格式，右侧指示条动态变化（红→黄→绿）； 
+（2）必填标识：带红色星号 * 的字段为必填； 
+（3）自动编号：Business Partner No. 字段只读，显示 “Auto-generated”，保存后由系统分配； 
+（4）Tab 切换：点击 Tab 切换不同视图，未保存的数据在切换时提示“是否保存草稿”； 
+（5）底部操作栏：左侧 “Save”（主按钮）、中间 “Save & Continue”（次要按钮）、右侧 “Cancel”（边框按钮）。
+与逻辑模型映射： 
+（1）对应实体：BusinessPartner、Contact、BPRelationship； 
+（2）对应数据存储：D1.1 客户表、D1.2 联系人表、D1.3 BP关系表；
+（3）关键字段：bp_id、bp_role、country、city、postal_code、email、telephone。
+
+4.3 未清应收账款列表（Unpaid Accounts Receivable）
+页面定位：财务管理模块下的监控列表页，对应逻辑模型中的 P4.2（登记收款）与 D5.4（应收账款信息表）。
+布局结构： 
+（1）顶部：页面标题 + 全局搜索； 
+（2）汇总卡片区：4 张横向排列的统计卡片； 
+（3）筛选区：Customer Name、Invoice No.、Status（All Statuses）、Due Date（Start Date - End Date）； 
+（4）表格区：10 行/页，底部带分页器。
+核心元素说明：
+汇总卡片
+数值
+说明
+Total Unpaid Amount
+$627,860.00
+总未清金额，深绿色
+Overdue Amount
+$128,540.00
+逾期金额，橙色警示
+Collected This Month
+$215,300.00
+本月已收，深绿色
+Remaining This Month
+$198,760.00
+本月剩余，深绿色
+表格列：Invoice No.、Customer Name、Invoice Date、Due Date、Invoice Amount、Received Amount、Unpaid Amount、Status、Collection Progress、Action。
+状态标签语义：（1）Unpaid：浅绿色背景，深绿文字；（2）Paid：浅绿色背景，深绿文字（100%进度）；（3）Partially Paid：浅黄色背景，橙色文字；（4）Overdue：浅红色背景，红色文字。
+Collection Progress 列：（1）使用进度条可视化，已收比例填充 #436850，未收部分为浅灰色；（2）右侧显示百分比数字。
+交互说明： 
+（1）筛选：输入条件后点击 “Search” 主按钮，“Reset” 清空条件； 
+（2）自动刷新：顶部右侧 “Auto Refresh” 开关，默认 ON，刷新间隔 30s（可配置 30s/60s/5min）；
+（3）导出：右上角下载图标，支持导出当前筛选结果； 
+（4）分页：底部显示 “Total 18 items”，每页 10/20/50 条可选，支持页码跳转； 
+（5）行操作：“View Details” 文字链，点击进入应收详情页。
+与逻辑模型映射： 
+（1）对应实体：Invoice、OpenAccountReceivable； 
+（2）对应数据存储：D5.1 发票表、D5.4 应收账款信息表； 
+（3）关键字段：invoice_id、customer_id、invoice_amount、received_amount、status、due_date。
+
+4.4 交货状态监控（Delivery Status Monitoring）
+页面定位：发货管理模块下的物流跟踪页，对应逻辑模型中的 P3.1（创建交货单）、P3.3（过账发货 PGI）。
+布局结构： 
+（1）顶部：页面标题 + 全局搜索 + Auto Refresh 开关； 
+（2）筛选区：Delivery No.、Sales Order No.、Customer Name、Status（All Statuses）； 
+（3）表格区：横向滚动表格，底部带分页器。
+核心元素说明：
+表格列：Delivery No.、Sales Order No.、Customer Name、Delivery Date、Planned GI Date、Status、Progress、Delivered/Total、Action。
+Status 标签：（1）Completed：浅绿背景，深绿文字；（2） In Transit：浅蓝/浅灰背景，蓝色文字；（3）Shipped：浅绿背景，深绿文字；（4）Picking：浅黄背景，橙色文字；（5）Creating：浅灰背景，灰色文字。
+Progress 列（里程碑进度条）： 
+（1）采用节点式进度条，节点依次为：Created → Picked → Shipped → Completed；
+（2）已完成节点为实心深绿圆点，当前节点为实心圆点（可带脉冲动画），未到达节点为空心灰圈； 
+（3）节点下方标注状态名称与完成时间（如 “Mar 15, 08:20”）。
+Delivered/Total 列： 显示格式如 “3,200 / 5,000”，直观反映分批交付进度。
+交互说明： 
+（1）点击 “View Details” 进入交货详情页； 
+（2）表格首列（Delivery No.）和尾列（Action）固定，中间列横向滚动； 
+（3）鼠标悬停行时整行高亮（背景色 #ADBC9F 10%透明度）。
+与逻辑模型映射： 
+（1）对应实体：Delivery、DeliveryItem、GoodsIssue； 
+（2）对应数据存储：D4.1 交货单表、D4.2 出库明细表； 
+（3）关键字段：delivery_id、sales_order_id、delivery_status、planned_GI_date、actual_GI_date。
+
+4.5 交货详情页（Delivery Details）
+页面定位：发货管理模块下的详情页，展示单个交货单的全生命周期信息。
+布局结构： 
+（1）顶部：返回按钮（< Back）、Delivery No.（如 80000078）、状态标签（In Transit）、操作按钮（Download POD、Print）； 
+（2）信息卡片区：Delivery Date、Planned GI Date、Carrier、Delivered/Total； 
+（3）Delivery Progress 区块：横向里程碑时间轴（Created / Picked / Shipped / Completed），带具体时间戳； 
+（4）Shipment Information 区块：Ship-to Address、Contact、Route、Truck/Driver、Latest GPS； 
+（5）Order Items 区块：表格展示物料明细（Material、Description、Qty、Status）。
+核心元素说明： 
+（1）状态标签：“In Transit” 使用浅蓝背景标签，位于页面标题右侧；
+（2）里程碑：当前节点 “Shipped” 高亮显示，并标注 “Current milestone: shipped and moving toward customer receiving dock”； 
+（3）Shipment Information：地址使用等宽字体堆叠显示，GPS 信息带 “Updated 6 minutes ago” 动态时间； 
+（4）Order Items：每行物料带独立状态标签（Shipped / Loading）。
+交互说明： 
+（1） “Download POD” 下载提货单 PDF； 
+（2） “Print” 唤起浏览器打印对话框； 
+（3）点击 “Back” 返回监控列表，保留列表页筛选状态。
+
+4.6 应收账款详情页（Unpaid Receivable Details）
+页面定位：财务管理模块下的详情页，展示单张发票的收款与催收全景。
+布局结构： 
+（1）顶部：返回按钮、Invoice No.（INV-2026-00086）、状态标签（Overdue）、操作按钮（Collect、Export）； 
+（2）金额卡片区：Invoice Amount、Received Amount、Unpaid Amount（红色高亮）、Days Overdue（139 days，橙色高亮）；
+（3）Collection Progress 区块：催收里程碑（Invoice Issued → Partially Paid → Overdue Notice → Closed），当前节点 “Overdue Notice” 为红色警示； 
+（4）Customer & Terms 区块：客户信息、联系人、付款条件、信用额度、风险等级（Medium，黄色标签）； 
+（5）Payment History 区块：表格展示历史收款记录（Date、Method、Amount、Reference）； 
+（6）Collection Ratio：底部进度条显示整体回款比例（24%）。
+核心元素说明： 
+（1）风险等级：Medium 使用黄色背景标签，High 为红色，Low 为绿色； 
+（2）催收进度：已完成的 “Invoice Issued”、“Partially Paid” 为深绿节点，当前 “Overdue Notice” 为红色节点，“Closed” 为灰色空心节点； 
+（3）Payment History：存在 “Pending” 状态的待收记录，金额显示红色。
+交互说明： 
+（1）“Collect” 按钮：快速登记一笔收款，弹出收款录入抽屉； 
+（2）“Export”：导出该发票的 PDF 或 Excel； 
+（3）底部 Collection Ratio 进度条实时计算：received_amount / invoice_amount。
+与逻辑模型映射： 
+（1）对应实体：Invoice、Receipt、OpenAccountReceivable； 
+（2）对应数据存储：D5.1 发票表、D5.2 收款台账表、D5.4 应收账款信息表； 
+（3）关键字段：invoice_id、receivable_amount、received_amount、due_date、status。
+
+4.7 F4 搜索帮助弹窗（Relationship Category）
+页面定位：全局通用组件，在表单中按 F4 或点击搜索图标时唤起，用于从主数据中选择条目。
+布局结构： 
+（1）弹窗标题：Relationship Category (1)； 
+（2）右上角关闭按钮（X）； 
+（3）内容区：Restrictions 标签页（可扩展多标签）； 
+（4）搜索区：Search Relationship Category 下拉框 + 搜索图标； 
+（5）表格区：单选列（Radio）、RelCat、Direction、Description； 
+（6）底部：条目计数（34 Entries found）+ 操作按钮（Search、Sort、Confirm、List、Cancel）。
+核心元素说明： 
+（1）单选交互：每行开头为 Radio Button，仅允许单选； 
+（2）默认选中：首行 BBP002 默认选中； 
+（3）Direction 列：-> 表示单向关系，<-> 表示双向关系； 
+（4）Description 列：业务语义描述，如 “Has the Invoicing Party”、“Is Married To” 等。
+交互说明： 
+（1）点击行任意位置可选中该 Radio； 
+（2）点击底部绿色 “✓” 按钮确认选择，数据回填至父页面字段； 
+（3）点击 “X” 或 “Cancel” 关闭弹窗，不回填； 
+（4）弹窗尺寸：中等（m: 720px 宽），高度自适应，内容过多时内部滚动。
+与逻辑模型映射： 
+（1）对应实体：BPRelationship； 
+（2）对应数据存储：D1.3 BP关系表； 
+（3）关键字段：relation_id、relationship_type、bp_from、bp_to。
+
+4.8 创建报价单行项目（Create Quotation: Item Data）
+页面定位：销售管理模块下的核心交易录入页，展示报价单中单个行项目的定价条件与价格构成。
+布局结构： 
+（1）顶部：Delete Item、Item Output View、Item Availability、More 下拉、Exit； 
+（2）行项目导航：< > 切换同一单据内的不同行项目； 
+（3）基础信息区：Sales Document Item (10)、Item category (AGN)、Material (DXTR1026)、Description； 
+（4）Tab 标签页：Sales A、Sales B、Shipping、Billing Document、Conditions（当前激活）、Account Assignment、Schedule Lines、Partner、Texts、Order Data； 
+（5）条件录入区：Quantity* (5 EA)、Net (14,750.00 USD)、Tax (0.00)；
+（6）Pricing Elements 表格：复杂的定价元素矩阵。
+核心元素说明：
+Conditions Tab： 
+（1）Quantity 为必填，单位 EA（Each）； 
+（2）Net 金额自动计算，只读； 
+（3）Tax 默认 0.00，可编辑。
+Pricing Elements 表格： 
+列包括：CntY（条件类型）、Name（名称）、Amount、Crcy、per、UoM、Condition Value、Curr.、Status、NumC…、Ovr、ATOMTS、Component、CConDe、Un、Condition Value、CdCurr、Stat； 
+行类型： 
+（1）PR00 Price：基础价格 3,000.00 USD； 
+（2）K004 Material：物料附加费 50.00- USD； 
+（3）折扣行：Discount Amount、Rebate Basis； 
+（4）净值行：Net Value for Item、Net Value 2、Total；
+（5）SKTO Cash Discount：现金折扣 0.00 %； 
+（6）VPRS Internal price：内部价格 1,400.00 USD； 
+（7）每行末尾有 Checkbox（Stat 列），勾选表示该条件类型激活。
+交互说明： 
+（1）切换行项目导航时，若当前行有未保存修改，提示“是否保存”； 
+（2）“Condition Record” 按钮：查看条件记录详情； 
+（3）“Analysis” 按钮：查看定价分析报表； 
+（4）“Update” 按钮：重新计算价格；
+（5）底部 “Save”（主按钮）、“Cancel”（边框按钮）。
+与逻辑模型映射： 
+（1）对应实体：Quotation、QuotationItem、Material； 
+（2）对应数据存储：D3.2 报价表、D3.2 报价行项表、D2 物料主数据； 
+（3）关键字段：quotation_id、material_id、order_quantity、unit_price、discount、net_price。
+
+4.9 成功提示弹窗（Success Modal）
+页面定位：全局通用反馈组件，用于操作成功后的确认与下一步引导。
+布局结构： 
+（1）模态弹窗，居中显示； 
+（2）顶部：绿色对勾图标 + “Success” 标题； 
+（3）分隔线（绿色）； 
+（4）内容区：文档图标 + 成功文案（如 “Journal entry 1400000063 (2026, US00) successfully posted”）； 
+（5）底部按钮区：“Display”（次要按钮）、“Post Next Payment”（主按钮）。
+核心元素说明： 
+（1）图标系统：顶部为圆形绿色背景内的白色对勾；内容区为文档图标带绿色确认徽标； 
+（2）文案规范：[操作对象] + [单号/标识] + ([上下文]) + successfully + [动作]； 
+（3）按钮语义：“Display” 表示查看刚刚创建的记录详情；“Post Next Payment” 表示继续下一笔同类操作。
+交互说明： 
+（1）弹窗出现时，背景蒙层（#12372A 20%透明度），禁止点击背后内容； 
+（2）按 Esc 键关闭弹窗（但不执行任何操作）； 
+（3）点击 “Display” 关闭弹窗并跳转对应详情页； 
+（4）点击 “Post Next Payment” 关闭弹窗并清空表单，准备下一笔录入。
+
+第5章 通用交互与前端规范
+5.1 表单校验规则
+基于《终端适配与通用交互统一规则》，系统采用三级校验机制：
+（1）失焦校验（Blur Validation）：
+字段失去焦点时触发格式校验（邮箱、邮编、编号规则）；
+仅在字段被修改后触发，避免打开编辑页满屏红框；
+异步校验（如编号唯一性）需带 500ms 防抖，显示“校验中…”状态。
+（2）提交校验（Submit Validation）：
+必填项、跨字段逻辑（如结束日期 ≥ 开始日期）在点击保存时统一触发；
+错误汇总并自动滚动定位到第一个错误字段。
+（3）提示样式：
+字段下方固定预留 20px 错误提示区，避免布局抖动；
+错误文案格式：[字段名称] + [具体错误]，如 “Postal Code format is invalid”。
+5.2 表格交互规范
+固定列：首列（勾选/编号）与尾列（操作）固定，中间列横向滚动；
+列宽：日期/状态列最小 100px，名称/备注列自适应或最小 200px；
+低分辨率适配（1366px）：默认展示核心列，非核心列通过“列展示设置”由用户自定义；
+分页器：固定在内容区底部，左侧显示总条数，中间页码，右侧每页条数选择器；
+跨页选择：仅记住当前页选中项，翻页清空，提供“选择全部 N 项”按钮；
+无数据状态：骨架屏首次加载，空状态显示插画 + “暂无数据” + 引导按钮。
+5.3 弹窗与抽屉尺寸
+尺寸档位
+宽度
+用途
+S
+480px
+简单确认、信息提示
+M
+720px
+F4 搜索帮助、中等复杂度表单
+L
+960px
+复杂表单、多列布局
+XL
+1200px
+宽表格、对比视图
+弹窗高度最大 80vh，内容区内部滚动；
+抽屉：统一从右侧滑出，宽度 480px 或 640px，用于详情查看与快速编辑。
+5.4 消息提示规则
+Toast：页面底部条状显示，3 秒自动消失；失败类 Toast 需手动关闭；文案格式 [操作]+[结果]+[建议]；
+通知中心：持久化存放审批、导入、预警消息，支持跳转与标记已读；
+进度弹窗：批量操作（如月结、导入）必须弹出模态进度条，显示百分比，禁止用户关闭；超时时显示“仍在处理中，请耐心等待…(已用时 X 秒)”。
+5.5 键盘与鼠标适配
+（1）全局快捷键：
+Ctrl + S：保存当前表单；
+Esc：关闭当前弹窗/抽屉；
+Ctrl + K：聚焦全局搜索；
+Tab：表单内严格按视觉流顺序切换焦点。
+（2）右键菜单：表格行、树节点支持右键上下文菜单（如复制、查看详情、导出该行）；
+（3）悬停即显：表格行悬停高亮，操作图标悬停显示 Tooltip。
+第6章 原型与逻辑模型的映射关系
+为确保界面原型与上一阶段的逻辑模型设计保持一致，建立以下映射关系：
+原型页面/组件
+对应 DFD 处理过程
+对应数据存储
+对应 ER 实体
+说明
+Home
+-
+-
+-
+驾驶舱，聚合各模块统计指标
+Create Business Partner
+P1.1, P1.2, P1.3
+D1.1, D1.2, D1.3
+BusinessPartner, Contact, BPRelationship
+客户主数据维护入口
+Unpaid Accounts Receivable
+P4.2
+D5.1, D5.4
+Invoice, OpenAccountReceivable
+应收账款监控与收款入口
+Delivery Status Monitoring
+P3.1, P3.3
+D4.1, D4.2
+Delivery, DeliveryItem, GoodsIssue
+物流执行跟踪
+Delivery Details
+P3.1, P3.3
+D4.1, D4.2
+Delivery, DeliveryItem, GoodsIssue
+单张交货单履约详情
+Unpaid Receivable Details
+P4.1, P4.2
+D5.1, D5.2, D5.4
+Invoice, Receipt, OpenAccountReceivable
+单张发票收款催收详情
+Relationship Category (F4)
+P1.3
+D1.3
+BPRelationship
+BP关系类型选择
+Create Quotation: Item Data
+P2.2
+D3.2, D2
+Quotation, QuotationItem, Material
+报价单行项目定价条件
+状态一致性检查： 
+（1）应收账款列表中的 Unpaid / Partially Paid / Paid / Overdue 状态 ←→ 逻辑模型中 D5.4 的 status 字段； 
+（2）交货监控中的 Creating / Picking / Shipped / In Transit / Completed ←→ D4.1 的 delivery_status 字段； 
+（3）单据关闭规则（询价→报价→订单的不可逆流转）←→ 原型中各创建页面的“引用类型”与“状态”字段。
+第7章 附录
+7.1 配色代码速查
+用途
+色值
+页面背景
+#FBFADA
+辅助/边框/次要按钮
+#ADBC9F
+主按钮/激活状态/成功
+#436850
+导航栏/标题/深色文字
+#12372A
+错误/逾期/高风险
+#D9534F
+警告/中风险/部分完成
+#F0AD4E
+7.2 菜单与页面对照表
+菜单路径
+对应原型页面
+优先级
+Home
+4.1 首页
+P0
+Customer Management → Business Partner
+4.2 创建业务伙伴
+P0
+Sales Management → Quotation Management
+4.8 创建报价单行项目
+P0
+Delivery Management → Delivery Status Monitoring
+4.4 交货状态监控
+P0
+Delivery Management → Delivery List
+4.5 交货详情页
+P0
+Financial Management → Unpaid Receivables
+4.3 未清应收账款列表
+P0
+Financial Management → Receivables Management
+4.6 应收账款详情页
+P0
+全局组件
+4.7 F4搜索帮助、4.9 成功提示弹窗
+P0
+7.3 后续待确认与补充事项
+（1）响应式断点：当前最小宽度定义为1280px，是否需要支持1024px（平板横屏）？
+（2）深色模式：新拟态风格在深色模式下实现成本较高，是否纳入二期？
+（3）首页3D插画：当前为静态图片，是否需要引入Lottie或WebGL实现微动效？
+（4）F4 弹窗多选：当前 Relationship Category 为单选，后续物料选择等场景是否需要支持多选（Checkbox）？
+（5）打印样式：Delivery Details 与 Invoice 页面的打印样式需单独设计打印 CSS。
+第二部分 数据库设计报告
+第1章 设计概述
+本报告对应 SAP SD（Sales & Distribution，销售与分销）后端数据库的完整物理设计，基于 ER 模型在 MySQL 8.0 上实现，全库共 20 张物理表，按业务域划分为五个子库：D1 客户主数据、D2 物料主数据、D3 业务单据、D4 物流、D5 财务。
+子库
+表名
+中文含义
+D1
+business_partner
+业务伙伴（客户主记录）
+D1
+customer_sales_data
+客户销售区域数据
+D1
+customer_finance_data
+客户公司代码财务数据
+D1
+contact
+联系人
+D1
+bp_relationship
+业务伙伴关系
+D2
+material
+物料主记录
+D3
+inquiry
+询价单（抬头）
+D3
+inquiry_item
+询价单行项目
+D3
+quotation
+报价单（抬头）
+D3
+quotation_item
+报价单行项目
+D3
+sales_order
+销售订单（抬头）
+D3
+sales_order_item
+销售订单行项目
+D4
+delivery
+交货单（抬头）
+D4
+delivery_item
+交货单行项目
+D4
+goods_issue
+发货过账
+D5
+invoice
+发票（抬头）
+D5
+invoice_item
+发票行项目
+D5
+open_account_receivable
+未清应收账款
+D5
+closed_account_receivable
+已清应收账款
+D5
+receipt
+收款单
+整套设计覆盖 SD 端到端业务流程的单据流（Document Flow）：
+询价 → 报价 → 销售订单 → 交货 → 发货过账 → 发票 → 收款 / 应收清账
+所有表采用 InnoDB 引擎 + utf8mb4 字符集，五个子库部署在同一 MySQL 实例内，跨子库全部采用物理外键直接关联，形成端到端的参照完整性闭环。
+第2章 总体设计原则
+1. 抬头–行项目双层结构：所有业务单据均拆分为抬头表（Header）与行项目表（Item），符合第三范式，避免一张单据多行产品造成的重复组问题。
+2. 主数据与单据分离：客户（D1）、物料（D2）作为主数据独立建表，被各单据以物理外键引用，保证主数据一处维护、处处一致。
+3. 业务单号作主键：主键统一采用 VARCHAR(20) 业务凭证号；客户销售/财务视图采用符合 SAP 习惯的复合主键（按销售区域、按公司代码）。
+4. 行号唯一约束：行项目表在主键之外另设 (单据号, item_no) 唯一键，保证同一单据内行号不重复，符合 SAP 行项目编号（10、20、30…）习惯。
+5. 单据流可溯源：下游单据保存上游单据号作为外键（quotation.inquiry_id、sales_order.quotation_id、delivery_item.so_item_id、invoice.delivery_id），完整还原业务链条。
+6. 删除策略分级：抬头→行项目使用 ON DELETE CASCADE；主数据引用、财务凭证与物流过账使用 ON DELETE RESTRICT，防止误删有业务依赖的记录。
+第3章 D1 客户主数据设计
+D1 采用 SAP Business Partner（业务伙伴）理念：同一客户主体只存一条主记录，其承担的不同角色（售达方/送达方/付款方）、不同销售区域视图、不同公司代码视图分别扩展为从表，避免客户基础信息冗余。
+3.1 business_partner（业务伙伴主记录）
+主键：bp_id
+关键属性：bp_type（伙伴类型）、bp_role（角色：售达方/送达方/付款方）、bp_name、国家/城市/区县/街道/门牌/邮编等地址字段、language、time_zone、transportation_zone（运输区域，供 D4 线路调度）、telephone / mobile_phone / fax / email、status（默认 ACTIVE）、block_reason（冻结原因）、created_time / last_changed_time（自动维护时间戳）、data_source、print_format 等。
+设计说明：created_time 默认 CURRENT_TIMESTAMP，last_changed_time 带 ON UPDATE CURRENT_TIMESTAMP，由数据库自动维护审计时间。
+3.2 customer_sales_data（客户销售区域数据）
+主键：(bp_id, sales_org, distribution_channel, division) 复合主键——同一客户在每个销售区域下各有一条视图数据，与 SAP 客户主记录销售视图一致。
+外键：bp_id → business_partner(bp_id)，ON DELETE RESTRICT
+关键属性：sales_office、sales_group、sales_district、currency、price_group、customer_pricing_procedure（定价过程）、delivery_priority（交货优先级）、shipping_condition（装运条件）、delivering_plant、max_partial_deliveries、incoterms、account_assignment_group（科目分配组，供 D5 财务过账）、tax_classification（税分类）。
+3.3 customer_finance_data（客户公司代码财务数据）
+主键：(bp_id, company_code) 复合主键——同一客户在每个公司代码下各有一条财务视图。
+外键：bp_id → business_partner(bp_id)，ON DELETE RESTRICT
+关键属性：reconciliation_account（统驭科目）、sort_key、payment_terms（付款条件）、银行信息（bank_account_name、bank_country、bank_key、bank_account、iban、bank_account_status）、支付卡信息（card_type、card_number、preferred_card、card_status）。
+3.4 contact（联系人）
+主键：contact_id
+外键：bp_id → business_partner(bp_id)，ON DELETE RESTRICT（一个客户 1 : n 个联系人）
+关键属性：contact_type / contact_role、姓名（first_name / last_name / birth_name）、地址字段、personal_phone、wechat、linkedin、gender、marital_status、nationality、birthday、occupation、department、position 等。
+3.5 bp_relationship（业务伙伴关系）
+主键：relation_id
+外键：bp_from / bp_to → business_partner(bp_id)，双外键自引用，表达伙伴之间的有向关系（如"集团-子公司"、"雇主-雇员"），均为 RESTRICT。
+关键属性：relationship_type（关系类型）、valid_from / valid_to（关系有效期）。
+3.6 D1 关系结构小结
+business_partner ──1:n── customer_sales_data（按销售区域）
+                 ──1:n── customer_finance_data（按公司代码）
+                 ──1:n── contact
+                 ──1:n── bp_relationship（bp_from / bp_to 双外键自引用）
+第4章 D2 物料主数据设计
+4.1 material（物料主记录）
+主键：material_id
+关键属性：material_name（NOT NULL）、description、base_unit（基本计量单位，NOT NULL）、standard_price（标准价格，DECIMAL(15,2)）、weight / volume（重量/体积，DECIMAL(15,3)）、search_term。
+设计说明：material 被 D3、D4、D5 的全部行项目表以 ON DELETE RESTRICT 引用，是全库被引用最多的主数据表；已发生业务的物料禁止删除，只能通过状态管理停用。
+第5章 D3 业务单据数据库设计
+5.1 inquiry（询价单抬头）
+记录客户询价的核心信息，是销售流程的起点单据。
+主键：inquiry_id
+外键：customer_id / sold_to_party / ship_to_party → business_partner(bp_id)（客户三方：客户·主、售达方、送达方）
+关键属性：inquiry_type、status、created_time / created_by、customer_reference（客户参考号）、sales_area / sales_org / distribution_channel / division（销售范围）、requested_delivery_date、valid_from / valid_to、pricing_date、currency、delivering_plant、incoterms、delivery_location、payment_terms、max_partial_deliveries、net_value、inquiry_address 等。
+设计说明：在 ER 原图基础上补充了客户三方外键，解决原图抬头表无法定位客户主数据的问题。
+5.2 inquiry_item（询价单行项目）
+主键：inquiry_item_id；唯一键 (inquiry_id, item_no)
+外键：inquiry_id → inquiry（CASCADE，1 : n）；material_id → material（RESTRICT）
+关键属性：order_quantity、sales_unit、expected_order_value、unit_price、discount、net_price、item_description。
+5.3 quotation（报价单抬头）
+主键：quotation_id
+外键：inquiry_id → inquiry（单据流，可空）；customer_id / sold_to_party / ship_to_party → business_partner
+关键属性：与询价单结构基本对应（quotation_type、valid_from / valid_to 报价有效期、net_value、quotation_address 等），便于从询价单复制生成。
+5.4 quotation_item（报价单行项目）
+主键：quotation_item_id；唯一键 (quotation_id, item_no)
+外键：quotation_id → quotation（CASCADE）；material_id → material（RESTRICT）
+属性结构与 inquiry_item 一致，支持询价→报价的无缝参照。
+5.5 sales_order（销售订单抬头）
+SD 模块的核心单据，是后续交货（D4）与开票（D5）的直接依据。
+主键：sales_order_id
+外键：quotation_id → quotation（单据流，可空）；customer_id / sold_to_party / ship_to_party → business_partner
+关键属性：order_type、reference_type（参照类型信息列：询价/报价/直接）、customer_reference（客户 PO 号）、requested_delivery_date、pricing_date、payment_terms、incoterms、delivering_plant、net_value、status 等。
+5.6 sales_order_item（销售订单行项目）
+主键：so_item_id；唯一键 (sales_order_id, item_no)
+外键：sales_order_id → sales_order（CASCADE）；material_id → material（RESTRICT）
+关键属性：通用价格字段之外，增加 availability_status（ATP 可用性检查状态）与 confirmed_quantity（确认数量）；同时作为 D4 delivery_item.so_item_id 的被引用方，衔接物流交货环节。
+5.7 D3 关系结构小结
+inquiry ──1:n── inquiry_item ──n:1── material
+   │1
+   │n（可空，单据流）
+quotation ──1:n── quotation_item ──n:1── material
+   │1
+   │n（可空，单据流）
+sales_order ──1:n── sales_order_item ──n:1── material
+   │
+   └──（customer_id / sold_to_party / ship_to_party）──n:1── business_partner
+第6章 D4 物流数据库设计
+6.1 delivery（交货单抬头）
+主键：delivery_id
+外键：ship_to_party → business_partner(bp_id)，RESTRICT（收货方）
+关键属性：delivery_type / delivery_status（NOT NULL）、planned_delivery_date（计划交货日）、planned_gi_date / actual_gi_date（计划/实际发货过账日）、picking_date（拣配日期）、shipping_point（装运点）。
+6.2 delivery_item（交货单行项目）
+主键：delivery_item_id；唯一键 (delivery_id, item_no)
+外键：delivery_id → delivery（CASCADE，1 : n）；material_id → material（RESTRICT）；so_item_id → sales_order_item(so_item_id)，单据流外键，可空，记录来源销售订单行。
+关键属性：delivery_quantity（交货数量）、sales_unit、item_description。
+设计说明：so_item_id 直接引用到"订单行"而非订单抬头，支持一张订单分多次部分交货（与 max_partial_deliveries 配合），是 D3→D4 的关键衔接点。
+6.3 goods_issue（发货过账）
+主键：goods_issue_id
+外键：delivery_item_id → delivery_item（RESTRICT，按交货行进行过账）
+关键属性：goods_issue_time（过账时间，NOT NULL）、actual_quantity（实际发货数量）、posting_date（过账日期，NOT NULL）、warehouse（仓库）。
+设计说明：发货过账是库存扣减与物权转移的确认点，actual_gi_date 回写到交货抬头后，物流环节完成，进入 D5 开票。
+6.4 D4 关系结构小结
+sales_order_item ──1:n── delivery_item ──n:1── material
+                        │n        └──1:n── goods_issue
+delivery ──1:n─────────┘
+   │
+   └── ship_to_party ──n:1── business_partner
+第7章 D5 财务数据库设计
+7.1 invoice（发票抬头）
+销售开票凭证，是物流交货之后的财务确认环节。
+主键：invoice_id
+外键：delivery_id → delivery（开票以交货单为参照，与 SAP"参照交货开票"一致）；sales_order_id → sales_order（信息列，保留订单来源）；sold_to_party / payer → business_partner（售达方与付款方，允许不同，如集团代付）。
+关键属性：billing_type、invoice_date / billing_date、销售范围三要素、shipping_point、destination_country、currency、total_amount、status（未清/部分清/已清/已冲销）。
+7.2 invoice_item（发票行项目）
+主键：invoice_item_id；唯一键 (invoice_id, item_no)
+外键：invoice_id → invoice（CASCADE）；material_id → material（RESTRICT）
+关键属性：quantity、unit_price、discount、net_price，并特有 tax_amount（税额）字段，满足财务开票含税核算需求。
+7.3 open_account_receivable（未清应收账款）
+发票开立后生成的未清应收记录，用于账龄与催款管理。
+主键：open_ar_id
+外键：invoice_id → invoice，RESTRICT（1 : 1）
+关键属性：receivable_amount（应收金额）、received_amount（已收金额，随收款逐次更新）、created_time、due_date（到期日）、status（未清/部分清/逾期）。
+7.4 closed_account_receivable（已清应收账款）
+发票全额收款后的已清应收档案记录，与未清表结构对应。
+主键：closed_ar_id
+外键：invoice_id → invoice，RESTRICT
+关键属性：receivable_amount、received_amount（实收金额）、created_time、closed_time（清账时间，本表特有）。
+设计说明：原 ER 图中本表缺少与 Invoice 的关联属性，物理设计中已补充 invoice_id 外键（SQL 注释"原图缺失，已补"）。
+7.5 receipt（收款单）
+记录每一次实际收款动作，一张发票可分多次收款。
+主键：receipt_id
+外键：invoice_id → invoice（1 : n）；payer → business_partner（实际付款方）
+关键属性：receipt_date、receipt_amount、payment_method（现金/银行转账/汇票等）、currency、reference_no（银行流水号/票据号）。
+7.6 D5 关系结构小结
+delivery ──1:n── invoice ──1:n── invoice_item ──n:1── material
+sales_order ──1:n──┘   │
+                       ├──1:1── open_account_receivable
+                       ├──1:1── closed_account_receivable
+                       └──1:n── receipt ──n:1── business_partner(payer)
+第8章 完整性与约束设计汇总
+8.1 三类完整性落实方式
+完整性类型
+落实方式
+示例
+实体完整性
+每张表均定义 PRIMARY KEY（含复合主键）
+pk_customer_sales_data (bp_id, sales_org, distribution_channel, division)
+参照完整性
+外键约束 + 删除/更新规则
+fk_ii_header … ON DELETE CASCADE
+用户自定义完整性
+NOT NULL、UNIQUE、DEFAULT、数据类型/长度约束
+uk_ii_no UNIQUE (inquiry_id, item_no)
+8.2 外键删除策略设计意图
+策略
+应用场景
+理由
+CASCADE
+单据抬头 → 行项目
+行项目无独立存在意义，随抬头删除
+RESTRICT
+主数据引用；财务凭证；物流过账
+保护主数据与财务/物流记录，防止产生孤儿记录
+8.3 单据流外键的可空设计
+quotation.inquiry_id、sales_order.quotation_id、delivery_item.so_item_id、invoice.sales_order_id 均允许为空：业务上允许跳过中间环节直接建单（如无询价直接报价、无报价直接下单、无订单直接交货），外键只在存在参照时生效，兼顾了数据约束与业务灵活性。
+第9章 数据类型规范
+用途
+类型
+说明
+单号 / 编号
+VARCHAR(20)
+业务凭证号，统一长度便于索引
+金额
+DECIMAL(15,2)
+精确小数，避免 FLOAT 精度误差
+数量 / 重量 / 体积
+DECIMAL(15,3)
+支持三位小数的计量
+日期
+DATE
+交货日期、到期日、生日等
+时间戳
+DATETIME
+创建/变更/清账时间，部分带自动默认值
+币种 / 国家
+CHAR(3) / CHAR(2)
+ISO 货币与国家代码
+备注 / 检索词
+VARCHAR(255) / VARCHAR(100)
+各表统一冗余，便于模糊检索
+第10章 总结
+1. 全库 20 张物理表全部满足第三范式：主数据按视图拆分、单据按抬头–行项目拆分，消除重复组与传递依赖。
+2. 通过 4 个单据流外键完整还原"询价→报价→订单→交货→发票"的 SD 业务链条，且均为可空设计，兼容跳步业务。
+3. 五个子库在同一实例内实现全物理外键贯通：单据抬头引用客户三方、行项目引用物料、交货行引用订单行、发票引用交货单与付款方，形成端到端参照完整性闭环。
+4. 客户主数据采用 SAP Business Partner 模式（一条主记录 + 销售区域视图 + 公司代码视图 + 联系人 + 伙伴关系），财务侧采用"未清应收 → 收款 → 已清应收"三表配合，高度贴近真实 SAP SD/FI 设计。
+5. 对原 ER 图的缺失做了两处合理补充：D3 抬头补充客户三方外键、D5 已清应收表补充 invoice_id 外键，并在 SQL 中留有注释备查。
+第三部分 RESTful_API接口规范
+第1章 总则与顶层设计
+1.1 文档目的
+本文规定简化版 SAP SD 系统前后端的统一接口契约：路径、方法、请求/响应参数及跨模块调用规则，供前后端联调与实现对照。
+以《第二阶段-逻辑模型设计报告》为权威依据；接口字段与 D1–D5 物理表对齐。D1 至 D5 按对等模块并列设计，覆盖主数据、销售单据、物流履约与财务清账全链路。
+设计抓手：按业务域划分接口，突出单据流转与状态约束，而非按单表堆叠 CRUD。
+1.2 业务全景（O2C）
+
+图 1　O2C 业务全景
+
+[准入] 客户/物料建档（D1 / D2）
+|
+[交易] 询价 → 报价 → 销售订单（D3）
+|
+[履约] 交货 → 发货过账 PGI（D4）
+|
+[结算] 开票 → 应收（D5）
+|
+[清账] 收款 → 核销未清/已清应收（D5）
+
+1.3 五库职责
+库
+名称
+职责
+物理脚本
+API 前缀
+D1
+Customer Master
+业务伙伴、销售/财务视图、联系人、BP 关系
+`sap_sd_d124.sql`
+`/api/v1/master`
+D2
+Material Master
+物料主数据
+`sap_sd_d124.sql`
+`/api/v1/master`
+D3
+Business Document
+询价、报价、销售订单
+`d3_d5_physical_tables(1).sql`
+`/api/v1/sales`
+D4
+Logistics
+交货、交货行、发货过账
+`sap_sd_d124.sql`
+`/api/v1/logistics`
+D5
+Financial
+发票、收款、未清/已清应收
+`d3_d5_physical_tables(1).sql`
+`/api/v1/finance`
+
+1.4 API 分层
+
+图 2　API 分层架构
+
+层级
+名称
+覆盖库
+特征
+接入层
+统一约定
+全部
+认证、幂等、统一响应、错误码
+MDM
+基础数据
+D1、D2
+高频查询、低频修改
+BPS
+业务流程
+D3、D4
+状态机、参照转换、过账
+FIN
+财务结算
+D5
+开票、收款、清账
+
+接口类型：
+类型
+说明
+示例
+资源型
+实体 CRUD / 查询
+`GET /sales/inquiries/{id}`
+过程型
+转换、过账、清账
+`POST /sales/quotations:convert-from-inquiry`
+聚合型
+单据流、汇总
+`GET /sales/orders/{id}/document-flow`
+
+1.5 关键业务规则
+规则
+内容
+接口含义
+单据关闭
+报价后关询价；订单后关报价；清账后关订单
+转换/清账接口回写 `CLOSED`
+QTN-11
+一报价仅转一订单
+二次转换拒绝
+FIN-01
+仅已 PGI 交货单可开票
+`invoices:create-from-delivery`
+FIN-07/08
+收款不超未清；全额后 Cleared
+收款事务内校验
+FIN-09
+单据流可追溯
+`document-flow`
+第2章 全局约定
+2.1 基础协议
+项
+约定
+协议
+HTTPS（本地可用 HTTP）
+风格
+RESTful
+Base Path
+`/api/v1`
+Content-Type
+`application/json; charset=utf-8`
+字段命名
+`snake_case`
+空值
+未知用 `null`，不用空串表示空金额/日期
+
+2.2 公共请求头
+Header
+必填
+说明
+`Content-Type`
+写操作必填
+`application/json`
+`Authorization`
+业务接口必填
+`Bearer <token>`
+`X-Request-Id`
+建议
+缺失则服务端生成 `trace_id`
+`X-Idempotency-Key`
+创建/过账类 POST 强制
+见幂等节
+`Accept-Language`
+可选
+`zh-CN` / `en-US`
+
+2.3 HTTP 方法
+方法
+用途
+GET
+查询
+POST
+创建或过程动作
+PATCH
+部分更新
+PUT
+少用（全量覆盖）
+DELETE
+单据禁用；用状态作废
+
+2.4 统一响应
+{
+  "success": true,
+  "trace_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "timestamp": "2026-07-24T14:08:00+08:00",
+  "code": "OK",
+  "message": "操作成功",
+  "data": {},
+  "errors": null
+}
+
+字段
+类型
+说明
+success
+boolean
+是否成功
+trace_id
+string
+链路追踪
+timestamp
+string
+ISO 8601，默认 +08:00
+code
+string
+业务码
+message
+string
+提示
+data
+object/array/null
+载荷
+errors
+array/null
+字段错误
+
+列表 data：
+{
+  "items": [],
+  "pagination": {
+    "page": 1,
+    "page_size": 20,
+    "total": 135,
+    "total_pages": 7
+  }
+}
+
+分页：page 从 1 起，默认 page_size=20，最大 100。
+2.5 错误码（摘要）
+code
+HTTP
+含义
+OK
+200
+成功
+CREATED
+201
+创建成功
+VALIDATION_ERROR
+400
+参数校验失败
+UNAUTHORIZED
+401
+未认证
+FORBIDDEN
+403
+无权限
+NOT_FOUND
+404
+不存在
+CONFLICT
+409
+状态冲突
+IDEMPOTENCY_KEY_REUSED
+409
+幂等键复用但体不同
+INTERNAL_ERROR
+500
+系统错误
+MDM_PARTNER_NOT_FOUND
+422
+伙伴不存在
+MDM_MATERIAL_NOT_FOUND
+422
+物料不存在
+MDM_CREDIT_EXCEEDED
+422
+信用不足
+SALES_SOURCE_NOT_FOUND
+422
+源单不存在
+SALES_SOURCE_STATUS_INVALID
+422
+源单状态不允许
+SALES_QUOTE_EXPIRED
+422
+报价过期
+LOG_DELIVERY_NOT_ALLOWED
+422
+不可交货
+FIN_DELIVERY_NOT_PGI
+422
+未 PGI 不可开票
+FIN_AR_INSUFFICIENT_OPEN
+422
+超未清余额
+FIN_INVOICE_ALREADY_CLEARED
+422
+发票已清
+
+2.6 幂等
+创建/过账/转换/清账类 POST：请求头强制 X-Idempotency-Key。
+同键同体返回首次结果；同键异体返回 IDEMPOTENCY_KEY_REUSED。
+2.7 单据参照 DocumentRef
+{
+  "source_type": "QUOTATION",
+  "source_id": "QT20260724001",
+  "source_item_no": 10
+}
+
+source_type 枚举：INQUIRY / QUOTATION / SALES_ORDER / DELIVERY / GOODS_ISSUE / INVOICE / RECEIPT / NONE。
+转换路径形态：POST /api/v1/sales/quotations:convert-from-inquiry。
+2.8 数据类型
+类型
+约定
+日期
+`YYYY-MM-DD`
+日期时间
+ISO 8601 + 时区
+金额
+number，两位小数
+数量
+number，最多三位小数
+币种
+ISO 4217，如 `CNY`
+业务单号
+string，长度不超过 20
+
+单据不作物理删除；状态作废。行号建议 10、20、30…。
+第3章 D1–D5 接口设计
+说明：本章按 D1、D2、D3、D4、D5 顺序并列给出，结构统一为「实体 → 接口清单 → 关键请求/响应 → 规则」。五库地位相同。
+3.1 D1 客户主数据（Customer Master）
+Base：/api/v1/master
+对应报告：P1.1–P1.3；实体 BusinessPartner、CustomerSalesData、CustomerFinanceData、Contact、BPRelationship
+物理表：business_partner、customer_sales_data、customer_finance_data、contact、bp_relationship
+3.1.1 接口清单
+方法
+路径
+说明
+幂等
+GET
+`/partners`
+分页检索伙伴
+—
+GET
+`/partners/{bp_id}`
+伙伴详情
+—
+POST
+`/partners`
+新建伙伴
+强制
+PATCH
+`/partners/{bp_id}`
+更新/冻结
+—
+GET
+`/partners/{bp_id}/sales-views`
+销售视图列表
+—
+PUT
+`/partners/{bp_id}/sales-views`
+创建或更新销售视图
+强制
+GET
+`/partners/{bp_id}/finance-views`
+财务视图列表
+—
+PUT
+`/partners/{bp_id}/finance-views`
+创建或更新财务视图
+强制
+GET
+`/partners/{bp_id}/contacts`
+联系人列表
+—
+POST
+`/partners/{bp_id}/contacts`
+新建联系人
+强制
+GET
+`/partners/{bp_id}/relationships`
+BP 关系
+—
+POST
+`/relationships`
+建立 BP 关系
+强制
+GET
+`/partners/{bp_id}/credit-check`
+信用检查（供 D3 调用）
+—
+
+3.1.2 创建伙伴请求示例
+{
+  "bp_type": "ORG",
+  "bp_role": "SOLD_TO",
+  "bp_name": "华东示例科技有限公司",
+  "country": "CN",
+  "city": "Shanghai",
+  "street": "Nanjing Rd",
+  "telephone": "021-88886666",
+  "email": "sales@example.com",
+  "status": "ACTIVE",
+  "search_term": "HDKJ"
+}
+
+3.1.3 销售视图主字段
+复合键：bp_id + sales_org + distribution_channel + division。
+另含：currency、price_group、delivering_plant、incoterms、max_partial_deliveries 等。
+3.1.4 典型错误码
+MDM_PARTNER_NOT_FOUND、MDM_PARTNER_BLOCKED、VALIDATION_ERROR
+3.2 D2 物料主数据（Material Master）
+Base：/api/v1/master
+对应报告：Material；库存数量不在 D2，ATP 走物流/MM
+物理表：material
+3.2.1 接口清单
+方法
+路径
+说明
+幂等
+GET
+`/materials`
+列表/模糊检索
+—
+GET
+`/materials/{material_id}`
+详情
+—
+POST
+`/materials`
+新建（或 MM 同步写入）
+强制
+PATCH
+`/materials/{material_id}`
+更新
+—
+
+3.2.2 请求/响应主字段
+{
+  "material_id": "M0001",
+  "material_name": "Notebook 14inch",
+  "description": "商务笔记本",
+  "base_unit": "PC",
+  "standard_price": 1500.00,
+  "weight": 1.250,
+  "volume": 0.005,
+  "search_term": "NB14"
+}
+
+3.2.3 典型错误码
+MDM_MATERIAL_NOT_FOUND、VALIDATION_ERROR
+3.3 D3 业务单据（Business Document）
+Base：/api/v1/sales
+对应报告：P2.1–P2.3；Inquiry / Quotation / SalesOrder 及行项目
+物理表：inquiry、inquiry_item、quotation、quotation_item、sales_order、sales_order_item
+3.3.1 单据状态（D3）
+status
+含义
+DRAFT
+草稿
+OPEN
+打开/可参照
+CLOSED
+已关闭（已转后续单据）
+REJECTED
+已拒绝（报价）
+CANCELLED
+已取消
+
+服务层强制：询价→报价、报价→订单按报告 1:1，并关闭源单。
+3.3.2 询价 Inquiry
+方法
+路径
+说明
+幂等
+GET
+`/inquiries`
+列表
+—
+GET
+`/inquiries/{inquiry_id}`
+详情含 items
+—
+POST
+`/inquiries`
+创建
+强制
+PATCH
+`/inquiries/{inquiry_id}`
+修改（仅 DRAFT/OPEN）
+—
+POST
+`/inquiries/{inquiry_id}:cancel`
+作废
+强制
+
+创建请求示例：
+{
+  "inquiry_type": "IN",
+  "customer_id": "C0001",
+  "sold_to_party": "C0001",
+  "ship_to_party": "C0002",
+  "sales_org": "1000",
+  "distribution_channel": "10",
+  "division": "00",
+  "currency": "CNY",
+  "requested_delivery_date": "2026-08-15",
+  "valid_from": "2026-07-24",
+  "valid_to": "2026-08-24",
+  "items": [
+    {
+      "item_no": 10,
+      "material_id": "M0001",
+      "order_quantity": 100,
+      "sales_unit": "PC",
+      "unit_price": 1500.00,
+      "net_price": 1500.00
+    }
+  ]
+}
+
+必填要点：customer_id、sold_to_party、ship_to_party、销售范围三字段、items[].material_id。
+3.3.3 报价 Quotation
+方法
+路径
+说明
+幂等
+GET
+`/quotations`
+列表
+—
+GET
+`/quotations/{quotation_id}`
+详情
+—
+POST
+`/quotations`
+手工创建
+强制
+POST
+`/quotations:convert-from-inquiry`
+询价转报价（主路径）
+强制
+PATCH
+`/quotations/{quotation_id}`
+修改
+—
+POST
+`/quotations/{quotation_id}:reject`
+拒绝
+强制
+POST
+`/quotations/{quotation_id}:cancel`
+作废
+强制
+
+转换请求：
+{
+  "source": { "source_type": "INQUIRY", "source_id": "INQ00001" },
+  "overrides": {
+    "valid_to": "2026-08-31",
+    "items": [{ "source_item_no": 10, "unit_price": 1480.00 }]
+  }
+}
+
+服务端：校验询价 OPEN → 复制客户与行项目 → 写 inquiry_id → 询价置 CLOSED。
+3.3.4 销售订单 SalesOrder
+方法
+路径
+说明
+幂等
+GET
+`/orders`
+列表
+—
+GET
+`/orders/{sales_order_id}`
+详情
+—
+GET
+`/orders/{sales_order_id}/document-flow`
+单据流
+—
+POST
+`/orders`
+手工创建
+强制
+POST
+`/orders:convert-from-quotation`
+报价转订单（主路径）
+强制
+PATCH
+`/orders/{sales_order_id}`
+有限修改
+—
+POST
+`/orders/{sales_order_id}:cancel`
+作废
+强制
+
+转换请求：
+{
+  "source": { "source_type": "QUOTATION", "source_id": "QT000001" },
+  "overrides": {
+    "requested_delivery_date": "2026-08-20",
+    "items": [{ "source_item_no": 10, "order_quantity": 100 }]
+  }
+}
+
+服务端：报价有效且未转过订单（QTN-11）→ 写 quotation_id → 报价 CLOSED → 预留 MM 锁量。
+单据流响应示例：
+{
+  "anchor": { "doc_type": "SALES_ORDER", "doc_id": "SO000001" },
+  "nodes": [
+    { "doc_type": "INQUIRY", "doc_id": "INQ00001", "status": "CLOSED" },
+    { "doc_type": "QUOTATION", "doc_id": "QT000001", "status": "CLOSED" },
+    { "doc_type": "SALES_ORDER", "doc_id": "SO000001", "status": "OPEN" },
+    { "doc_type": "DELIVERY", "doc_id": "DN000001", "status": "PGI_DONE" },
+    { "doc_type": "INVOICE", "doc_id": "IV000001", "status": "OPEN" }
+  ]
+}
+
+3.4 D4 物流（Logistics）
+Base：/api/v1/logistics
+对应报告：P3.1–P3.3；Delivery / DeliveryItem / GoodsIssue
+物理表：delivery（含 sales_order_id）、delivery_item、goods_issue
+3.4.1 交货状态
+delivery_status
+含义
+OPEN
+已创建未发货
+PGI_DONE
+已发货过账（可开票）
+CANCELLED
+已取消
+
+首期不做部分过账。
+3.4.2 交货单
+方法
+路径
+说明
+幂等
+GET
+`/deliveries`
+列表
+—
+GET
+`/deliveries/{delivery_id}`
+详情含 items
+—
+POST
+`/deliveries:create-from-sales-order`
+由销售订单生成（主路径）
+强制
+PATCH
+`/deliveries/{delivery_id}`
+未 PGI 前修改
+—
+POST
+`/deliveries/{delivery_id}:cancel`
+取消
+强制
+
+创建请求：
+{
+  "source": { "source_type": "SALES_ORDER", "source_id": "SO000001" },
+  "overrides": {
+    "planned_delivery_date": "2026-08-10",
+    "shipping_point": "1100",
+    "items": [
+      { "so_item_id": "SOI00010", "delivery_quantity": 50 }
+    ]
+  }
+}
+
+服务端写入 sales_order_id、ship_to_party、行 material_id / so_item_id。
+3.4.3 发货过账 PGI
+方法
+路径
+说明
+幂等
+POST
+`/deliveries/{delivery_id}:post-goods-issue`
+整单 PGI
+强制
+GET
+`/goods-issues`
+过账列表
+—
+GET
+`/goods-issues/{goods_issue_id}`
+过账详情
+—
+
+{
+  "posting_date": "2026-08-10",
+  "warehouse": "WH01",
+  "items": [
+    { "delivery_item_id": "DI000001", "actual_quantity": 50 }
+  ]
+}
+
+规则：PGI 后 delivery_status=PGI_DONE；不自动开票，开票调用 D5。
+3.4.4 库存可用性（MM 预留）
+方法
+路径
+说明
+GET
+`/inventory/availability`
+`material_id` + `plant`；可 Mock
+
+3.5 D5 财务（Financial）
+Base：/api/v1/finance
+对应报告：P4.1–P4.3；Invoice / Receipt / OpenAR / ClosedAR
+物理表：invoice、invoice_item、receipt、open_account_receivable、closed_account_receivable
+3.5.1 发票状态
+status
+含义
+OPEN
+未清
+PARTIAL
+部分清
+CLEARED
+已清
+VOID
+已冲销
+
+3.5.2 发票
+方法
+路径
+说明
+幂等
+GET
+`/invoices`
+列表
+—
+GET
+`/invoices/{invoice_id}`
+详情含 items
+—
+POST
+`/invoices:create-from-delivery`
+按已 PGI 交货开票（主路径）
+强制
+POST
+`/invoices/{invoice_id}:void`
+冲销
+强制
+GET
+`/invoices/{invoice_id}/document-flow`
+单据流
+—
+
+{
+  "source": { "source_type": "DELIVERY", "source_id": "DN000001" },
+  "billing_type": "F2",
+  "invoice_date": "2026-07-24",
+  "billing_date": "2026-07-24",
+  "overrides": { "payer": "C0001" }
+}
+
+服务端：校验 PGI → 写发票与行（含 material_id）→ 同步创建 OpenAR → 回写 sales_order_id / delivery_id。
+默认不允许从销售订单直接开票。
+3.5.3 收款
+方法
+路径
+说明
+幂等
+GET
+`/receipts`
+列表
+—
+GET
+`/receipts/{receipt_id}`
+详情
+—
+POST
+`/receipts`
+登记收款并核销
+强制
+
+{
+  "invoice_id": "IV000001",
+  "receipt_date": "2026-07-30",
+  "receipt_amount": 50000.00,
+  "payment_method": "BANK",
+  "payer": "C0001",
+  "currency": "CNY",
+  "reference_no": "BANK20260730001"
+}
+
+事务：校验未清余额 → 写 Receipt → 更新 OpenAR → 全额则 Invoice=CLEARED、写 ClosedAR、删除 OpenAR、关闭销售订单。
+3.5.4 应收账款查询
+方法
+路径
+说明
+GET
+`/receivables/open`
+未清列表
+GET
+`/receivables/open/{invoice_id}`
+按发票查未清
+GET
+`/receivables/closed`
+已清列表
+GET
+`/receivables/closed/{invoice_id}`
+按发票查已清
+GET
+`/document-flow`
+`doc_type` + `doc_id` 展开全链
+
+3.6 跨域联动
+
+图 3　单据流与跨域联动
+
+D1 / D2 主数据校验
+        |
+D3 销售订单 OPEN
+        |  deliveries:create-from-sales-order
+D4 交货 OPEN → post-goods-issue → PGI_DONE
+        |  invoices:create-from-delivery
+D5 发票 + OpenAR → receipts 清账 → 关闭订单
+
+调用方
+被调用方
+目的
+D3
+D1
+客户/信用
+D3
+D2
+物料
+D4
+D3
+按订单建交货
+D5
+D4
+按 PGI 交货开票
+D5
+D3
+清账后关闭订单
+第4章 物理模型符合性
+库
+实体覆盖
+与报告对齐结论
+D1
+五表齐全
+合格；个别字段命名等价调整可接受
+D2
+material 齐全
+合格
+D3
+六表齐全；已含客户三字段与行 `material_id`
+合格；1:1 转换由服务层强制
+D4
+三表齐全；交货含 `sales_order_id`
+合格
+D5
+五表齐全；Receipt 合并 DFD 台账+凭证
+合格（可接受简化）
+第5章 定稿决议摘要
+项
+决议
+响应体
+含 `success`；时间为 ISO 8601 +08:00
+错误码
+字符串码
+转换路径
+冒号形式 `:convert-from-*`
+幂等
+创建/过账类强制
+金额
+number，两位小数
+数量
+三位小数
+D3 转换基数
+1:1 + 关闭源单
+开票
+仅已 PGI 交货单
+PGI
+整单；不自动开票
+清账
+写 ClosedAR 后删 OpenAR；关闭销售订单
+文档结构
+D1–D5 并列同等，不拆成主次模块文
