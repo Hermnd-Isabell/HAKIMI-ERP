@@ -26,15 +26,35 @@
   </MainLayout>
 </template>
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import MainLayout from '@/layout/MainLayout.vue'
-interface R{id:number;no:string;cust:string;date:string;amt:string;rcv:string;st:string}
-const rows:R[]=[
-  {id:1,no:'INV-00086',cust:'The Bike Zone',date:'2026-01-28',amt:'$85,000.00',rcv:'$20,000.00',st:'Open'},
-  {id:2,no:'INV-00102',cust:'GlobalTech',date:'2026-04-01',amt:'$142,500.00',rcv:'$100,000.00',st:'Partial'},
-  {id:3,no:'INV-00115',cust:'Beta Ind.',date:'2026-05-10',amt:'$56,200.00',rcv:'$0.00',st:'Open'},
-  {id:4,no:'INV-00128',cust:'Delta Supply',date:'2026-06-01',amt:'$210,000.00',rcv:'$210,000.00',st:'Cleared'},
-]
-function sc(s:string){const m:Record<string,string>={'Open':'s-open','Partial':'s-partial','Cleared':'s-done','Void':'s-cancel'};return m[s]||''}
+import axios from 'axios'
+
+interface R{id:string;no:string;cust:string;date:string;amt:string;rcv:string;st:string}
+const rows = ref<R[]>([])
+
+async function fetchData() {
+  try {
+    const res = await axios.get("/api/v1/finance/invoices")
+    if (res.data.success) {
+      rows.value = res.data.data.items.map((i: any) => ({
+        id: i.invoice_id,
+        no: i.invoice_id,
+        cust: i.payer,
+        date: i.invoice_date,
+        amt: i.total_amount ? `¥${i.total_amount.toLocaleString()}` : '¥0.00',
+        rcv: i.status === 'CLEARED' ? (i.total_amount ? `¥${i.total_amount.toLocaleString()}` : '¥0.00') : '¥0.00', // Simplified
+        st: i.status
+      }))
+    }
+  } catch (err) {
+    console.error("Fetch invoices failed:", err)
+  }
+}
+
+onMounted(fetchData)
+
+function sc(s:string){const m:Record<string,string>={'OPEN':'s-open','PARTIAL':'s-partial','CLEARED':'s-done','VOID':'s-cancel'};return m[s]||''}
 </script>
 <style scoped>
 .page{padding:28px 36px;max-width:1200px;margin:0 auto;}

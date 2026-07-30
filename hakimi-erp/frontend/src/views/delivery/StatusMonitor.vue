@@ -54,19 +54,45 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import MainLayout from '@/layout/MainLayout.vue'
+import axios from 'axios'
+
 const ar=ref(true); const ri=ref('30s')
 const f=reactive({dn:'',sn:'',cn:'',st:''})
-interface R{id:number;dn:string;sn:string;cn:string;dd:string;gi:string;st:string;si:number;dt:string}
-const rows:R[]=[
-  {id:1,dn:'80000078',sn:'SO000450',cn:'Acme Corp',dd:'08/10/26',gi:'08/12/26',st:'In Transit',si:2,dt:'3,200 / 5,000'},
-  {id:2,dn:'80000079',sn:'SO000451',cn:'GlobalTech',dd:'08/08/26',gi:'08/09/26',st:'Shipped',si:1,dt:'1,500 / 1,500'},
-  {id:3,dn:'80000080',sn:'SO000460',cn:'Beta Industries',dd:'08/05/26',gi:'08/06/26',st:'Completed',si:3,dt:'8,000 / 8,000'},
-  {id:4,dn:'80000081',sn:'SO000465',cn:'Delta Supply',dd:'08/11/26',gi:'08/13/26',st:'Picking',si:0,dt:'0 / 2,400'},
-  {id:5,dn:'80000082',sn:'SO000470',cn:'Omega Retail',dd:'08/12/26',gi:'08/14/26',st:'Creating',si:-1,dt:'0 / 900'},
-]
-function sc(s:string){const m:Record<string,string>={'Completed':'s-done','In Transit':'s-transit','Shipped':'s-ship','Picking':'s-pick','Creating':'s-creating'};return m[s]||''}
+interface R{id:string;dn:string;sn:string;cn:string;dd:string;gi:string;st:string;si:number;dt:string}
+const rows=ref<R[]>([])
+
+async function fetchData() {
+  try {
+    const res = await axios.get("/api/v1/logistics/deliveries")
+    if (res.data.success) {
+      rows.value = res.data.data.items.map((i: any) => {
+        const isDone = i.delivery_status === 'PGI_DONE'
+        return {
+          id: i.delivery_id,
+          dn: i.delivery_id,
+          sn: i.sales_order_id,
+          cn: i.ship_to_party,
+          dd: i.planned_delivery_date || 'N/A',
+          gi: i.planned_gi_date || 'N/A',
+          st: i.delivery_status,
+          si: isDone ? 3 : 0, // Simplified progress: 0 for Open, 3 for PGI_DONE
+          dt: '1 / 1' // Mocked total
+        }
+      })
+    }
+  } catch (err) {
+    console.error("Fetch status failed:", err)
+  }
+}
+
+onMounted(() => {
+  fetchData()
+  setInterval(() => { if(ar.value) fetchData() }, 30000)
+})
+
+function sc(s:string){const m:Record<string,string>={'PGI_DONE':'s-done','OPEN':'s-proc','CANCELLED':'s-cancel'};return m[s]||''}
 </script>
 
 <style scoped>

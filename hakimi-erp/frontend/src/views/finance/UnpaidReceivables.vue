@@ -19,10 +19,10 @@
 
       <!-- KPI Cards -->
       <div class="kpi-cards">
-        <div class="kpi-card"><span class="kpi-label">Total Unpaid Amount</span><span class="kpi-value">$627,860.00</span></div>
-        <div class="kpi-card kpi-warn"><span class="kpi-label">Overdue Amount</span><span class="kpi-value kpi-amber">$128,540.00</span></div>
-        <div class="kpi-card"><span class="kpi-label">Collected This Month</span><span class="kpi-value">$215,300.00</span></div>
-        <div class="kpi-card"><span class="kpi-label">Remaining This Month</span><span class="kpi-value">$198,760.00</span></div>
+        <div class="kpi-card"><span class="kpi-label">Total Unpaid Amount</span><span class="kpi-value">¥{{ kpis.totalUnpaid.toLocaleString() }}</span></div>
+        <div class="kpi-card kpi-warn"><span class="kpi-label">Overdue Amount</span><span class="kpi-value kpi-amber">¥{{ kpis.overdue.toLocaleString() }}</span></div>
+        <div class="kpi-card"><span class="kpi-label">Collected This Month</span><span class="kpi-value">¥{{ kpis.collected.toLocaleString() }}</span></div>
+        <div class="kpi-card"><span class="kpi-label">Remaining This Month</span><span class="kpi-value">¥{{ kpis.remaining.toLocaleString() }}</span></div>
       </div>
 
       <!-- Filter Bar -->
@@ -53,11 +53,16 @@
           <tbody>
             <tr v-for="row in rows" :key="row.id" class="data-row">
               <td class="mono">{{ row.inv }}</td><td>{{ row.cust }}</td><td>{{ row.date }}</td><td>{{ row.due }}</td>
-              <td class="num mono">{{ row.amt }}</td><td class="num mono">{{ row.rcv }}</td><td class="num mono strong">{{ row.unp }}</td>
+              <td class="num mono">¥{{ row.amt.toLocaleString() }}</td>
+              <td class="num mono">¥{{ row.rcv.toLocaleString() }}</td>
+              <td class="num mono strong">¥{{ row.unp.toLocaleString() }}</td>
               <td><span class="stag" :class="sc(row.st)">{{ row.st }}</span></td>
               <td><div class="prog-cell"><div class="prog-bar"><div class="prog-fill" :style="{width:row.pct+'%'}"></div></div><span class="prog-pct">{{ row.pct }}%</span></div></td>
-              <td><a class="link" @click="$router.push('/finance/receivable/'+row.id)">View Details</a></td>
+              <td>
+                <a class="link" @click="handleClear(row)">Post Payment</a>
+              </td>
             </tr>
+            <tr v-if="rows.length === 0"><td colspan="10" style="text-align:center;padding:40px;color:#999;">No unpaid receivables found.</td></tr>
           </tbody>
         </table>
         <div class="table-footer">
@@ -71,21 +76,89 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import MainLayout from '@/layout/MainLayout.vue'
+import axios from 'axios'
+
 const autoRefresh=ref(true); const refreshInterval=ref('30s')
 const f=reactive({customer:'',invoice:'',status:'',from:'',to:''})
-interface R{id:number;inv:string;cust:string;date:string;due:string;amt:string;rcv:string;unp:string;st:string;pct:number}
-const rows:R[]=[
-  {id:1,inv:'INV-2026-00089',cust:'The Bike Zone',date:'03/01/26',due:'03/31/26',amt:'$120,000.00',rcv:'$70,000.00',unp:'$50,000.00',st:'Unpaid',pct:58},
-  {id:2,inv:'INV-2026-00102',cust:'GlobalTech Ltd',date:'04/01/26',due:'05/01/26',amt:'$142,500.00',rcv:'$100,000.00',unp:'$42,500.00',st:'Partially Paid',pct:70},
-  {id:3,inv:'INV-2026-00115',cust:'Beta Industries',date:'05/10/26',due:'06/09/26',amt:'$56,200.00',rcv:'$0.00',unp:'$56,200.00',st:'Overdue',pct:0},
-  {id:4,inv:'INV-2026-00128',cust:'Delta Supply',date:'06/01/26',due:'07/01/26',amt:'$210,000.00',rcv:'$210,000.00',unp:'$0.00',st:'Paid',pct:100},
-  {id:5,inv:'INV-2026-00140',cust:'Omega Retail',date:'06/20/26',due:'07/20/26',amt:'$78,900.00',rcv:'$40,000.00',unp:'$38,900.00',st:'Partially Paid',pct:51},
-]
+interface R{id:string;inv:string;cust:string;date:string;due:string;amt:number;rcv:number;unp:number;st:string;pct:number}
+const rows=ref<R[]>([])
+
+const kpis = reactive({
+  totalUnpaid: 0,
+  overdue: 0,
+  collected: 0,
+  remaining: 0
+})
+
+async function fetchData() {
+  try {
+    const res = await axios.get("/api/v1/finance/ar/open")
+    if (res.data.success) {
+      rows.value = res.data.data.items.map((i: any) => {
+        const amt = parseFloat(i.receivable_amount) || 0
+        const rcv = parseFloat(i.received_amount) || 0
+        const unp = amt - rcv
+        return {
+          id: i.open_ar_id,
+          inv: i.invoice_id,
+          cust: i.invoice?.payer || 'Unknown',
+          date: i.invoice?.invoice_date || 'N/A',
+          due: i.due_date || 'N/A',
+          amt: amt,
+          rcv: rcv,
+          unp: unp,
+          st: i.status === 'UNPAID' ? 'Unpaid' : 'Partially Paid',
+          pct: amt > 0 ? Math.round((rcv / amt) * 100) : 0
+        }
+      })
+      
+      // Update KPIs
+      kpis.totalUnpaid = rows.value.reduce((acc, r) => acc + r.unp, 0)
+      kpis.collected = rows.value.reduce((acc, r) => acc + r.rcv, 0)
+      kpis.remaining = kpis.totalUnpaid
+    }
+  } catch (err) {
+    console.error("Fetch open AR failed:", err)
+  }
+}
+
+onMounted(() => {
+  fetchData()
+  setInterval(() => { if(autoRefresh.value) fetchData() }, 30000)
+})
+
 function sc(s:string){const m:Record<string,string>={'Unpaid':'s-unpaid','Paid':'s-paid','Partially Paid':'s-partial','Overdue':'s-overdue'};return m[s]||''}
 function search(){}
 function reset(){Object.assign(f,{customer:'',invoice:'',status:'',from:'',to:''})}
+
+async function handleClear(row: R) {
+  const amount = prompt(`Enter payment amount for invoice ${row.inv}:`, row.unp.toString())
+  if (amount) {
+    const payAmt = parseFloat(amount)
+    if (isNaN(payAmt) || payAmt <= 0) {
+      alert("Invalid amount")
+      return
+    }
+    try {
+      const res = await axios.post("/api/v1/finance/receipts", {
+        receipt_id: `RCT${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
+        invoice_id: row.inv,
+        payer: row.cust,
+        receipt_amount: payAmt,
+        payment_method: 'BANK_TRANSFER',
+        currency: 'CNY'
+      })
+      if (res.data.success) {
+        alert("Payment posted successfully!")
+        fetchData()
+      }
+    } catch (err: any) {
+      alert("Post receipt failed: " + (err.response?.data?.detail || err.message))
+    }
+  }
+}
 </script>
 
 <style scoped>

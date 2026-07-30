@@ -26,14 +26,48 @@
   </MainLayout>
 </template>
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import MainLayout from '@/layout/MainLayout.vue'
-interface R{id:number;no:string;cust:string;due:string;amt:string;out:string;st:string}
-const rows:R[]=[
-  {id:1,no:'INV-00086',cust:'The Bike Zone',due:'2026-03-31',amt:'$85,000.00',out:'$65,000.00',st:'Open'},
-  {id:2,no:'INV-00102',cust:'GlobalTech',due:'2026-05-01',amt:'$142,500.00',out:'$42,500.00',st:'Open'},
-  {id:3,no:'INV-00115',cust:'Beta Ind.',due:'2026-06-09',amt:'$56,200.00',out:'$56,200.00',st:'Open'},
-  {id:4,no:'INV-00128',cust:'Delta Supply',due:'2026-07-01',amt:'$210,000.00',out:'$0.00',st:'Closed'},
-]
+import axios from 'axios'
+
+interface R{id:string;no:string;cust:string;due:string;amt:string;out:string;st:string}
+const rows = ref<R[]>([])
+
+async function fetchData() {
+  try {
+    const [openRes, closedRes] = await Promise.all([
+      axios.get("/api/v1/finance/ar/open"),
+      axios.get("/api/v1/finance/ar/closed")
+    ])
+    
+    const openItems = openRes.data.success ? openRes.data.data.items.map((i: any) => ({
+      id: i.open_ar_id,
+      no: i.invoice_id,
+      cust: i.invoice?.payer || 'Unknown',
+      due: i.due_date,
+      amt: i.receivable_amount ? `¥${parseFloat(i.receivable_amount).toLocaleString()}` : '¥0.00',
+      out: `¥${(parseFloat(i.receivable_amount) - parseFloat(i.received_amount)).toLocaleString()}`,
+      st: 'Open'
+    })) : []
+
+    const closedItems = closedRes.data.success ? closedRes.data.data.items.map((i: any) => ({
+      id: i.closed_ar_id,
+      no: i.invoice_id,
+      cust: i.invoice?.payer || 'Unknown',
+      due: i.closed_time?.split('T')[0] || 'N/A',
+      amt: i.receivable_amount ? `¥${parseFloat(i.receivable_amount).toLocaleString()}` : '¥0.00',
+      out: '¥0.00',
+      st: 'Closed'
+    })) : []
+
+    rows.value = [...openItems, ...closedItems]
+  } catch (err) {
+    console.error("Fetch AR failed:", err)
+  }
+}
+
+onMounted(fetchData)
+
 function sc(s:string){const m:Record<string,string>={'Open':'s-open','Closed':'s-done'};return m[s]||''}
 </script>
 <style scoped>

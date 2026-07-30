@@ -10,33 +10,89 @@
       <div class="filter-bar">
         <input type="text" class="form-input" placeholder="Delivery No." /><input type="text" class="form-input" placeholder="Sales Order" />
         <input type="text" class="form-input" placeholder="Customer" />
-        <select class="form-select"><option>All Statuses</option><option>Creating</option><option>Picking</option><option>Shipped</option><option>Completed</option></select>
+        <select class="form-select"><option>All Statuses</option><option>OPEN</option><option>PGI_DONE</option></select>
         <button class="btn btn-primary">Search</button><button class="btn btn-outline">Reset</button>
       </div>
-      <div class="data-card"><table class="data-table">
-        <thead><tr><th>Delivery No.</th><th>Sales Order</th><th>Customer</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>
-          <tr v-for="r in rows" :key="r.id" class="data-row">
-            <td class="mono">{{ r.no }}</td><td class="mono">{{ r.so }}</td><td>{{ r.cust }}</td><td>{{ r.date }}</td>
-            <td><span class="stag" :class="sc(r.st)">{{ r.st }}</span></td>
-            <td><a class="link" @click="$router.push('/delivery/detail/'+r.id)">View Details</a></td>
-          </tr>
-        </tbody>
-      </table></div>
+      <div class="data-card">
+        <table class="data-table">
+          <thead><tr><th>Delivery No.</th><th>Sales Order</th><th>Customer</th><th>GI Date</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr v-for="r in rows" :key="r.id" class="data-row">
+              <td class="mono">{{ r.no }}</td><td class="mono">{{ r.so }}</td><td>{{ r.cust }}</td><td>{{ r.date }}</td>
+              <td><span class="stag" :class="sc(r.st)">{{ r.st }}</span></td>
+              <td>
+                <a class="link" @click="viewDetail(r.id)">View</a>
+                <span class="divider" v-if="r.st === 'OPEN'">|</span>
+                <a class="link" v-if="r.st === 'OPEN'" @click="handlePGI(r.id)">Post Goods Issue</a>
+                <span class="divider" v-if="r.st === 'PGI_DONE'">|</span>
+                <a class="link" v-if="r.st === 'PGI_DONE'" @click="createInvoice(r.id)">Create Invoice</a>
+              </td>
+            </tr>
+            <tr v-if="rows.length === 0"><td colspan="6" style="text-align:center;padding:40px;color:#999;">No deliveries found.</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </MainLayout>
 </template>
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import MainLayout from '@/layout/MainLayout.vue'
-interface R{id:number;no:string;so:string;cust:string;date:string;st:string}
-const rows:R[]=[
-  {id:1,no:'DN000078',so:'SO000120',cust:'The Bike Zone',date:'2026-03-15',st:'Completed'},
-  {id:2,no:'DN000079',so:'SO000121',cust:'Acme Corp',date:'2026-04-10',st:'In Transit'},
-  {id:3,no:'DN000080',so:'SO000122',cust:'GlobalTech',date:'2026-05-05',st:'Shipped'},
-  {id:4,no:'DN000081',so:'SO000123',cust:'Beta Ind.',date:'2026-06-01',st:'Picking'},
-  {id:5,no:'DN000082',so:'SO000124',cust:'Delta Supply',date:'2026-06-20',st:'Creating'},
-]
-function sc(s:string){const m:Record<string,string>={'Completed':'s-done','In Transit':'s-transit','Shipped':'s-ship','Picking':'s-pick','Creating':'s-creating'};return m[s]||''}
+import axios from 'axios'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+interface R{id:string;no:string;so:string;cust:string;date:string;st:string}
+const rows = ref<R[]>([])
+
+async function fetchData() {
+  try {
+    const res = await axios.get("/api/v1/logistics/deliveries")
+    if (res.data.success) {
+      rows.value = res.data.data.items.map((i: any) => ({
+        id: i.delivery_id,
+        no: i.delivery_id,
+        so: i.sales_order_id,
+        cust: i.ship_to_party,
+        date: i.actual_gi_date?.split('T')[0] || i.planned_gi_date || 'N/A',
+        st: i.delivery_status
+      }))
+    }
+  } catch (err) {
+    console.error("Fetch deliveries failed:", err)
+  }
+}
+
+onMounted(fetchData)
+
+function sc(s:string){const m:Record<string,string>={'PGI_DONE':'s-done','OPEN':'s-proc','CANCELLED':'s-cancel'};return m[s]||''}
+function viewDetail(id:string){alert("Viewing delivery "+id+" details")}
+async function handlePGI(id:string) {
+  if (confirm(`Post Goods Issue for delivery ${id}? This will reduce inventory and lock the delivery.`)) {
+    try {
+      const res = await axios.post(`/api/v1/logistics/deliveries/${id}/pgi`)
+      if (res.data.success) {
+        alert("Goods Issue posted successfully!")
+        fetchData()
+      }
+    } catch (err: any) {
+      alert("PGI failed: " + (err.response?.data?.detail || err.message))
+    }
+  }
+}
+async function createInvoice(id:string) {
+  if (confirm(`Create invoice for delivery ${id}?`)) {
+    try {
+      const res = await axios.post(`/api/v1/finance/invoices/from-delivery/${id}`)
+      if (res.data.success) {
+        alert(`Invoice ${res.data.data.invoice_id} created successfully!`)
+        router.push("/finance/invoice")
+      }
+    } catch (err: any) {
+      alert("Failed to create invoice: " + (err.response?.data?.detail || err.message))
+    }
+  }
+}
 </script>
 <style scoped>
 .page{padding:28px 36px;max-width:1200px;margin:0 auto;}
@@ -55,12 +111,11 @@ function sc(s:string){const m:Record<string,string>={'Completed':'s-done','In Tr
 .mono{font-family:'SF Mono',Consolas,monospace;font-size:12px;}
 .stag{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;}
 .s-done{background:rgba(67,104,80,0.1);color:#436850;}
-.s-transit{background:rgba(67,104,80,0.08);color:#2d4a38;}
-.s-ship{background:rgba(173,188,159,0.2);color:#436850;}
-.s-pick{background:rgba(240,173,78,0.12);color:#c98a20;}
-.s-creating{background:rgba(217,83,79,0.08);color:#c94a45;}
+.s-proc{background:rgba(240,173,78,0.12);color:#c98a20;}
+.s-cancel{background:rgba(217,83,79,0.08);color:#c94a45;}
 .link{color:#436850;cursor:pointer;font-weight:600;font-size:12px;}
 .link:hover{text-decoration:underline;}
+.divider{margin:0 8px;color:rgba(18,55,42,0.15);font-size:12px;}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all 0.2s;font-family:inherit;}
 .btn-primary{background:linear-gradient(135deg,#436850,#365440);color:#FBFADA;border:none;}
 .btn-primary:hover{transform:translateY(-1px);}

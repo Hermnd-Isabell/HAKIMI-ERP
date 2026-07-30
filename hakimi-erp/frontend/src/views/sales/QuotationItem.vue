@@ -31,7 +31,19 @@
 
       <!-- Header Fields with F4 Search -->
       <div class="form-card">
+        <div class="hdr-info-row" v-if="inquiryId || customerId">
+          <span class="info-tag" v-if="inquiryId">Ref Inquiry: {{ inquiryId }}</span>
+          <span class="info-tag" v-if="customerId">Customer: {{ customerId }}</span>
+        </div>
         <div class="hdr-field-row">
+          <div class="hdr-field" v-if="!customerId">
+            <label class="hf-label">Sold-to Party</label>
+            <div class="input-with-f4-inline">
+              <select class="hf-input" style="width:180px" v-model="customerId">
+                <option v-for="p in partners" :key="p.bp_id" :value="p.bp_id">{{ p.bp_id }} - {{ p.bp_name }}</option>
+              </select>
+            </div>
+          </div>
           <div class="hdr-field"><label class="hf-label">Sales Document Item</label><input type="text" class="hf-input" v-model="itemData.docItem" /></div>
           <div class="hdr-field">
             <label class="hf-label">Item category</label>
@@ -40,8 +52,11 @@
           </div>
           <div class="hdr-field" style="flex:2">
             <label class="hf-label">Material</label>
-            <div class="input-with-f4-inline"><input type="text" class="hf-input" style="width:130px" v-model="itemData.material" /><button class="f4-trigger-sm" @click="openF4('material')" title="F4 Search Material"><svg viewBox="0 0 20 20" width="12" height="12"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
-            <span class="hf-hint">Deluxe Touring Bike (black)</span>
+            <div class="input-with-f4-inline">
+              <select class="hf-input" style="width:180px" v-model="itemData.material">
+                <option v-for="m in materials" :key="m.material_id" :value="m.material_id">{{ m.material_id }} - {{ m.material_name }}</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -54,11 +69,11 @@
 
         <div class="tab-content" v-show="activeTab==='Conditions'">
           <div class="qnt-row">
-            <div class="qnt-field"><label class="qnt-label">Quantity *</label><div class="qnt-input-wrap"><input type="text" class="qnt-input" v-model="qty" /><span class="qnt-unit">EA</span></div></div>
+            <div class="qnt-field"><label class="qnt-label">Quantity *</label><div class="qnt-input-wrap"><input type="text" class="qnt-input" v-model="qty" /><span class="qnt-unit">PC</span></div></div>
             <div class="qnt-field"><label class="qnt-label">Net</label><div class="qnt-readonly">{{ netPrice }}</div></div>
             <div class="qnt-field"><label class="qnt-label">Tax</label><input type="text" class="qnt-input" v-model="tax" /></div>
           </div>
-
+          
           <!-- Pricing Toolbar -->
           <div class="price-toolbar">
             <div class="pt-left">
@@ -91,7 +106,35 @@
           </div>
         </div>
 
-        <div class="tab-placeholder" v-show="activeTab!=='Conditions'">
+        <div class="tab-content" v-show="activeTab==='Sales A'">
+          <div class="form-grid-3">
+            <div class="hdr-field"><label class="hf-label">Sales Office</label><input type="text" class="hf-input" v-model="salesData.office" /></div>
+            <div class="hdr-field"><label class="hf-label">Sales Group</label><input type="text" class="hf-input" v-model="salesData.group" /></div>
+            <div class="hdr-field"><label class="hf-label">Order Reason</label><input type="text" class="hf-input" v-model="salesData.reason" /></div>
+            <div class="hdr-field"><label class="hf-label">Usage</label><input type="text" class="hf-input" v-model="salesData.usage" /></div>
+            <div class="hdr-field"><label class="hf-label">Delivery Date</label><input type="date" class="hf-input" v-model="salesData.delivDate" /></div>
+          </div>
+        </div>
+
+        <div class="tab-content" v-show="activeTab==='Shipping'">
+          <div class="form-grid-3">
+            <div class="hdr-field"><label class="hf-label">Plant</label><input type="text" class="hf-input" v-model="shippingData.plant" /></div>
+            <div class="hdr-field"><label class="hf-label">Shipping Point</label><input type="text" class="hf-input" v-model="shippingData.shippingPoint" /></div>
+            <div class="hdr-field"><label class="hf-label">Storage Location</label><input type="text" class="hf-input" v-model="shippingData.storageLoc" /></div>
+            <div class="hdr-field"><label class="hf-label">Delivery Priority</label><input type="text" class="hf-input" v-model="shippingData.priority" /></div>
+            <div class="hdr-field"><label class="hf-label">Shipping Cond.</label><input type="text" class="hf-input" v-model="shippingData.condition" /></div>
+          </div>
+        </div>
+
+        <div class="tab-content" v-show="activeTab==='Billing Document'">
+          <div class="form-grid-3">
+            <div class="hdr-field"><label class="hf-label">Payment Terms</label><input type="text" class="hf-input" v-model="billingData.payTerms" /></div>
+            <div class="hdr-field"><label class="hf-label">Incoterms</label><input type="text" class="hf-input" v-model="billingData.incoterms" /></div>
+            <div class="hdr-field"><label class="hf-label">Billing Block</label><input type="text" class="hf-input" v-model="billingData.block" /></div>
+          </div>
+        </div>
+
+        <div class="tab-placeholder" v-show="!['Conditions','Sales A','Shipping','Billing Document'].includes(activeTab)">
           <p>{{ activeTab }} &mdash; content to be developed</p>
         </div>
       </div>
@@ -111,36 +154,131 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from "vue"
+import { ref, reactive, computed, onMounted } from "vue"
 import MainLayout from "@/layout/MainLayout.vue"
 import F4SearchModal from "@/components/F4SearchModal.vue"
+import { useRoute, useRouter } from "vue-router"
+import axios from "axios"
 
+const route = useRoute()
+const router = useRouter()
 const activeTab = ref("Conditions")
 const tabs = ["Conditions","Sales A","Sales B","Shipping","Billing Document","Account Assignment","Schedule Lines"]
 
 const currentItem = ref(1)
-const totalItems = ref(3)
+const totalItems = ref(1)
 const qty = ref("1")
 const tax = ref("13.00")
+const quotationId = ref("")
+const inquiryId = ref("")
+const customerId = ref("")
+const partners = ref<any[]>([])
+const materials = ref<any[]>([])
+
+const salesData = reactive({
+  office: "100",
+  group: "10",
+  reason: "",
+  usage: "FREE",
+  delivDate: ""
+})
+
+const shippingData = reactive({
+  plant: "1000",
+  shippingPoint: "1000",
+  storageLoc: "0001",
+  priority: "02",
+  condition: "01"
+})
+
+const billingData = reactive({
+  payTerms: "Z001",
+  incoterms: "EXW",
+  block: ""
+})
 
 const itemData = reactive({
   docItem: "10",
   itemCat: "AGN",
-  material: "DXTR1026",
+  material: "",
+  materialName: ""
+})
+
+async function fetchInquiryRef(id: string) {
+  try {
+    const res = await axios.get(`/api/v1/sales/inquiries/${id}`)
+    if (res.data.success) {
+      const inq = res.data.data
+      inquiryId.value = inq.inquiry_id
+      customerId.value = inq.customer_id
+      if (inq.items && inq.items.length > 0) {
+        const item = inq.items[0]
+        itemData.material = item.material_id
+        qty.value = item.order_quantity.toString()
+        // Fetch material name if needed
+      }
+    }
+  } catch (err) {
+    console.error("Fetch inquiry ref failed:", err)
+  }
+}
+
+async function fetchQuotation(id: string) {
+  try {
+    const res = await axios.get(`/api/v1/sales/quotations/${id}`)
+    if (res.data.success) {
+      const q = res.data.data
+      quotationId.value = q.quotation_id
+      inquiryId.value = q.inquiry_id
+      customerId.value = q.customer_id
+      if (q.items && q.items.length > 0) {
+        const item = q.items[0]
+        itemData.material = item.material_id
+        qty.value = item.order_quantity.toString()
+      }
+    }
+  } catch (err) {
+    console.error("Fetch quotation failed:", err)
+  }
+}
+
+async function fetchData() {
+  try {
+    const [bpRes, matRes] = await Promise.all([
+      axios.get("/api/v1/master/partners/"),
+      axios.get("/api/v1/master/materials/")
+    ])
+    if (bpRes.data.success) partners.value = bpRes.data.data.items
+    if (matRes.data.success) materials.value = matRes.data.data.items
+  } catch (err) {
+    console.error("Fetch partners/materials failed:", err)
+  }
+}
+
+onMounted(() => {
+  fetchData()
+  const refInq = route.query.ref as string
+  const qId = route.params.id as string
+  
+  if (qId && qId !== 'new') {
+    fetchQuotation(qId)
+  } else if (refInq) {
+    fetchInquiryRef(refInq)
+  }
 })
 
 const netPrice = computed(() => {
   const q = parseFloat(qty.value) || 0
-  return q > 0 ? (q * 3200).toLocaleString("en-US",{style:"currency",currency:"USD"}) : "$0.00"
+  return q > 0 ? (q * 3200).toLocaleString("zh-CN",{style:"currency",currency:"CNY"}) : "¥0.00"
 })
 
 const pricingRows = [
-  {cn:"01",ty:"PR00",name:"Price",desc:"Standard Price",amount:"3,200.00",crcy:"USD",unit:"1",rate:"3,200.00",active:true,derived:false,total:false,statColor:"#436850"},
-  {cn:"02",ty:"K007",name:"Cust.Disc.",desc:"Customer Discount",amount:"160.00-",crcy:"USD",unit:"1",rate:"5.000-",active:true,derived:false,total:false,statColor:"#D9534F"},
-  {cn:"03",ty:"K005",name:"Vol.Disc.",desc:"Volume Discount",amount:"64.00-",crcy:"USD",unit:"1",rate:"2.000-",active:true,derived:false,total:false,statColor:"#D9534F"},
-  {cn:"04",ty:"MWST",name:"Tax",desc:"Output Tax 13%",amount:"386.88",crcy:"USD",unit:"1",rate:"13.000",active:true,derived:false,total:false,statColor:"#436850"},
-  {cn:"",ty:"",name:"Net",desc:"Net Value",amount:"2,976.00",crcy:"USD",unit:"",rate:"",active:false,derived:true,total:false,statColor:""},
-  {cn:"",ty:"",name:"Total",desc:"Total Value incl. Tax",amount:"3,362.88",crcy:"USD",unit:"",rate:"",active:false,derived:false,total:true,statColor:""},
+  {cn:"01",ty:"PR00",name:"Price",desc:"Standard Price",amount:"3,200.00",crcy:"CNY",unit:"1",rate:"3,200.00",active:true,derived:false,total:false,statColor:"#436850"},
+  {cn:"02",ty:"K007",name:"Cust.Disc.",desc:"Customer Discount",amount:"160.00-",crcy:"CNY",unit:"1",rate:"5.000-",active:true,derived:false,total:false,statColor:"#D9534F"},
+  {cn:"03",ty:"K005",name:"Vol.Disc.",desc:"Volume Discount",amount:"64.00-",crcy:"CNY",unit:"1",rate:"2.000-",active:true,derived:false,total:false,statColor:"#D9534F"},
+  {cn:"04",ty:"MWST",name:"Tax",desc:"Output Tax 13%",amount:"386.88",crcy:"CNY",unit:"1",rate:"13.000",active:true,derived:false,total:false,statColor:"#436850"},
+  {cn:"",ty:"",name:"Net",desc:"Net Value",amount:"2,976.00",crcy:"CNY",unit:"",rate:"",active:false,derived:true,total:false,statColor:""},
+  {cn:"",ty:"",name:"Total",desc:"Total Value incl. Tax",amount:"3,362.88",crcy:"CNY",unit:"",rate:"",active:false,derived:false,total:true,statColor:""},
 ]
 
 // F4 Search
@@ -162,16 +300,63 @@ function onF4Confirm(idx: number) {
   f4Visible.value = false
   alert("Selection confirmed at index " + idx + " for " + f4Context.value)
 }
-function showItemOutput(){ alert("Item output view") }
-function checkAvailability(){ alert("Checking availability...") }
-function showConditionRecord(){ alert("Condition Record") }
-function showAnalysis(){ alert("Analysis") }
-function updatePricing(){ alert("Pricing updated!") }
+
+function showItemOutput(){ alert("Generating Output Document (PDF Simulation)...") }
+function checkAvailability(){ 
+  const q = parseFloat(qty.value) || 0
+  alert(`ATP Check: Material ${itemData.material} is AVAILABLE. \nConfirmed Quantity: ${q} PC \nEarliest Delivery: ${new Date().toLocaleDateString()}`) 
+}
+function showConditionRecord(){ alert("Pricing Procedure: RVAA01 (Standard) \nCondition Record found for PR00.") }
+function showAnalysis(){ alert("Pricing Analysis: \n- PR00: Base Price Active \n- K007: Cust. Discount Applied \n- MWST: Tax 13% Calculated") }
+function updatePricing(){ 
+  alert("Pricing updated based on current conditions!") 
+}
 
 function prevItem(){ if(currentItem.value>1)currentItem.value-- }
 function nextItem(){ if(currentItem.value<totalItems.value)currentItem.value++ }
 function deleteItem(){ if(confirm("Delete this item?"))alert("Item deleted") }
-function saveQuotation(){ alert("Quotation saved successfully!") }
+
+async function saveQuotation() {
+  if (!customerId.value || !itemData.material) {
+    alert("Please ensure Customer and Material are selected.")
+    return
+  }
+
+  try {
+    const isNew = !quotationId.value || route.params.id === 'new'
+    const payload = {
+      quotation_id: quotationId.value || `QUO${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
+      inquiry_id: inquiryId.value || null,
+      quotation_type: 'QT',
+      status: 'OPEN',
+      customer_id: customerId.value,
+      valid_from: new Date().toISOString().split('T')[0],
+      valid_to: salesData.delivDate || null,
+      payment_terms: billingData.payTerms,
+      incoterms: billingData.incoterms,
+      items: [
+        {
+          quotation_item_id: `QI${Math.floor(Math.random() * 1000000)}`,
+          item_no: 10,
+          material_id: itemData.material,
+          order_quantity: parseFloat(qty.value),
+          sales_unit: 'PC',
+          unit_price: 3200,
+          net_price: 2976
+        }
+      ],
+      net_value: 2976 * parseFloat(qty.value)
+    }
+
+    const res = await axios.post("/api/v1/sales/quotations", payload)
+    if (res.data.success) {
+      alert("Quotation saved successfully!")
+      router.push("/sales/quotation")
+    }
+  } catch (err: any) {
+    alert("Save failed: " + (err.response?.data?.detail || err.message))
+  }
+}
 </script>
 
 <style scoped>
@@ -193,6 +378,9 @@ function saveQuotation(){ alert("Quotation saved successfully!") }
 .na-info{font-size:12px;color:rgba(18,55,42,0.4);margin:0 8px;}
 
 .form-card{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:12px;padding:16px 18px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 1px 4px rgba(173,188,159,0.08);margin-bottom:12px;}
+.hdr-info-row{display:flex;gap:12px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(173,188,159,0.1);}
+.form-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 10px 0; }
+.info-tag{font-size:11px;font-weight:700;background:rgba(67,104,80,0.08);color:#436850;padding:4px 10px;border-radius:6px;border:1px solid rgba(67,104,80,0.1);}
 .form-card-tabs{padding-top:0;overflow:hidden;}
 
 .hdr-field-row{display:flex;gap:16px;}

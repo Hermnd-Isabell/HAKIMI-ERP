@@ -17,7 +17,7 @@
         <div class="form-row form-row-3">
           <div class="form-group">
             <label class="form-label">Business Partner No.</label>
-            <div class="input-readonly">Auto-generated</div>
+            <input type="text" class="form-input" v-model="form.bpId" placeholder="Auto-generated if empty" />
           </div>
           <div class="form-group">
             <label class="form-label">Grouping</label>
@@ -170,6 +170,36 @@
         </div>
       </div>
 
+      <!-- Business Partner List (Added for viewing) -->
+      <div class="form-card">
+        <h3 class="block-title">Business Partner List</h3>
+        <table class="bp-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Country</th>
+              <th>City</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="bp in partners" :key="bp.bp_id">
+              <td class="mono">{{ bp.bp_id }}</td>
+              <td>{{ bp.bp_name }}</td>
+              <td>{{ bp.bp_role }}</td>
+              <td>{{ bp.country }}</td>
+              <td>{{ bp.city }}</td>
+              <td><span class="status-tag">{{ bp.status }}</span></td>
+            </tr>
+            <tr v-if="partners.length === 0">
+              <td colspan="6" style="text-align: center; padding: 20px; color: #999;">No business partners found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       <!-- Bottom Action Bar -->
       <div class="action-bar">
         <div class="action-left">
@@ -192,14 +222,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import MainLayout from '@/layout/MainLayout.vue'
 import F4SearchModal from '@/components/F4SearchModal.vue'
+import axios from 'axios'
 
 const router = useRouter()
 
 const form = reactive({
+  bpId: '', 
   grouping: '',
   bpRole: '',
   salutation: '',
@@ -217,6 +249,23 @@ const form = reactive({
   email: '',
   fax: '',
   website: '',
+})
+
+const partners = ref<any[]>([])
+
+async function fetchPartners() {
+  try {
+    const res = await axios.get('/api/v1/master/partners/')
+    if (res.data.success) {
+      partners.value = res.data.data.items
+    }
+  } catch (err) {
+    console.error("Failed to fetch partners:", err)
+  }
+}
+
+onMounted(() => {
+  fetchPartners()
 })
 
 const activeTab = ref('address')
@@ -268,8 +317,37 @@ function onF4Confirm(idx: number) {
   showF4.value = false
 }
 
-function handleSave() { /* TODO */ }
-function handleSaveContinue() { /* TODO */ }
+async function handleSave() {
+  try {
+    const payload = {
+      bp_id: form.bpId || `BP${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
+      bp_type: form.grouping === 'INT' ? 'PERS' : 'ORG',
+      bp_role: form.bpRole,
+      bp_name: `${form.lastName} ${form.firstName}`.trim(),
+      country: form.country,
+      city: form.city,
+      street: form.street,
+      postal_code: form.postalCode,
+      telephone: form.phone,
+      email: form.email,
+      search_term: form.searchTerm,
+      status: 'ACTIVE'
+    }
+    const res = await axios.post('/api/v1/master/partners/', payload)
+    if (res.data.success) {
+      alert(`Business Partner ${res.data.data.bp_id} created successfully!`)
+      fetchPartners() // Refresh list instead of redirecting
+      // Reset form
+      Object.keys(form).forEach(key => (form as any)[key] = '')
+    }
+  } catch (err: any) {
+    alert("Save failed: " + (err.response?.data?.detail || err.message))
+  }
+}
+
+async function handleSaveContinue() {
+  await handleSave()
+}
 function handleCancel() { router.push('/') }
 function handleExit() { router.push('/') }
 </script>
@@ -447,4 +525,33 @@ function handleExit() { router.push('/') }
   color: rgba(18,55,42,0.35); transition: all 0.2s; flex-shrink: 0;
 }
 .f4-trigger:hover { border-color: #436850; color: #436850; background: rgba(67,104,80,0.06); }
+
+.bp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.bp-table th {
+  text-align: left;
+  padding: 12px;
+  font-size: 11px;
+  color: rgba(18, 55, 42, 0.4);
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(173, 188, 159, 0.2);
+}
+.bp-table td {
+  padding: 12px;
+  font-size: 13px;
+  color: #12372A;
+  border-bottom: 1px solid rgba(173, 188, 159, 0.08);
+}
+.mono { font-family: monospace; }
+.status-tag {
+  background: rgba(67, 104, 80, 0.1);
+  color: #436850;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
 </style>

@@ -6,6 +6,12 @@
           <div class="hc-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 8l1.7-4.3A1 1 0 0 1 5.6 3h12.8a1 1 0 0 1 .9.7L21 8M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" fill="none" stroke="#436850" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 12h4" fill="none" stroke="#436850" stroke-width="1.5" stroke-linecap="round"/></svg></div>
           <div class="hc-text"><h2 class="hc-title">Inquiry Management</h2><p class="hc-sub">Track and manage customer inquiries, convert to quotations.</p></div>
         </div>
+        <div class="hc-right">
+          <button class="btn btn-primary" @click="showCreate = true">
+            <svg viewBox="0 0 24 24" width="16" height="16" style="margin-right: 4px;"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Create Inquiry
+          </button>
+        </div>
       </div>
 
       <div class="filter-bar">
@@ -23,13 +29,58 @@
             <tr v-for="r in rows" :key="r.id" class="data-row">
               <td class="mono">{{ r.no }}</td><td>{{ r.cust }}</td><td>{{ r.date }}</td><td>{{ r.mat }}</td><td class="num mono">{{ r.qty }}</td>
               <td><span class="stag" :class="sc(r.st)">{{ r.st }}</span></td>
-              <td><a class="link" @click="viewDetail(r.id)">View Details</a></td>
+              <td>
+                <a class="link" @click="viewDetail(r.id)">View</a>
+                <span class="divider">|</span>
+                <a class="link" v-if="r.st === 'OPEN'" @click="convertToQuotation(r.id)">Convert to Quote</a>
+              </td>
             </tr>
+            <tr v-if="rows.length === 0"><td colspan="7" style="text-align:center;padding:40px;color:#999;">No inquiries found.</td></tr>
           </tbody>
         </table>
         <div class="table-footer">
           <span class="tf-total">Total {{ rows.length }} items</span>
-          <div class="pager"><button class="pg-btn active">1</button><button class="pg-btn">2</button></div>
+          <div class="pager"><button class="pg-btn active">1</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Modal -->
+    <div v-if="showCreate" class="modal-mask">
+      <div class="modal-container modal-lg">
+        <div class="modal-header"><h3>Create New Inquiry</h3><button class="close-btn" @click="showCreate=false">&times;</button></div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group"><label class="fl required">Customer (BP)</label>
+              <select class="form-select" v-model="form.customerId">
+                <option v-for="p in partners" :key="p.bp_id" :value="p.bp_id">{{ p.bp_id }} - {{ p.bp_name }}</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="fl">Customer Reference</label><input type="text" class="form-input" v-model="form.customerReference" /></div>
+            
+            <div class="form-group"><label class="fl">Validity From</label><input type="date" class="form-input" v-model="form.validFrom" /></div>
+            <div class="form-group"><label class="fl">Validity To</label><input type="date" class="form-input" v-model="form.validTo" /></div>
+            
+            <div class="form-group"><label class="fl">Req. Deliv. Date</label><input type="date" class="form-input" v-model="form.requestedDeliveryDate" /></div>
+            <div class="form-group"><label class="fl">Sales Org</label><input type="text" class="form-input" v-model="form.salesOrg" /></div>
+          </div>
+
+          <div class="divider">Material Details</div>
+          
+          <div class="form-grid">
+            <div class="form-group"><label class="fl required">Material</label>
+              <select class="form-select" v-model="form.materialId">
+                <option v-for="m in materials" :key="m.material_id" :value="m.material_id">{{ m.material_id }} - {{ m.material_name }}</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="fl">Item Description</label><input type="text" class="form-input" v-model="form.itemDescription" /></div>
+            <div class="form-group"><label class="fl required">Quantity</label><input type="number" class="form-input" v-model="form.quantity" /></div>
+            <div class="form-group"><label class="fl">Expected Value</label><input type="number" class="form-input" v-model="form.expectedValue" /></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" @click="showCreate=false">Cancel</button>
+          <button class="btn btn-primary" @click="handleSave">Create Inquiry</button>
         </div>
       </div>
     </div>
@@ -37,17 +88,106 @@
 </template>
 
 <script setup lang="ts">
+import { ref, reactive, onMounted } from "vue"
 import MainLayout from "@/layout/MainLayout.vue"
-interface R{id:number;no:string;cust:string;date:string;mat:string;qty:string;st:string}
-const rows:R[]=[
-  {id:1,no:"INQ00001",cust:"The Bike Zone",date:"2026-01-10",mat:"Bicycle Frame X200",qty:"50",st:"Converted"},
-  {id:2,no:"INQ00002",cust:"Acme Corp",date:"2026-02-14",mat:"Gear Set Pro",qty:"200",st:"Open"},
-  {id:3,no:"INQ00003",cust:"GlobalTech",date:"2026-03-05",mat:"Brake Pads V3",qty:"1,000",st:"Open"},
-  {id:4,no:"INQ00004",cust:"Beta Industries",date:"2026-04-22",mat:"Chain Assembly",qty:"350",st:"Rejected"},
-  {id:5,no:"INQ00005",cust:"Delta Supply",date:"2026-05-18",mat:"Pedal Set Light",qty:"800",st:"Converted"},
-]
-function sc(s:string){const m:Record<string,string>={"Open":"s-open","Converted":"s-done","Rejected":"s-cancel"};return m[s]||""}
-function viewDetail(id:number){alert("Viewing inquiry "+id+" details")}
+import axios from "axios"
+import { useRouter } from "vue-router"
+
+const router = useRouter()
+interface R{id:string;no:string;cust:string;date:string;mat:string;qty:string;st:string}
+const rows = ref<R[]>([])
+
+// Create form state
+const showCreate = ref(false)
+const form = reactive({
+  customerId: '',
+  materialId: '',
+  quantity: 1,
+  type: 'IN',
+  validFrom: new Date().toISOString().split('T')[0],
+  validTo: '',
+  requestedDeliveryDate: '',
+  customerReference: '',
+  salesOrg: '1000',
+  distributionChannel: '10',
+  division: '00',
+  itemDescription: '',
+  expectedValue: 0
+})
+
+const partners = ref<any[]>([])
+const materials = ref<any[]>([])
+
+async function fetchData() {
+  try {
+    const [inqRes, bpRes, matRes] = await Promise.all([
+      axios.get("/api/v1/sales/inquiries"),
+      axios.get("/api/v1/master/partners/"),
+      axios.get("/api/v1/master/materials/")
+    ])
+    
+    if (inqRes.data.success) {
+      rows.value = inqRes.data.data.items.map((i: any) => ({
+        id: i.inquiry_id,
+        no: i.inquiry_id,
+        cust: i.customer_id,
+        date: i.created_time?.split('T')[0] || 'N/A',
+        mat: i.items?.[0]?.material_id || 'N/A',
+        qty: i.items?.[0]?.order_quantity || '0',
+        st: i.status
+      }))
+    }
+    if (bpRes.data.success) partners.value = bpRes.data.data.items
+    if (matRes.data.success) materials.value = matRes.data.data.items
+  } catch (err) {
+    console.error("Fetch error:", err)
+  }
+}
+
+onMounted(fetchData)
+
+async function handleSave() {
+  try {
+    const payload = {
+      inquiry_id: `INQ${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
+      inquiry_type: form.type,
+      customer_id: form.customerId,
+      customer_reference: form.customerReference,
+      valid_from: form.validFrom || null,
+      valid_to: form.validTo || null,
+      requested_delivery_date: form.requestedDeliveryDate || null,
+      sales_org: form.salesOrg,
+      distribution_channel: form.distributionChannel,
+      division: form.division,
+      status: 'OPEN',
+      items: [
+        {
+          inquiry_item_id: `II${Math.floor(Math.random() * 1000000)}`,
+          item_no: 10,
+          material_id: form.materialId,
+          item_description: form.itemDescription,
+          order_quantity: form.quantity,
+          expected_order_value: form.expectedValue,
+          sales_unit: 'PC'
+        }
+      ]
+    }
+    const res = await axios.post("/api/v1/sales/inquiries", payload)
+    if (res.data.success) {
+      alert("Inquiry created!")
+      showCreate.value = false
+      fetchData()
+    }
+  } catch (err: any) {
+    alert("Save failed: " + (err.response?.data?.detail || err.message))
+  }
+}
+
+function sc(s:string){const m:Record<string,string>={"OPEN":"s-open","CLOSED":"s-done","CANCELLED":"s-cancel"};return m[s]||""}
+function viewDetail(id:string){alert("Viewing inquiry "+id+" details")}
+function convertToQuotation(id:string) {
+  router.push({ path: '/sales/quotation/new', query: { ref: id } })
+}
 </script>
 
 <style scoped>
@@ -74,6 +214,7 @@ function viewDetail(id:number){alert("Viewing inquiry "+id+" details")}
 .s-cancel{background:rgba(217,83,79,0.08);color:#c94a45;}
 .link{color:#436850;cursor:pointer;font-weight:600;font-size:12px;}
 .link:hover{text-decoration:underline;}
+.divider{margin:0 8px;color:rgba(18,55,42,0.15);font-size:12px;}
 .table-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid rgba(173,188,159,0.15);}
 .tf-total{font-size:12px;color:rgba(18,55,42,0.4);}
 .pager{display:flex;gap:4px;}
@@ -84,4 +225,24 @@ function viewDetail(id:number){alert("Viewing inquiry "+id+" details")}
 .btn-primary:hover{transform:translateY(-1px);}
 .btn-outline{background:none;color:rgba(18,55,42,0.5);border:1px solid rgba(173,188,159,0.35);}
 .btn-outline:hover{border-color:rgba(18,55,42,0.3);color:#12372A;}
+
+/* Modal CSS */
+.modal-mask {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(18, 55, 42, 0.4); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.modal-container {
+  background: #FBFADA; width: 480px; border-radius: 16px; padding: 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 1px solid rgba(173,188,159,0.3);
+}
+.modal-lg { width: 720px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.divider { margin: 20px 0 10px; padding-bottom: 5px; border-bottom: 1px solid rgba(173,188,159,0.2); font-size: 12px; font-weight: 700; color: #436850; text-transform: uppercase; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-header h3 { color: #12372A; margin: 0; font-size: 18px; }
+.close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+.modal-body { display: flex; flex-direction: column; gap: 16px; }
+.modal-footer { margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px; }
+.fl.required::after { content: " *"; color: #D9534F; }
 </style>

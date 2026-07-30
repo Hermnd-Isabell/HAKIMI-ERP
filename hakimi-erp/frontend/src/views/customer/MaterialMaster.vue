@@ -11,7 +11,7 @@
       <!-- Form with F4 Search -->
       <div class="form-card">
         <div class="form-row form-row-4">
-          <div class="form-group"><label class="fl">Material No.</label><div class="ir">Auto-generated</div></div>
+          <div class="form-group"><label class="fl">Material No.</label><input class="fi" v-model="form.matId" placeholder="Input ID or leave for random" /></div>
           <div class="form-group"><label class="fl required">Material Type</label>
             <div class="input-with-f4-inline"><select class="fs" v-model="form.matType"><option>FERT - Finished Product</option><option>ROH - Raw Material</option><option>HAWA - Trading Goods</option><option>HALB - Semi-Finished</option></select><button class="f4-trigger-sm" @click="openF4(`matType`)" title="F4 Search"><svg viewBox="0 0 20 20" width="12" height="12"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
           </div>
@@ -70,14 +70,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from "vue"
+import { ref, reactive, onMounted } from "vue"
 import MainLayout from "@/layout/MainLayout.vue"
 import F4SearchModal from "@/components/F4SearchModal.vue"
+import axios from "axios"
 
 const active=ref("Basic Data")
 const tabs=["Basic Data","Sales Data","Purchasing","MRP","Accounting","Storage","Quality"]
 
 const form=reactive({
+  matId: "", // Added for creation
   matType:"FERT - Finished Product",
   industry:"M - Mechanical Engineering",
   uom:"EA - Each",
@@ -90,7 +92,30 @@ const form=reactive({
   volume:"",
 })
 
-const mats=[{id:"DXTR1026",desc:"Industrial Sensor Module X200",type:"FERT",uom:"EA",grp:"Electronics",st:"Active"},{id:"CABL4400",desc:"Fiber Optic Cable 50m",type:"HAWA",uom:"M",grp:"Electronics",st:"Active"},{id:"BRKT220",desc:"Mounting Bracket Set",type:"FERT",uom:"EA",grp:"Mechanical",st:"Active"},{id:"FG-1001",desc:"Mountain Bike Frame",type:"FERT",uom:"EA",grp:"Mechanical",st:"Active"},{id:"SP-7780",desc:"Brake Assembly Kit",type:"HALB",uom:"EA",grp:"Mechanical",st:"Inactive"}]
+const mats = ref<any[]>([])
+
+// Fetch materials from backend
+async function fetchMaterials() {
+  try {
+    const res = await axios.get("/api/v1/master/materials/")
+    if (res.data.success) {
+      mats.value = res.data.data.items.map((item: any) => ({
+        id: item.material_id,
+        desc: item.material_name,
+        type: item.base_unit, // Simplified for display
+        uom: item.base_unit,
+        grp: item.search_term || "N/A",
+        st: "Active"
+      }))
+    }
+  } catch (err) {
+    console.error("Failed to fetch materials:", err)
+  }
+}
+
+onMounted(() => {
+  fetchMaterials()
+})
 
 // F4 Search
 const f4Visible=ref(false)
@@ -102,7 +127,27 @@ function openF4(ctx:string){
 }
 function onF4Confirm(idx:number){f4Visible.value=false;alert(`F4 selection confirmed at index ${idx}`)}
 
-function saveMaterial(){alert("Material saved successfully!")}
+async function saveMaterial(){
+  try {
+    const payload = {
+      material_id: form.matId || `M${Math.floor(Math.random() * 1000)}`,
+      material_name: form.desc,
+      description: form.desc,
+      base_unit: form.uom.split(" - ")[0],
+      standard_price: 0,
+      weight: parseFloat(form.netWt) || 0,
+      volume: parseFloat(form.volume) || 0,
+      search_term: form.matGroup.split(" - ")[0]
+    }
+    const res = await axios.post("/api/v1/master/materials/", payload)
+    if (res.data.success) {
+      alert("Material saved successfully!")
+      fetchMaterials()
+    }
+  } catch (err: any) {
+    alert("Save failed: " + (err.response?.data?.detail || err.message))
+  }
+}
 function viewDetail(id:string){alert(`Editing material ${id}`)}
 </script>
 
