@@ -41,4 +41,52 @@ body {
   background-color: rgba(67, 104, 80, 0.18);
   color: #12372A;
 }
+
+/* Toast - fixed bottom bar style per UX spec */
+.hakimi-toast-bottom.el-message {
+  top: auto !important;
+  bottom: 24px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  min-width: 320px;
+  max-width: 560px;
+  padding: 12px 18px;
+  border-radius: 8px;
+  background: #12372A;
+  border: 1px solid rgba(67, 104, 80, 0.3);
+  box-shadow: 0 6px 24px rgba(18, 55, 42, 0.22);
+}
+
+.hakimi-toast-bottom.el-message .el-message__content {
+  color: #FBFADA;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.hakimi-toast-bottom.el-message .el-message__icon {
+  color: #FBFADA;
+}
+
+.hakimi-toast-bottom.el-message--success {
+  background: #436850;
+  border-color: rgba(67, 104, 80, 0.5);
+}
+
+.hakimi-toast-bottom.el-message--error {
+  background: #D9534F;
+  border-color: rgba(217, 83, 79, 0.5);
+}
+
+.hakimi-toast-bottom.el-message--warning {
+  background: #F0AD4E;
+  border-color: rgba(240, 173, 78, 0.5);
+}
+
+.hakimi-confirm-dialog .el-message-box__title {
+  color: #12372A;
+}
+
+.hakimi-alert-dialog .el-message-box__title {
+  color: #12372A;
+}
 </style>

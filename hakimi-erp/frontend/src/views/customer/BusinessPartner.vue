@@ -84,9 +84,15 @@
             <legend class="block-title">Standard Address</legend>
             <div class="form-row form-row-2">
               <div class="form-group">
-                <label class="form-label">Street / House No.</label>
-                <input type="text" class="form-input" v-model="form.street" placeholder="Street and house number" />
+                <label class="form-label">Street</label>
+                <input type="text" class="form-input" v-model="form.street" placeholder="Street name" />
               </div>
+              <div class="form-group">
+                <label class="form-label">House No.</label>
+                <input type="text" class="form-input" v-model="form.houseNumber" placeholder="House number" />
+              </div>
+            </div>
+            <div class="form-row form-row-3">
               <div class="form-group">
                 <label class="form-label required">Country / Region</label>
                 <select class="form-select" v-model="form.country">
@@ -97,8 +103,6 @@
                   <option value="JP">Japan</option>
                 </select>
               </div>
-            </div>
-            <div class="form-row form-row-3">
               <div class="form-group">
                 <label class="form-label required">City</label>
                 <input type="text" class="form-input" v-model="form.city" placeholder="Enter city" />
@@ -117,6 +121,12 @@
                     <span class="indicator-label">{{ postalLabel }}</span>
                   </div>
                 </div>
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label class="form-label">District</label>
+                <input type="text" class="form-input" v-model="form.district" placeholder="District / county" />
               </div>
               <div class="form-group">
                 <label class="form-label">Region</label>
@@ -145,8 +155,12 @@
             <legend class="block-title">Communication</legend>
             <div class="form-row form-row-4">
               <div class="form-group">
-                <label class="form-label">Phone</label>
-                <input type="text" class="form-input" v-model="form.phone" placeholder="+86 10 1234 5678" />
+                <label class="form-label">Telephone</label>
+                <input type="text" class="form-input" v-model="form.telephone" placeholder="+86 10 1234 5678" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Mobile Phone</label>
+                <input type="text" class="form-input" v-model="form.mobilePhone" placeholder="Mobile number" />
               </div>
               <div class="form-group">
                 <label class="form-label">Email</label>
@@ -156,6 +170,8 @@
                 <label class="form-label">Fax</label>
                 <input type="text" class="form-input" v-model="form.fax" placeholder="Fax number" />
               </div>
+            </div>
+            <div class="form-row form-row-2">
               <div class="form-group">
                 <label class="form-label">Website</label>
                 <input type="text" class="form-input" v-model="form.website" placeholder="https://www.example.com" />
@@ -170,9 +186,10 @@
         </div>
       </div>
 
-      <!-- Business Partner List (Added for viewing) -->
+      <!-- Business Partner List -->
       <div class="form-card">
         <h3 class="block-title">Business Partner List</h3>
+        <div v-if="error" class="error-msg">{{ error }}</div>
         <table class="bp-table">
           <thead>
             <tr>
@@ -185,17 +202,22 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="bp in partners" :key="bp.bp_id">
-              <td class="mono">{{ bp.bp_id }}</td>
-              <td>{{ bp.bp_name }}</td>
-              <td>{{ bp.bp_role }}</td>
-              <td>{{ bp.country }}</td>
-              <td>{{ bp.city }}</td>
-              <td><span class="status-tag">{{ bp.status }}</span></td>
+            <tr v-if="loading">
+              <td colspan="6" class="loading-cell">Loading business partners...</td>
             </tr>
-            <tr v-if="partners.length === 0">
-              <td colspan="6" style="text-align: center; padding: 20px; color: #999;">No business partners found.</td>
-            </tr>
+            <template v-else>
+              <tr v-for="bp in partners" :key="bp.bp_id">
+                <td class="mono">{{ bp.bp_id }}</td>
+                <td>{{ bp.bp_name }}</td>
+                <td>{{ bp.bp_role }}</td>
+                <td>{{ bp.country }}</td>
+                <td>{{ bp.city }}</td>
+                <td><span class="status-tag">{{ bp.status }}</span></td>
+              </tr>
+              <tr v-if="partners.length === 0">
+                <td colspan="6" class="empty-cell">No business partners found.</td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -203,21 +225,22 @@
       <!-- Bottom Action Bar -->
       <div class="action-bar">
         <div class="action-left">
-          <button class="btn btn-primary" @click="handleSave">
+          <button class="btn btn-primary" @click="handleSave" :disabled="saving">
             <svg viewBox="0 0 20 20" width="16" height="16">
               <path d="M4 16V4a1 1 0 0 1 1-1h8l4 4v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.5"/>
               <path d="M13 3v4h4M7 12h6M7 15h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
-            Save
+            {{ saving ? 'Saving...' : 'Save' }}
           </button>
-          <button class="btn btn-secondary" @click="handleSaveContinue">
+          <button class="btn btn-secondary" @click="handleSaveContinue" :disabled="saving">
             Save &amp; Continue
           </button>
         </div>
-        <button class="btn btn-border" @click="handleCancel">Cancel</button>
+        <button class="btn btn-border" @click="handleCancel" :disabled="saving">Cancel</button>
       </div>
     </div>
     <F4SearchModal v-model:visible="showF4" @confirm="onF4Confirm" />
+    <SuccessModal v-model:visible="successVisible" :message="successMsg" @confirm="handleSuccessConfirm" />
   </MainLayout>
 </template>
 
@@ -226,12 +249,16 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import MainLayout from '@/layout/MainLayout.vue'
 import F4SearchModal from '@/components/F4SearchModal.vue'
-import axios from 'axios'
+import SuccessModal from '@/components/SuccessModal.vue'
+import { fetchPartners, createPartner } from '@/api'
 
 const router = useRouter()
 
+const successVisible = ref(false)
+const successMsg = ref('')
+
 const form = reactive({
-  bpId: '', 
+  bpId: '',
   grouping: '',
   bpRole: '',
   salutation: '',
@@ -239,33 +266,42 @@ const form = reactive({
   firstName: '',
   searchTerm: '',
   street: '',
+  houseNumber: '',
   country: '',
   city: '',
+  district: '',
   postalCode: '',
   region: '',
   poBox: '',
   poBoxPostal: '',
-  phone: '',
+  telephone: '',
+  mobilePhone: '',
   email: '',
   fax: '',
   website: '',
 })
 
 const partners = ref<any[]>([])
+const loading = ref(false)
+const saving = ref(false)
+const error = ref('')
 
-async function fetchPartners() {
+async function loadPartners() {
+  loading.value = true
+  error.value = ''
   try {
-    const res = await axios.get('/api/v1/master/partners/')
-    if (res.data.success) {
-      partners.value = res.data.data.items
-    }
-  } catch (err) {
-    console.error("Failed to fetch partners:", err)
+    const res = await fetchPartners()
+    partners.value = res.data.items || []
+  } catch (err: any) {
+    error.value = err?.response?.data?.detail || err.message || 'Failed to load business partners'
+    console.error('Failed to fetch partners:', err)
+  } finally {
+    loading.value = false
   }
 }
 
 onMounted(() => {
-  fetchPartners()
+  loadPartners()
 })
 
 const activeTab = ref('address')
@@ -317,32 +353,49 @@ function onF4Confirm(idx: number) {
   showF4.value = false
 }
 
-async function handleSave() {
-  try {
-    const payload = {
-      bp_id: form.bpId || `BP${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
-      bp_type: form.grouping === 'INT' ? 'PERS' : 'ORG',
-      bp_role: form.bpRole,
-      bp_name: `${form.lastName} ${form.firstName}`.trim(),
-      country: form.country,
-      city: form.city,
-      street: form.street,
-      postal_code: form.postalCode,
-      telephone: form.phone,
-      email: form.email,
-      search_term: form.searchTerm,
-      status: 'ACTIVE'
-    }
-    const res = await axios.post('/api/v1/master/partners/', payload)
-    if (res.data.success) {
-      alert(`Business Partner ${res.data.data.bp_id} created successfully!`)
-      fetchPartners() // Refresh list instead of redirecting
-      // Reset form
-      Object.keys(form).forEach(key => (form as any)[key] = '')
-    }
-  } catch (err: any) {
-    alert("Save failed: " + (err.response?.data?.detail || err.message))
+function buildPayload() {
+  return {
+    bp_id: form.bpId || `BP${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
+    bp_type: form.grouping === 'INT' ? 'PERS' : 'ORG',
+    bp_role: form.bpRole,
+    bp_name: `${form.lastName} ${form.firstName}`.trim(),
+    country: form.country,
+    city: form.city,
+    district: form.district || form.region || undefined,
+    street: form.street,
+    house_number: form.houseNumber,
+    postal_code: form.postalCode,
+    telephone: form.telephone,
+    mobile_phone: form.mobilePhone,
+    fax: form.fax,
+    email: form.email,
+    website: form.website,
+    search_term: form.searchTerm,
+    status: 'ACTIVE',
   }
+}
+
+async function handleSave() {
+  if (!form.bpRole || !form.lastName || !form.firstName || !form.city || !form.country || !form.postalCode) {
+    alert('Please fill in required fields: BP Role, Last Name, First Name, Country, City, Postal Code')
+    return
+  }
+  saving.value = true
+  try {
+    const res = await createPartner(buildPayload())
+    successMsg.value = `Business Partner ${res.data.bp_id} created successfully!`
+    successVisible.value = true
+    await loadPartners()
+    Object.keys(form).forEach(key => (form as any)[key] = '')
+  } catch (err: any) {
+    alert('Save failed: ' + (err?.response?.data?.detail || err?.response?.data?.message || err.message))
+  } finally {
+    saving.value = false
+  }
+}
+
+function handleSuccessConfirm() {
+  successVisible.value = false
 }
 
 async function handleSaveContinue() {
@@ -553,5 +606,24 @@ function handleExit() { router.push('/') }
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
+}
+.error-msg {
+  color: #D9534F;
+  font-size: 13px;
+  padding: 10px 12px;
+  background: rgba(217, 83, 79, 0.08);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.loading-cell, .empty-cell {
+  text-align: center;
+  padding: 20px;
+  color: rgba(18, 55, 42, 0.4);
+}
+.loading-cell { font-style: italic; }
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
 }
 </style>

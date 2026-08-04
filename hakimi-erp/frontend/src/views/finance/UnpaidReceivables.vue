@@ -13,16 +13,16 @@
         <div class="hc-right">
           <label class="auto-refresh"><input type="checkbox" v-model="autoRefresh" /> Auto Refresh</label>
           <select class="form-select form-select-sm" v-model="refreshInterval"><option>30s</option><option>60s</option><option>5min</option></select>
-          <button class="btn-icon" title="Export"><svg viewBox="0 0 20 20" width="16" height="16"><path d="M10 3v10M6 9l4 4 4-4M3 17h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn-icon" title="Export" @click="exportData"><svg viewBox="0 0 20 20" width="16" height="16"><path d="M10 3v10M6 9l4 4 4-4M3 17h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
       </div>
 
       <!-- KPI Cards -->
       <div class="kpi-cards">
-        <div class="kpi-card"><span class="kpi-label">Total Unpaid Amount</span><span class="kpi-value">¥{{ kpis.totalUnpaid.toLocaleString() }}</span></div>
-        <div class="kpi-card kpi-warn"><span class="kpi-label">Overdue Amount</span><span class="kpi-value kpi-amber">¥{{ kpis.overdue.toLocaleString() }}</span></div>
-        <div class="kpi-card"><span class="kpi-label">Collected This Month</span><span class="kpi-value">¥{{ kpis.collected.toLocaleString() }}</span></div>
-        <div class="kpi-card"><span class="kpi-label">Remaining This Month</span><span class="kpi-value">¥{{ kpis.remaining.toLocaleString() }}</span></div>
+        <div class="kpi-card"><span class="kpi-label">Total Unpaid Amount</span><span class="kpi-value">¥{{ format(kpis.totalUnpaid) }}</span></div>
+        <div class="kpi-card kpi-warn"><span class="kpi-label">Overdue Amount</span><span class="kpi-value kpi-amber">¥{{ format(kpis.overdue) }}</span></div>
+        <div class="kpi-card"><span class="kpi-label">Collected This Month</span><span class="kpi-value">¥{{ format(kpis.collected) }}</span></div>
+        <div class="kpi-card"><span class="kpi-label">Remaining This Month</span><span class="kpi-value">¥{{ format(kpis.remaining) }}</span></div>
       </div>
 
       <!-- Filter Bar -->
@@ -38,9 +38,11 @@
           <svg viewBox="0 0 20 20" width="14" height="14" class="date-icon"><rect x="2" y="4" width="16" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h16M6 2v4M14 2v4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           <input type="date" class="form-input date-input" v-model="f.to" placeholder="End Date" />
         </div>
-        <button class="btn btn-primary" @click="search">Search</button>
-        <button class="btn btn-outline" @click="reset">Reset</button>
+        <button class="btn btn-primary" @click="search" :disabled="loading">Search</button>
+        <button class="btn btn-outline" @click="reset" :disabled="loading">Reset</button>
       </div>
+
+      <div v-if="error" class="error-msg">{{ error }}</div>
 
       <!-- Table -->
       <div class="data-card">
@@ -51,114 +53,211 @@
             <th>Status</th><th>Collection Progress</th><th>Action</th>
           </tr></thead>
           <tbody>
-            <tr v-for="row in rows" :key="row.id" class="data-row">
+            <tr v-if="loading && displayedRows.length === 0">
+              <td colspan="10" class="empty-cell">Loading receivables...</td>
+            </tr>
+            <tr v-for="row in displayedRows" :key="row.id" class="data-row">
               <td class="mono">{{ row.inv }}</td><td>{{ row.cust }}</td><td>{{ row.date }}</td><td>{{ row.due }}</td>
-              <td class="num mono">¥{{ row.amt.toLocaleString() }}</td>
-              <td class="num mono">¥{{ row.rcv.toLocaleString() }}</td>
-              <td class="num mono strong">¥{{ row.unp.toLocaleString() }}</td>
+              <td class="num mono">¥{{ format(row.amt) }}</td>
+              <td class="num mono">¥{{ format(row.rcv) }}</td>
+              <td class="num mono strong">¥{{ format(row.unp) }}</td>
               <td><span class="stag" :class="sc(row.st)">{{ row.st }}</span></td>
               <td><div class="prog-cell"><div class="prog-bar"><div class="prog-fill" :style="{width:row.pct+'%'}"></div></div><span class="prog-pct">{{ row.pct }}%</span></div></td>
               <td>
-                <a class="link" @click="handleClear(row)">Post Payment</a>
+                <a class="link" :class="{disabled: postingId === row.id}" @click="handleClear(row)">
+                  {{ postingId === row.id ? 'Posting...' : 'Post Payment' }}
+                </a>
               </td>
             </tr>
-            <tr v-if="rows.length === 0"><td colspan="10" style="text-align:center;padding:40px;color:#999;">No unpaid receivables found.</td></tr>
+            <tr v-if="!loading && displayedRows.length === 0"><td colspan="10" class="empty-cell">No unpaid receivables found.</td></tr>
           </tbody>
         </table>
         <div class="table-footer">
-          <div class="tf-left"><span class="tf-total">Total 18 items</span><select class="form-select form-select-sm" style="width:80px"><option>10 / page</option><option>20</option><option>50</option></select></div>
+          <div class="tf-left"><span class="tf-total">Total {{ displayedRows.length }} items</span><select class="form-select form-select-sm" style="width:80px"><option>10 / page</option><option>20</option><option>50</option></select></div>
           <div class="pager"><button class="pg-btn">1</button><button class="pg-btn active">2</button><button class="pg-btn">3</button></div>
           <div class="tf-right"><span class="tf-label">Go to</span><input type="text" class="pg-input" placeholder="page" /></div>
         </div>
       </div>
     </div>
+    <SuccessModal
+      v-model:visible="successVisible"
+      title="Payment Posted"
+      :message="successMsg"
+      @confirm="onSuccessConfirm"
+    />
   </MainLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import MainLayout from '@/layout/MainLayout.vue'
-import axios from 'axios'
+import SuccessModal from '@/components/SuccessModal.vue'
+import { fetchOpenAR, fetchInvoices, createReceipt } from '@/api'
+import type { OpenAccountReceivable, Invoice } from '@/api/modules/finance'
 
-const autoRefresh=ref(true); const refreshInterval=ref('30s')
-const f=reactive({customer:'',invoice:'',status:'',from:'',to:''})
-interface R{id:string;inv:string;cust:string;date:string;due:string;amt:number;rcv:number;unp:number;st:string;pct:number}
-const rows=ref<R[]>([])
+const autoRefresh = ref(true)
+const refreshInterval = ref('30s')
+const f = reactive({ customer: '', invoice: '', status: '', from: '', to: '' })
 
-const kpis = reactive({
-  totalUnpaid: 0,
-  overdue: 0,
-  collected: 0,
-  remaining: 0
+const rawOpenAR = ref<OpenAccountReceivable[]>([])
+const invoiceMap = ref<Record<string, Invoice>>({})
+const loading = ref(false)
+const error = ref('')
+const postingId = ref('')
+const successVisible = ref(false)
+const successMsg = ref('')
+
+let refreshTimer: ReturnType<typeof setInterval> | null = null
+
+const allRows = computed(() => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return rawOpenAR.value.map((i: any) => {
+    const invoice = invoiceMap.value[i.invoice_id]
+    const amt = parseFloat(i.receivable_amount) || 0
+    const rcv = parseFloat(i.received_amount) || 0
+    const unp = Math.max(0, amt - rcv)
+    const dueDate = i.due_date ? new Date(i.due_date) : null
+    let st = 'Unpaid'
+    if (rcv >= amt) st = 'Paid'
+    else if (rcv > 0) st = 'Partially Paid'
+    if (dueDate && dueDate < today && rcv < amt) st = 'Overdue'
+    const invoiceDate = invoice?.invoice_date || i.invoice_date || 'N/A'
+    return {
+      id: i.open_ar_id,
+      inv: i.invoice_id,
+      cust: invoice?.payer || invoice?.sold_to_party || 'Unknown',
+      date: invoiceDate,
+      due: i.due_date || 'N/A',
+      amt,
+      rcv,
+      unp,
+      st,
+      pct: amt > 0 ? Math.round((rcv / amt) * 100) : 0,
+      rawDue: i.due_date || '',
+    }
+  })
 })
 
-async function fetchData() {
-  try {
-    const res = await axios.get("/api/v1/finance/ar/open")
-    if (res.data.success) {
-      rows.value = res.data.data.items.map((i: any) => {
-        const amt = parseFloat(i.receivable_amount) || 0
-        const rcv = parseFloat(i.received_amount) || 0
-        const unp = amt - rcv
-        return {
-          id: i.open_ar_id,
-          inv: i.invoice_id,
-          cust: i.invoice?.payer || 'Unknown',
-          date: i.invoice?.invoice_date || 'N/A',
-          due: i.due_date || 'N/A',
-          amt: amt,
-          rcv: rcv,
-          unp: unp,
-          st: i.status === 'UNPAID' ? 'Unpaid' : 'Partially Paid',
-          pct: amt > 0 ? Math.round((rcv / amt) * 100) : 0
-        }
-      })
-      
-      // Update KPIs
-      kpis.totalUnpaid = rows.value.reduce((acc, r) => acc + r.unp, 0)
-      kpis.collected = rows.value.reduce((acc, r) => acc + r.rcv, 0)
-      kpis.remaining = kpis.totalUnpaid
-    }
-  } catch (err) {
-    console.error("Fetch open AR failed:", err)
+const displayedRows = computed(() => {
+  return allRows.value.filter(r => {
+    if (f.customer && !r.cust.toLowerCase().includes(f.customer.toLowerCase())) return false
+    if (f.invoice && !r.inv.toLowerCase().includes(f.invoice.toLowerCase())) return false
+    if (f.status && r.st !== f.status) return false
+    if (f.from && r.date && r.date < f.from) return false
+    if (f.to && r.date && r.date > f.to) return false
+    return true
+  })
+})
+
+const kpis = computed(() => {
+  const totalUnpaid = displayedRows.value.reduce((acc, r) => acc + r.unp, 0)
+  const overdue = displayedRows.value.filter(r => r.st === 'Overdue').reduce((acc, r) => acc + r.unp, 0)
+  const collected = displayedRows.value.reduce((acc, r) => acc + r.rcv, 0)
+  return {
+    totalUnpaid,
+    overdue,
+    collected,
+    remaining: totalUnpaid
   }
+})
+
+function format(n: number) {
+  return Math.round(n).toLocaleString()
+}
+
+function sc(s: string) {
+  const m: Record<string, string> = { 'Unpaid': 's-unpaid', 'Paid': 's-paid', 'Partially Paid': 's-partial', 'Overdue': 's-overdue' }
+  return m[s] || ''
+}
+
+async function fetchData() {
+  loading.value = true
+  error.value = ''
+  try {
+    const [arRes, invRes] = await Promise.all([
+      fetchOpenAR({ limit: 1000 }),
+      fetchInvoices({ limit: 1000 })
+    ])
+    rawOpenAR.value = arRes.data.items || []
+    const invItems = invRes.data.items || []
+    invoiceMap.value = invItems.reduce((acc: Record<string, Invoice>, inv: Invoice) => {
+      if (inv.invoice_id) acc[inv.invoice_id] = inv
+      return acc
+    }, {})
+  } catch (err: any) {
+    error.value = err?.response?.data?.detail || err.message || 'Failed to load receivables'
+    console.error('Fetch open AR failed:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+function startRefreshTimer() {
+  if (refreshTimer) clearInterval(refreshTimer)
+  if (!autoRefresh.value) return
+  const ms = refreshInterval.value === '30s' ? 30000 : refreshInterval.value === '60s' ? 60000 : 300000
+  refreshTimer = setInterval(() => fetchData(), ms)
+}
+
+function search() { fetchData() }
+function reset() {
+  Object.assign(f, { customer: '', invoice: '', status: '', from: '', to: '' })
+  fetchData()
+}
+
+function exportData() {
+  alert('Export feature will be implemented in the reporting module.')
+}
+
+async function handleClear(row: any) {
+  if (postingId.value) return
+  const amount = prompt(`Enter payment amount for invoice ${row.inv}:`, row.unp.toString())
+  if (!amount) return
+  const payAmt = parseFloat(amount)
+  if (isNaN(payAmt) || payAmt <= 0) {
+    alert('Invalid amount')
+    return
+  }
+  if (payAmt > row.unp) {
+    alert('Payment amount cannot exceed unpaid amount')
+    return
+  }
+  postingId.value = row.id
+  try {
+    await createReceipt({
+      receipt_id: `RCT${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
+      invoice_id: row.inv,
+      payer: row.cust,
+      receipt_amount: payAmt,
+      payment_method: 'BANK_TRANSFER',
+      currency: 'CNY',
+      receipt_date: new Date().toISOString().split('T')[0]
+    })
+    successMsg.value = `Payment ¥${payAmt.toLocaleString()} posted successfully for invoice ${row.inv}.`
+    successVisible.value = true
+    fetchData()
+  } catch (err: any) {
+    alert('Post receipt failed: ' + (err?.response?.data?.detail || err?.response?.data?.message || err.message))
+  } finally {
+    postingId.value = ''
+  }
+}
+
+function onSuccessConfirm() {
+  fetchData()
 }
 
 onMounted(() => {
   fetchData()
-  setInterval(() => { if(autoRefresh.value) fetchData() }, 30000)
+  startRefreshTimer()
 })
 
-function sc(s:string){const m:Record<string,string>={'Unpaid':'s-unpaid','Paid':'s-paid','Partially Paid':'s-partial','Overdue':'s-overdue'};return m[s]||''}
-function search(){}
-function reset(){Object.assign(f,{customer:'',invoice:'',status:'',from:'',to:''})}
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer)
+})
 
-async function handleClear(row: R) {
-  const amount = prompt(`Enter payment amount for invoice ${row.inv}:`, row.unp.toString())
-  if (amount) {
-    const payAmt = parseFloat(amount)
-    if (isNaN(payAmt) || payAmt <= 0) {
-      alert("Invalid amount")
-      return
-    }
-    try {
-      const res = await axios.post("/api/v1/finance/receipts", {
-        receipt_id: `RCT${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
-        invoice_id: row.inv,
-        payer: row.cust,
-        receipt_amount: payAmt,
-        payment_method: 'BANK_TRANSFER',
-        currency: 'CNY'
-      })
-      if (res.data.success) {
-        alert("Payment posted successfully!")
-        fetchData()
-      }
-    } catch (err: any) {
-      alert("Post receipt failed: " + (err.response?.data?.detail || err.message))
-    }
-  }
-}
+watch([autoRefresh, refreshInterval], startRefreshTimer)
 </script>
 
 <style scoped>
@@ -187,6 +286,15 @@ async function handleClear(row: R) {
 .date-icon{position:absolute;left:10px;color:rgba(18,55,42,0.3);pointer-events:none;z-index:1;}
 .date-input{padding-left:30px;min-width:150px;}
 
+.error-msg {
+  color: #D9534F;
+  font-size: 13px;
+  padding: 10px 14px;
+  background: rgba(217, 83, 79, 0.08);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
 .data-card{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:14px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 2px 6px rgba(173,188,159,0.1);overflow:hidden;}
 .data-table{width:100%;border-collapse:collapse;font-size:13px;}
 .data-table th{text-align:left;padding:12px 14px;font-size:10px;font-weight:700;color:rgba(18,55,42,0.45);text-transform:uppercase;letter-spacing:0.8px;background:rgba(173,188,159,0.08);border-bottom:1px solid rgba(173,188,159,0.2);}
@@ -196,6 +304,7 @@ async function handleClear(row: R) {
 .data-row:hover{background:rgba(67,104,80,0.025);}
 .mono{font-family:'SF Mono',Consolas,monospace;font-size:12px;}
 .strong{font-weight:700;}
+.empty-cell{text-align:center;padding:40px;color:rgba(18,55,42,0.4);}
 
 .stag{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;}
 .s-unpaid{background:rgba(67,104,80,0.1);color:#436850;}
@@ -209,6 +318,7 @@ async function handleClear(row: R) {
 .prog-pct{font-size:11px;color:rgba(18,55,42,0.4);min-width:30px;}
 .link{color:#436850;cursor:pointer;font-weight:600;font-size:12px;}
 .link:hover{text-decoration:underline;}
+.link.disabled{color:rgba(18,55,42,0.3);cursor:not-allowed;text-decoration:none;}
 
 .table-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid rgba(173,188,159,0.15);}
 .tf-left{display:flex;align-items:center;gap:10px;}
@@ -223,8 +333,10 @@ async function handleClear(row: R) {
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all 0.2s;font-family:inherit;}
 .btn-primary{background:linear-gradient(135deg,#436850,#365440);color:#FBFADA;border:none;box-shadow:0 2px 8px rgba(67,104,80,0.25);}
 .btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(67,104,80,0.3);}
+.btn-primary:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
 .btn-outline{background:none;color:rgba(18,55,42,0.5);border:1px solid rgba(173,188,159,0.35);}
 .btn-outline:hover{border-color:rgba(18,55,42,0.3);color:#12372A;}
+.btn-outline:disabled{opacity:0.6;cursor:not-allowed;}
 .btn-icon{background:none;border:1px solid rgba(173,188,159,0.3);border-radius:8px;padding:6px;cursor:pointer;color:rgba(18,55,42,0.45);display:flex;transition:all 0.2s;}
 .btn-icon:hover{border-color:#436850;color:#436850;background:rgba(67,104,80,0.05);}
 </style>

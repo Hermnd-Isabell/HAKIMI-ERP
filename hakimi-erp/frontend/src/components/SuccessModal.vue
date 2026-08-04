@@ -6,7 +6,7 @@
           <div class="sm-check-circle">
             <svg viewBox="0 0 32 32" width="24" height="24"><path d="M8 16l6 6 10-10" fill="none" stroke="#FBFADA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
-          <h3 class="sm-title">Success</h3>
+          <h3 class="sm-title">{{ title }}</h3>
         </div>
         <div class="sm-divider"></div>
         <div class="sm-body">
@@ -15,12 +15,12 @@
             <div class="sm-doc-badge"><svg viewBox="0 0 14 14" width="8" height="8"><path d="M3 7l3 3 5-5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           </div>
           <div class="sm-msg">
-            <p class="sm-line1">Journal entry 1400000063 (2026, US00)</p>
-            <p class="sm-line2">successfully posted</p>
+            <p class="sm-line1">{{ message }}</p>
+            <p class="sm-line2" v-if="subtitle">{{ subtitle }}</p>
           </div>
         </div>
         <div class="sm-footer">
-          <button class="btn btn-secondary" @click="close">Display</button>
+          <button class="btn btn-secondary" @click="close">{{ displayLabel }}</button>
           <button class="btn btn-primary" @click="confirm">{{ actionLabel }}</button>
         </div>
       </div>
@@ -29,10 +29,27 @@
 </template>
 
 <script setup lang="ts">
-withDefaults(defineProps<{visible?:boolean;message?:string;actionLabel?:string}>(),{visible:false,message:'',actionLabel:'Post Next Payment'})
-const emit=defineEmits<{'update:visible':[v:boolean];confirm:[]}>()
-function close(){emit('update:visible',false)}
-function confirm(){emit('confirm');emit('update:visible',false)}
+withDefaults(defineProps<{
+  visible?: boolean
+  title?: string
+  message?: string
+  subtitle?: string
+  actionLabel?: string
+  displayLabel?: string
+}>(), {
+  visible: false,
+  title: 'Success',
+  message: 'Operation completed successfully',
+  subtitle: '',
+  actionLabel: 'OK',
+  displayLabel: 'Display'
+})
+const emit = defineEmits<{
+  'update:visible': [v: boolean]
+  confirm: []
+}>()
+function close() { emit('update:visible', false) }
+function confirm() { emit('confirm'); emit('update:visible', false) }
 </script>
 
 <style scoped>
