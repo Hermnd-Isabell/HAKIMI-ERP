@@ -6,6 +6,8 @@ export const API_BASE = '/api'
 export const MASTER_API = {
   partners: `${API_BASE}/v1/master/partners/`,
   materials: `${API_BASE}/v1/master/materials/`,
+  pricingConditions: `${API_BASE}/v1/master/materials/pricing-conditions`,
+  salesOrganizations: `${API_BASE}/v1/master/materials/sales-organizations`,
 } as const
 
 export const SALES_API = {
