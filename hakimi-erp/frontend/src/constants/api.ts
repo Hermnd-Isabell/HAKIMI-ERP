@@ -1,4 +1,4 @@
-// API endpoint constants.
+﻿// API endpoint constants.
 // Use these instead of scattering path strings across views.
 
 export const API_BASE = '/api'
@@ -23,7 +23,14 @@ export const LOGISTICS_API = {
   deliveries: `${API_BASE}/v1/logistics/deliveries`,
   deliveryById: (id: string) => `${API_BASE}/v1/logistics/deliveries/${id}`,
   createFromSo: (soId: string) => `${API_BASE}/v1/logistics/deliveries/from-so/${soId}`,
+  startPicking: (id: string) => `${API_BASE}/v1/logistics/deliveries/${id}/start-picking`,
+  confirmPicking: (id: string) => `${API_BASE}/v1/logistics/deliveries/${id}/confirm-picking`,
+  pickBatch: (id: string) => `${API_BASE}/v1/logistics/deliveries/${id}/pick-batch`,
+  pickRecords: (id: string) => `${API_BASE}/v1/logistics/deliveries/${id}/pick-records`,
+  ship: (id: string) => `${API_BASE}/v1/logistics/deliveries/${id}/ship`,
   postPgi: (id: string) => `${API_BASE}/v1/logistics/deliveries/${id}/pgi`,
+  soRemaining: (soId: string) => `${API_BASE}/v1/logistics/sales-orders/${soId}/remaining-quantities`,
+  storageLocations: `${API_BASE}/v1/logistics/storage-locations`,
 } as const
 
 export const FINANCE_API = {

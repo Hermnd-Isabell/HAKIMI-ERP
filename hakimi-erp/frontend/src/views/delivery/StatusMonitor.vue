@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <MainLayout>
     <div class="page">
       <div class="header-card">
@@ -16,7 +16,7 @@
         <input type="text" class="form-input" v-model="f.dn" placeholder="Delivery No." />
         <input type="text" class="form-input" v-model="f.sn" placeholder="Sales Order No." />
         <input type="text" class="form-input" v-model="f.cn" placeholder="Customer Name" />
-        <select class="form-select" v-model="f.st"><option value="">All Statuses</option><option>Creating</option><option>Picking</option><option>Shipped</option><option>Completed</option><option>Cancelled</option></select>
+        <select class="form-select" v-model="f.st"><option value="">All Statuses</option><option>Creating</option><option>Picking</option><option>Picked</option><option>In Transit</option><option>Completed</option><option>Cancelled</option></select>
         <button class="btn btn-primary" @click="search" :disabled="loading">Search</button>
         <button class="btn btn-outline" @click="reset" :disabled="loading">Reset</button>
       </div>
@@ -26,35 +26,37 @@
       <div class="data-card">
         <div class="table-scroll"><table class="data-table">
           <thead><tr>
-            <th class="sticky-left">Delivery No.</th><th>Sales Order No.</th><th>Customer Name</th><th>Delivery Date</th><th>Planned GI Date</th><th>Status</th>
-            <th class="prog-hdr">Progress</th><th class="num">Delivered / Total</th><th class="sticky-right">Action</th>
+            <th class="sticky-left">Del. No.</th><th>Sales Order</th><th>Customer</th><th>Planned GI</th><th>Status</th>
+            <th class="prog-hdr">Progress</th><th class="num">Qty (Pick/Total)</th><th class="sticky-right">Action</th>
           </tr></thead>
           <tbody>
             <tr v-if="loading && displayedRows.length === 0"><td colspan="9" class="empty-cell">Loading deliveries...</td></tr>
             <tr v-for="row in displayedRows" :key="row.id" class="data-row">
-              <td class="sticky-left mono">{{ row.dn }}</td><td class="mono">{{ row.sn }}</td><td>{{ row.cn }}</td><td>{{ row.dd }}</td><td>{{ row.gi }}</td>
+              <td class="sticky-left mono">{{ row.dn }}</td><td class="mono">{{ row.sn }}</td><td>{{ row.cn }}</td><td>{{ row.gi }}</td>
               <td><span class="stag" :class="sc(row.st)">{{ row.st }}</span></td>
               <td class="prog-hdr"><div class="ms-bar">
-                <div v-for="(m,i) in milestones" :key="i" class="ms-step">
+                <div v-for="(m,i) in milestones" :key="i" class="ms-step" :style="{minWidth: i===0?'48px':'46px'}">
                   <div class="ms-dot" :class="{done:row.si>=i,cur:row.si===i}"></div>
-                  <div v-if="i<3" class="ms-line" :class="{done:row.si>i}"></div>
+                  <div v-if="i < milestones.length - 1" class="ms-line" :class="{done:row.si>i}"></div>
                   <span class="ms-lbl">{{ m }}</span>
                 </div>
               </div></td>
-              <td class="num mono">{{ row.dt }}</td>
+              <td class="num mono qty-cell">{{ row.dt }}</td>
               <td class="sticky-right">
-                <a class="link" @click="$router.push('/delivery/detail/'+row.id)">View Details</a>
-                <a v-if="row.canPgi" class="link pgi-link" :class="{disabled: postingId === row.id}" @click="postPgi(row)">
-                  {{ postingId === row.id ? 'Posting...' : 'Post GI' }}
-                </a>
+                <div class="row-actions">
+                  <a class="link" @click="$router.push('/delivery/detail/'+row.id)">View Details</a>
+                  <a v-if="row.actionLabel" class="link pgi-link" :class="{disabled: postingId === row.id}" @click="processDelivery(row)">
+                    {{ postingId === row.id ? 'Processing...' : row.actionLabel }}
+                  </a>
+                </div>
               </td>
             </tr>
             <tr v-if="!loading && displayedRows.length === 0"><td colspan="9" class="empty-cell">No deliveries found.</td></tr>
           </tbody>
         </table></div>
         <div class="table-footer">
-          <div class="tf-left"><span class="tf-total">Total {{ displayedRows.length }} items</span><select class="form-select form-select-sm" style="width:80px"><option>10 / page</option><option>20</option><option>50</option></select></div>
-          <div class="pager"><button class="pg-btn active">1</button><button class="pg-btn">2</button><button class="pg-btn">3</button></div>
+          <div class="tf-left"><span class="tf-total">Total {{ pagination.total }} items</span><select class="form-select form-select-sm" style="width:80px"><option>10 / page</option><option>20</option><option>50</option></select></div>
+          <div class="pager"><button v-for="p in Math.min(pagination.total_pages, 5)" :key="p" class="pg-btn" :class="{active: p === currentPage}" @click="goPage(p)">{{ p }}</button></div>
           <div class="tf-right"><span class="tf-label">Go to</span><input type="text" class="pg-input" placeholder="page" /></div>
         </div>
       </div>
@@ -62,95 +64,118 @@
   </MainLayout>
 </template>
 
+
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import MainLayout from '@/layout/MainLayout.vue'
-import { fetchDeliveries, postGoodsIssue, fetchPartners } from '@/api'
-import type { Delivery } from '@/api/modules/logistics'
+import { confirmPicking, fetchDeliveries, postGoodsIssue, shipDelivery, startPicking } from '@/api/modules/logistics'
+import type { DeliveryListItem } from '@/api/modules/logistics'
+import { fetchPartners } from '@/api/modules/master'
 import type { Partner } from '@/api/modules/master'
 
-const ar = ref(true)
+const router = useRouter()
+const ar = ref(false)
 const ri = ref('30s')
 const f = reactive({ dn: '', sn: '', cn: '', st: '' })
 
-const rawDeliveries = ref<Delivery[]>([])
-const partnerMap = ref<Record<string, Partner>>({})
+const rawItems = ref<DeliveryListItem[]>([])
+const partnerMap = ref<Record<string, string>>({})
 const loading = ref(false)
 const error = ref('')
 const postingId = ref('')
+const pagination = ref({ page: 1, page_size: 20, total: 0, total_pages: 1 })
+const currentPage = ref(1)
 
 let refreshTimer: ReturnType<typeof setInterval> | null = null
-const milestones = ['Created', 'Picked', 'Shipped', 'Completed']
+const milestones = ['Created', 'Picking', 'Picked', 'PGI']
 
-function computeStatus(i: any) {
-  const status = i.delivery_status
-  if (status === 'CANCELLED') return { st: 'Cancelled', si: -1, canPgi: false }
-  if (status === 'PGI_DONE') {
-    if (i.actual_gi_date) return { st: 'Completed', si: 3, canPgi: false }
-    return { st: 'Shipped', si: 2, canPgi: false }
-  }
-  if (i.picking_date) return { st: 'Picking', si: 1, canPgi: true }
-  return { st: 'Creating', si: 0, canPgi: true }
+// Status mapping
+const STATUS_LABEL: Record<string, string> = {
+  OPEN: 'Creating',
+  PICKING: 'Picking',
+  SHIPPED: 'Picked',
+  IN_TRANSIT: 'In Transit',
+  PGI_DONE: 'Completed',
+  CANCELLED: 'Cancelled',
 }
 
-const allRows = computed(() => {
-  return rawDeliveries.value.map((i: any) => {
-    const { st, si, canPgi } = computeStatus(i)
-    const total = (i.items || []).reduce((acc: number, it: any) => acc + (parseFloat(it.delivery_quantity) || 0), 0)
-    const delivered = st === 'Completed' || st === 'Shipped' ? total : 0
-    return {
-      id: i.delivery_id,
-      dn: i.delivery_id,
-      sn: i.sales_order_id || 'N/A',
-      cn: partnerMap.value[i.ship_to_party]?.bp_name || i.ship_to_party || 'Unknown',
-      dd: i.planned_delivery_date || 'N/A',
-      gi: i.planned_gi_date || 'N/A',
-      st,
-      si,
-      dt: `${delivered} / ${total}`,
-      canPgi,
-      deliveryId: i.delivery_id
-    }
-  })
-})
+const STATUS_INDEX: Record<string, number> = {
+  CANCELLED: -1,
+  OPEN: 0,
+  PICKING: 1,
+  SHIPPED: 2,
+  IN_TRANSIT: 2,
+  PGI_DONE: 3,
+}
 
-const displayedRows = computed(() => {
-  return allRows.value.filter(r => {
-    if (f.dn && !r.dn.toLowerCase().includes(f.dn.toLowerCase())) return false
-    if (f.sn && !r.sn.toLowerCase().includes(f.sn.toLowerCase())) return false
-    if (f.cn && !r.cn.toLowerCase().includes(f.cn.toLowerCase())) return false
-    if (f.st && r.st !== f.st) return false
-    return true
-  })
-})
+function mapRow(item: DeliveryListItem) {
+  const st = STATUS_LABEL[item.delivery_status] || item.delivery_status
+  const si = STATUS_INDEX[item.delivery_status] ?? 0
+  const actionMap: Record<string, string> = {
+    OPEN: 'Start Picking',
+    PICKING: 'Pick Items',
+    SHIPPED: 'Ship',
+    IN_TRANSIT: 'Post GI',
+  }
+  const total = item.total_quantity ?? 0
+  const delivered = item.delivered_quantity ?? 0
+
+  return {
+    id: item.delivery_id,
+    dn: item.delivery_id,
+    sn: item.sales_order_id || 'N/A',
+    cn: item.ship_to_party_name || item.ship_to_party || 'N/A',
+    dd: item.planned_delivery_date || 'N/A',
+    gi: item.planned_gi_date || 'N/A',
+    st,
+    si,
+    dt: `${Number(delivered).toFixed(0)} / ${Number(total).toFixed(0)}`,
+    rawStatus: item.delivery_status,
+    actionLabel: actionMap[item.delivery_status] || '',
+  }
+}
+
+const displayedRows = computed(() => rawItems.value.map(mapRow))
 
 function sc(s: string) {
   const m: Record<string, string> = {
-    'Completed': 's-done',
-    'Shipped': 's-ship',
-    'Picking': 's-pick',
-    'Creating': 's-creating',
-    'Cancelled': 's-cancel'
+    Completed: 's-done',
+    Picked: 's-ship',
+    Picking: 's-pick',
+    Creating: 's-creating',
+    Cancelled: 's-cancel',
   }
   return m[s] || ''
 }
 
-async function fetchData() {
+async function loadPartners() {
+  try {
+    const res = await fetchPartners({ limit: 999 })
+    const items: Partner[] = res.items || []
+    partnerMap.value = items.reduce((acc: Record<string, string>, p: Partner) => {
+      if (p.bp_id) acc[p.bp_id] = p.bp_name
+      return acc
+    }, {})
+  } catch (e) { /* partner names already served by backend; fallback only */ }
+}
+
+async function loadDeliveries() {
   loading.value = true
   error.value = ''
   try {
-    const [delRes, partRes] = await Promise.all([
-      fetchDeliveries({ limit: 1000 }),
-      fetchPartners({ limit: 1000 })
-    ])
-    rawDeliveries.value = delRes.data.items || []
-    const partners = partRes.data.items || []
-    partnerMap.value = partners.reduce((acc: Record<string, Partner>, p: Partner) => {
-      if (p.bp_id) acc[p.bp_id] = p
-      return acc
-    }, {})
+    const res = await fetchDeliveries({
+      page: currentPage.value,
+      page_size: 20,
+      delivery_no: f.dn || undefined,
+      sales_order_no: f.sn || undefined,
+      customer_name: f.cn || undefined,
+      status: f.st || undefined,
+    })
+    rawItems.value = res.items || []
+    pagination.value = res.pagination || { page: 1, page_size: 20, total: 0, total_pages: 1 }
   } catch (err: any) {
-    error.value = err?.response?.data?.detail || err.message || 'Failed to load deliveries'
+    error.value = err?.message || 'Failed to load deliveries'
     console.error('Fetch status failed:', err)
   } finally {
     loading.value = false
@@ -161,33 +186,50 @@ function startRefreshTimer() {
   if (refreshTimer) clearInterval(refreshTimer)
   if (!ar.value) return
   const ms = ri.value === '30s' ? 30000 : ri.value === '60s' ? 60000 : 300000
-  refreshTimer = setInterval(() => fetchData(), ms)
+  refreshTimer = setInterval(() => loadDeliveries(), ms)
 }
 
-function search() { fetchData() }
+function search() {
+  currentPage.value = 1
+  loadDeliveries()
+}
+
 function reset() {
   Object.assign(f, { dn: '', sn: '', cn: '', st: '' })
-  fetchData()
+  currentPage.value = 1
+  loadDeliveries()
 }
 
-async function postPgi(row: any) {
+async function processDelivery(row: any) {
+  if (row.rawStatus === 'PICKING') {
+    router.push('/delivery/detail/' + row.id)
+    return
+  }
   if (postingId.value) return
-  if (!confirm(`Post Goods Issue for delivery ${row.dn}?`)) return
+  if (!confirm(`${row.actionLabel} for delivery ${row.dn}?`)) return
   postingId.value = row.id
   try {
-    await postGoodsIssue(row.deliveryId)
-    alert('Goods Issue posted successfully')
-    fetchData()
+    if (row.rawStatus === 'OPEN') await startPicking(row.id)
+    
+    else if (row.rawStatus === 'SHIPPED') await shipDelivery(row.id)
+    else if (row.rawStatus === 'IN_TRANSIT') await postGoodsIssue(row.id)
+    alert(`${row.actionLabel} completed`)
+    loadDeliveries()
   } catch (err: any) {
-    alert('Post GI failed: ' + (err?.response?.data?.detail || err?.response?.data?.message || err.message))
+    alert(`${row.actionLabel} failed: ` + (err?.message || 'Unknown error'))
   } finally {
     postingId.value = ''
   }
 }
 
-onMounted(() => {
-  fetchData()
-  startRefreshTimer()
+function goPage(p: number) {
+  if (p < 1 || p > pagination.value.total_pages) return
+  currentPage.value = p
+  loadDeliveries()
+}
+
+onMounted(async () => {
+  await Promise.all([loadPartners(), loadDeliveries()])
 })
 
 onUnmounted(() => {
@@ -196,6 +238,7 @@ onUnmounted(() => {
 
 watch([ar, ri], startRefreshTimer)
 </script>
+
 
 <style scoped>
 .page{padding:28px 36px;max-width:1340px;margin:0 auto;}
@@ -223,16 +266,17 @@ watch([ar, ri], startRefreshTimer)
 
 .data-card{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:14px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 2px 6px rgba(173,188,159,0.1);overflow:hidden;}
 .table-scroll{overflow-x:auto;}
-.data-table{width:100%;border-collapse:collapse;font-size:13px;min-width:1000px;}
+.data-table{width:100%;border-collapse:collapse;font-size:13px;min-width:1220px;}
 .data-table th{text-align:left;padding:12px 14px;font-size:10px;font-weight:700;color:rgba(18,55,42,0.45);text-transform:uppercase;letter-spacing:0.8px;background:rgba(173,188,159,0.08);border-bottom:1px solid rgba(173,188,159,0.2);white-space:nowrap;}
 .data-table th.num{text-align:right;}
 .data-table td{padding:11px 14px;border-bottom:1px solid rgba(173,188,159,0.08);color:#12372A;white-space:nowrap;}
 .data-table td.num{text-align:right;}
+.qty-cell{min-width:110px;}
 .data-row:hover{background:rgba(67,104,80,0.025);}
 .empty-cell{text-align:center;padding:40px;color:rgba(18,55,42,0.4);}
 .mono{font-family:'SF Mono',Consolas,monospace;font-size:12px;}
 .sticky-left{position:sticky;left:0;background:inherit;z-index:1;box-shadow:2px 0 4px rgba(18,55,42,0.03);}
-.sticky-right{position:sticky;right:0;background:inherit;z-index:1;box-shadow:-2px 0 4px rgba(18,55,42,0.03);}
+.sticky-right{position:sticky;right:0;background:inherit;z-index:1;box-shadow:-2px 0 4px rgba(18,55,42,0.03);min-width:180px;}
 
 .stag{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;}
 .s-done{background:rgba(67,104,80,0.1);color:#436850;}
@@ -241,7 +285,7 @@ watch([ar, ri], startRefreshTimer)
 .s-creating{background:rgba(240,173,78,0.12);color:#c98a20;}
 .s-cancel{background:rgba(217,83,79,0.1);color:#D9534F;}
 
-.prog-hdr{min-width:260px;}
+.prog-hdr{min-width:200px;}
 .ms-bar{display:flex;align-items:center;gap:0;padding-top:2px;}
 .ms-step{display:flex;flex-direction:column;align-items:center;position:relative;min-width:58px;}
 .ms-dot{width:10px;height:10px;border-radius:50%;border:2px solid rgba(173,188,159,0.35);background:#FBFADA;}
@@ -250,8 +294,8 @@ watch([ar, ri], startRefreshTimer)
 .ms-line{position:absolute;top:5px;left:50%;width:100%;height:2px;background:rgba(173,188,159,0.25);}
 .ms-line.done{background:#436850;}
 .ms-lbl{font-size:9px;color:rgba(18,55,42,0.3);margin-top:3px;white-space:nowrap;}
-.link{color:#436850;cursor:pointer;font-weight:600;font-size:12px;margin-left:10px;}
-.link:first-child{margin-left:0;}
+.row-actions{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:170px;}
+.link{color:#436850;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;}
 .link:hover{text-decoration:underline;}
 .link.disabled{color:rgba(18,55,42,0.3);cursor:not-allowed;text-decoration:none;}
 
@@ -273,3 +317,4 @@ watch([ar, ri], startRefreshTimer)
 .btn-outline:hover{border-color:rgba(18,55,42,0.3);color:#12372A;}
 .btn-outline:disabled{opacity:0.6;cursor:not-allowed;}
 </style>
+

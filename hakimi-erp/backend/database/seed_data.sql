@@ -298,4 +298,26 @@ INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date
 INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0006', 'INV0006', 'BP00006', 11058.72, '2026-08-03 16:45:24', 'BANK_TRANSFER', 'CNY', 'REF246289');
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+-- 21. Storage Locations (18)
+INSERT INTO storage_location (sloc_id, sloc_name, plant, warehouse_no, storage_type, storage_bin, description) VALUES
+('WH01-A01', 'Raw Material Shelf A01', 'PL01', 'WH01', 'RAW', 'A-01-01', 'Raw material storage area'),
+('WH01-A02', 'Raw Material Shelf A02', 'PL01', 'WH01', 'RAW', 'A-01-02', 'Raw material storage area'),
+('WH01-A03', 'Raw Material Shelf A03', 'PL01', 'WH01', 'RAW', 'A-01-03', 'Raw material storage area'),
+('WH01-B01', 'Semi-finished Shelf B01', 'PL01', 'WH01', 'SEMI', 'B-02-01', 'Semi-finished goods area'),
+('WH01-B02', 'Semi-finished Shelf B02', 'PL01', 'WH01', 'SEMI', 'B-02-02', 'Semi-finished goods area'),
+('WH01-C01', 'Finished Goods Shelf C01', 'PL01', 'WH01', 'FERT', 'C-03-01', 'Finished goods shipping area'),
+('WH01-C02', 'Finished Goods Shelf C02', 'PL01', 'WH01', 'FERT', 'C-03-02', 'Finished goods shipping area'),
+('WH01-C03', 'Finished Goods Shelf C03', 'PL01', 'WH01', 'FERT', 'C-03-03', 'Finished goods shipping area'),
+('WH02-A01', 'Bulk Storage Zone A', 'PL02', 'WH02', 'BULK', 'Z-A-01', 'Bulk chemical storage'),
+('WH02-A02', 'Bulk Storage Zone B', 'PL02', 'WH02', 'BULK', 'Z-A-02', 'Bulk chemical storage'),
+('WH02-B01', 'Hazardous Material Zone', 'PL02', 'WH02', 'HAZ', 'Z-B-01', 'Hazardous material segregated storage'),
+('WH02-C01', 'Cold Storage Room 1', 'PL02', 'WH02', 'COLD', 'Z-C-01', 'Temperature-controlled storage 2-8C'),
+('WH03-A01', 'High-rack Shelf 01', 'PL03', 'WH03', 'RACK', 'R-01-01', 'Automated high-rack storage'),
+('WH03-A02', 'High-rack Shelf 02', 'PL03', 'WH03', 'RACK', 'R-01-02', 'Automated high-rack storage'),
+('WH03-B01', 'Picking Zone Floor', 'PL03', 'WH03', 'PICK', 'P-01-01', 'Manual picking zone ground floor'),
+('1000-01', 'Main Warehouse Zone 1', '1000', 'WH01', 'FERT', 'M-01-01', 'Main plant storage zone 1'),
+('1000-02', 'Main Warehouse Zone 2', '1000', 'WH01', 'FERT', 'M-01-02', 'Main plant storage zone 2'),
+('1000-03', 'Outbound Staging Area', '1000', 'WH01', 'STAG', 'M-02-01', 'Outbound goods staging area');
 -- END --

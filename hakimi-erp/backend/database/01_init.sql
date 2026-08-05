@@ -117,6 +117,19 @@ CREATE TABLE IF NOT EXISTS `bp_relationship` (
     FOREIGN KEY (`bp_to`) REFERENCES `business_partner` (`bp_id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB COMMENT='业务伙伴关系';
 
+
+-- 3.5 storage_location (warehouse storage location master)
+CREATE TABLE IF NOT EXISTS `storage_location` (
+    `sloc_id` VARCHAR(10) NOT NULL COMMENT 'Storage location ID',
+    `sloc_name` VARCHAR(100) NOT NULL COMMENT 'Storage location name',
+    `plant` VARCHAR(20) NOT NULL COMMENT 'Associated plant',
+    `warehouse_no` VARCHAR(10) COMMENT 'Warehouse number',
+    `storage_type` VARCHAR(20) COMMENT 'Storage type: RAW/SEMI/FERT/BULK/HAZ/COLD/PICK/STAG',
+    `storage_bin` VARCHAR(20) COMMENT 'Shelf/bin coordinate',
+    `description` VARCHAR(255) COMMENT 'Description',
+    PRIMARY KEY (`sloc_id`)
+) ENGINE=InnoDB COMMENT='Warehouse storage location master data';
+
 -- ---------------------------------------------------------
 -- D2: MATERIAL MASTER DATA
 -- ---------------------------------------------------------
@@ -289,6 +302,10 @@ CREATE TABLE IF NOT EXISTS `delivery` (
     `actual_gi_date` DATETIME,
     `picking_date` DATE,
     `shipping_point` VARCHAR(20),
+    `carrier` VARCHAR(100) COMMENT 'Carrier',
+    `driver_name` VARCHAR(50) COMMENT 'Driver name',
+    `route` VARCHAR(100) COMMENT 'Route',
+    `tracking_no` VARCHAR(50) COMMENT 'Tracking No',
     PRIMARY KEY (`delivery_id`),
     FOREIGN KEY (`ship_to_party`) REFERENCES `business_partner` (`bp_id`) ON DELETE RESTRICT,
     FOREIGN KEY (`sales_order_id`) REFERENCES `sales_order` (`sales_order_id`) ON DELETE SET NULL
@@ -304,6 +321,11 @@ CREATE TABLE IF NOT EXISTS `delivery_item` (
     `delivery_quantity` DECIMAL(15,3),
     `sales_unit` VARCHAR(10),
     `item_description` VARCHAR(255),
+    `picked_quantity` DECIMAL(15,3) DEFAULT 0,
+    `plant` VARCHAR(20),
+    `storage_location` VARCHAR(10),
+    `item_status` VARCHAR(20) DEFAULT 'OPEN',
+    `order_quantity` DECIMAL(15,3) DEFAULT 0,
     PRIMARY KEY (`delivery_item_id`),
     UNIQUE KEY `uk_delivery_item` (`delivery_id`, `item_no`),
     FOREIGN KEY (`delivery_id`) REFERENCES `delivery` (`delivery_id`) ON DELETE CASCADE,
@@ -319,9 +341,24 @@ CREATE TABLE IF NOT EXISTS `goods_issue` (
     `posting_date` DATE NOT NULL,
     `goods_issue_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `warehouse` VARCHAR(20),
+    `batch_no` INT DEFAULT 1,
     PRIMARY KEY (`goods_issue_id`),
     FOREIGN KEY (`delivery_item_id`) REFERENCES `delivery_item` (`delivery_item_id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB COMMENT='发货过账';
+
+
+-- 6.4 pick_record (batch picking history)
+CREATE TABLE IF NOT EXISTS `pick_record` (
+    `pick_id` VARCHAR(20) NOT NULL,
+    `delivery_item_id` VARCHAR(20) NOT NULL,
+    `batch_no` INT NOT NULL COMMENT 'Pick batch number within the delivery',
+    `pick_quantity` DECIMAL(15,3) NOT NULL DEFAULT 0,
+    `storage_location` VARCHAR(10) COMMENT 'Storage location where pick occurred',
+    `pick_date` DATETIME NOT NULL COMMENT 'Pick date and time',
+    `picked_by` VARCHAR(50) COMMENT 'Operator who performed the pick',
+    PRIMARY KEY (`pick_id`),
+    FOREIGN KEY (`delivery_item_id`) REFERENCES delivery_item (delivery_item_id) ON DELETE RESTRICT
+) ENGINE=InnoDB COMMENT='Pick record for batch picking operations';
 
 -- ---------------------------------------------------------
 -- D5: FINANCIAL
