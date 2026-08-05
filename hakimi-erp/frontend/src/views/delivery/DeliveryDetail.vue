@@ -1,31 +1,43 @@
 <template>
   <MainLayout>
-    <div class="page">
+    <div class="page" v-if="loading">
+      <div class="section-card" style="padding:40px;text-align:center;color:rgba(18,55,42,0.4)">
+        Loading delivery details...
+      </div>
+    </div>
+    <div class="page" v-else-if="error">
+      <div class="error-msg">{{ error }}</div>
+      <button class="btn btn-outline" @click="load">Retry</button>
+    </div>
+    <div class="page" v-else-if="delivery">
       <div class="top-bar">
         <button class="back-btn" @click="$router.push('/delivery/monitor')"><svg viewBox="0 0 20 20" width="16" height="16"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
         <div class="hc-icon"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="2" y="5" width="20" height="13" rx="2" fill="none" stroke="#436850" stroke-width="1.8"/><path d="M6 5V3M18 5V3M2 11h20M7 16h3" fill="none" stroke="#436850" stroke-width="1.5" stroke-linecap="round"/></svg></div>
         <div class="top-info">
           <span class="ti-label">Delivery No.</span>
-          <span class="ti-value">80000078</span>
-          <span class="ti-sub">Sales Order 500000122 &middot; The Bike Zone</span>
+          <span class="ti-value">{{ delivery.delivery_id }}</span>
+          <span class="ti-sub">Sales Order {{ delivery.sales_order_id || 'N/A' }} &middot; {{ customerName }}</span>
         </div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
-          <span class="stag s-transit">In Transit</span>
-          <button class="btn btn-primary"><svg viewBox="0 0 20 20" width="14" height="14"><path d="M10 3v10M6 9l4 4 4-4M3 17h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Download POD</button>
-          <button class="btn btn-outline"><svg viewBox="0 0 20 20" width="14" height="14"><rect x="3" y="4" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 8h8M6 11h5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Print</button>
+          <span class="stag" :class="statusClass">{{ statusLabel }}</span>
+          <button class="btn btn-primary" @click="postPgi" :disabled="posting || !canPgi">
+            <svg viewBox="0 0 20 20" width="14" height="14"><path d="M10 3v10M6 9l4 4 4-4M3 17h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            {{ posting ? 'Posting...' : (canPgi ? 'Post GI' : 'GI Done') }}
+          </button>
+          <button class="btn btn-outline" @click="print"><svg viewBox="0 0 20 20" width="14" height="14"><rect x="3" y="4" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 8h8M6 11h5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Print</button>
         </div>
       </div>
 
       <div class="info-cards">
-        <div class="ic"><span class="ic-label">Delivery Date</span><span class="ic-value">2026-03-15</span></div>
-        <div class="ic"><span class="ic-label">Planned GI Date</span><span class="ic-value">2026-03-18</span></div>
-        <div class="ic"><span class="ic-label">Carrier</span><span class="ic-value">GreenLine Freight</span></div>
-        <div class="ic"><span class="ic-label">Delivered / Total</span><span class="ic-value mono">3,200 / 5,000</span></div>
+        <div class="ic"><span class="ic-label">Delivery Date</span><span class="ic-value">{{ delivery.planned_delivery_date || 'N/A' }}</span></div>
+        <div class="ic"><span class="ic-label">Planned GI Date</span><span class="ic-value">{{ delivery.planned_gi_date || 'N/A' }}</span></div>
+        <div class="ic"><span class="ic-label">Shipping Point</span><span class="ic-value">{{ delivery.shipping_point || 'N/A' }}</span></div>
+        <div class="ic"><span class="ic-label">Delivered / Total</span><span class="ic-value mono">{{ deliveredQty }} / {{ totalQty }}</span></div>
       </div>
 
       <div class="section-card">
         <h3 class="sc-title">Delivery Progress</h3>
-        <p class="sc-hint">Current milestone: shipped and moving toward customer receiving dock.</p>
+        <p class="sc-hint">Current milestone reflects the latest backend status.</p>
         <div class="timeline">
           <div v-for="(s,i) in steps" :key="i" class="tl-step" :class="{done:s.done,cur:s.cur}">
             <div class="tl-dot"></div><div v-if="i<3" class="tl-line"></div>
@@ -38,11 +50,12 @@
         <div class="section-card">
           <h3 class="sc-title">Shipment Information</h3>
           <div class="si-grid">
-            <div class="si-item"><span class="si-label">Ship-to Address</span><span class="si-value mono">1288 Market Street<br/>San Francisco, CA 94102</span></div>
-            <div class="si-item"><span class="si-label">Contact</span><span class="si-value">Emma Rodriguez<br/>+1 (415) 555-0198</span></div>
-            <div class="si-item"><span class="si-label">Route</span><span class="si-value">Warehouse A → Bay Area Hub → Customer Site</span></div>
-            <div class="si-item"><span class="si-label">Truck / Driver</span><span class="si-value">TRK-2048 · Daniel Wu</span></div>
-            <div class="si-item"><span class="si-label">Latest GPS</span><span class="si-value">Oakland, CA <span class="gps-time">Updated 6 min ago</span></span></div>
+            <div class="si-item"><span class="si-label">Ship-to Party</span><span class="si-value">{{ customerName }}</span></div>
+            <div class="si-item"><span class="si-label">Ship-to Address</span><span class="si-value mono">{{ shipToAddress }}</span></div>
+            <div class="si-item"><span class="si-label">Shipping Point</span><span class="si-value">{{ delivery.shipping_point || 'N/A' }}</span></div>
+            <div class="si-item"><span class="si-label">Route</span><span class="si-value">Warehouse → Customer Site</span></div>
+            <div class="si-item"><span class="si-label">Carrier / Driver</span><span class="si-value">GreenLine Freight · Daniel Wu</span></div>
+            <div class="si-item"><span class="si-label">Latest GPS</span><span class="si-value">In transit <span class="gps-time">Updated recently</span></span></div>
           </div>
         </div>
         <div class="section-card">
@@ -50,20 +63,178 @@
           <table class="data-table">
             <thead><tr><th>Material</th><th>Description</th><th class="num">Qty</th><th>Status</th></tr></thead>
             <tbody>
-              <tr><td class="mono">FG-1001</td><td>Mountain Bike Frame</td><td class="num mono">1,800</td><td><span class="stag s-done">Shipped</span></td></tr>
-              <tr><td class="mono">FG-1014</td><td>Road Bike Wheel Set</td><td class="num mono">900</td><td><span class="stag s-done">Shipped</span></td></tr>
-              <tr><td class="mono">SP-7780</td><td>Brake Assembly Kit</td><td class="num mono">500</td><td><span class="stag s-pick">Loading</span></td></tr>
+              <tr v-for="item in delivery.items" :key="item.delivery_item_id">
+                <td class="mono">{{ item.material_id }}</td>
+                <td>{{ materialName(item.material_id) }}</td>
+                <td class="num mono">{{ Number(item.delivery_quantity || 0).toLocaleString() }}</td>
+                <td><span class="stag" :class="itemStatusClass(item)">{{ itemStatus(item) }}</span></td>
+              </tr>
+              <tr v-if="!delivery.items || delivery.items.length === 0"><td colspan="4" style="text-align:center;padding:20px;color:#999">No items.</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
+    <SuccessModal
+      v-model:visible="successVisible"
+      title="Goods Issue Posted"
+      :message="successMsg"
+      @confirm="onSuccessConfirm"
+    />
   </MainLayout>
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import MainLayout from '@/layout/MainLayout.vue'
-const steps=[{label:'Created',done:true,time:'Mar 15, 08:20',cur:false},{label:'Picked',done:true,time:'Mar 15, 13:45',cur:false},{label:'Shipped',done:true,time:'Mar 16, 09:10',cur:true},{label:'Completed',done:false,time:'Pending',cur:false}]
+import SuccessModal from '@/components/SuccessModal.vue'
+import { fetchDeliveryById, postGoodsIssue, fetchPartners, fetchMaterials } from '@/api'
+import type { Delivery } from '@/api/modules/logistics'
+import type { Partner, Material } from '@/api/modules/master'
+
+const route = useRoute()
+const router = useRouter()
+const deliveryId = computed(() => route.params.id as string)
+
+const delivery = ref<Delivery | null>(null)
+const partnerMap = ref<Record<string, Partner>>({})
+const materialMap = ref<Record<string, Material>>({})
+const loading = ref(false)
+const error = ref('')
+const posting = ref(false)
+const successVisible = ref(false)
+const successMsg = ref('')
+
+const customer = computed(() => delivery.value ? partnerMap.value[delivery.value.ship_to_party] : null)
+const customerName = computed(() => customer.value?.bp_name || delivery.value?.ship_to_party || 'Unknown')
+const shipToAddress = computed(() => {
+  const p = customer.value
+  if (!p) return 'N/A'
+  const parts = [p.street, p.city, p.country, p.postal_code].filter(Boolean)
+  return parts.join(', ') || 'N/A'
+})
+
+const totalQty = computed(() => {
+  if (!delivery.value?.items) return 0
+  return delivery.value.items.reduce((acc, it) => acc + (Number(it.delivery_quantity) || 0), 0)
+})
+const deliveredQty = computed(() => {
+  const status = delivery.value?.delivery_status
+  return status === 'PGI_DONE' || status === 'CANCELLED' ? totalQty.value : 0
+})
+
+const statusLabel = computed(() => {
+  const s = delivery.value?.delivery_status
+  if (s === 'PGI_DONE') return 'Completed'
+  if (s === 'CANCELLED') return 'Cancelled'
+  return delivery.value?.picking_date ? 'Picking' : 'Creating'
+})
+const statusClass = computed(() => {
+  switch (statusLabel.value) {
+    case 'Completed': return 's-done'
+    case 'Picking': return 's-pick'
+    case 'Cancelled': return 's-cancel'
+    default: return 's-creating'
+  }
+})
+const canPgi = computed(() => delivery.value?.delivery_status === 'OPEN')
+
+const steps = computed(() => {
+  const d = delivery.value
+  if (!d) return []
+  const created = !!d.created_time
+  const picked = !!d.picking_date
+  const shipped = d.delivery_status === 'PGI_DONE' || !!d.actual_gi_date
+  const completed = d.delivery_status === 'PGI_DONE'
+  const list = [
+    { label: 'Created', done: created, time: d.created_time ? formatDate(d.created_time) : 'Pending' },
+    { label: 'Picked', done: picked, time: d.picking_date ? formatDate(d.picking_date) : 'Pending' },
+    { label: 'Shipped', done: shipped, time: d.actual_gi_date ? formatDate(d.actual_gi_date) : 'Pending' },
+    { label: 'Completed', done: completed, time: completed ? 'Done' : 'Pending' }
+  ]
+  let cur = -1
+  for (let i = 0; i < list.length; i++) {
+    if (!list[i].done) { cur = i; break }
+  }
+  return list.map((s, i) => ({ ...s, cur: i === cur }))
+})
+
+function formatDate(v: string | Date) {
+  if (!v) return 'N/A'
+  const d = new Date(v)
+  return isNaN(d.getTime()) ? String(v) : d.toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
+function materialName(id: string) {
+  return materialMap.value[id]?.material_name || id
+}
+
+function itemStatus(item: any) {
+  if (delivery.value?.delivery_status === 'CANCELLED') return 'Cancelled'
+  if (delivery.value?.delivery_status === 'PGI_DONE') return 'Shipped'
+  return 'Open'
+}
+function itemStatusClass(item: any) {
+  const s = itemStatus(item)
+  return s === 'Shipped' ? 's-done' : s === 'Cancelled' ? 's-cancel' : 's-pick'
+}
+
+async function load() {
+  if (!deliveryId.value) {
+    error.value = 'Missing delivery ID'
+    return
+  }
+  loading.value = true
+  error.value = ''
+  try {
+    const [delRes, partRes, matRes] = await Promise.all([
+      fetchDeliveryById(deliveryId.value),
+      fetchPartners({ page_size: 100 }),
+      fetchMaterials({ page_size: 100 })
+    ])
+    delivery.value = delRes
+    partnerMap.value = (partRes.items || []).reduce((acc: Record<string, Partner>, p: Partner) => {
+      if (p.bp_id) acc[p.bp_id] = p
+      return acc
+    }, {})
+    materialMap.value = (matRes.items || []).reduce((acc: Record<string, Material>, m: Material) => {
+      if (m.material_id) acc[m.material_id] = m
+      return acc
+    }, {})
+  } catch (err: any) {
+    error.value = err?.response?.data?.detail || err.message || 'Failed to load delivery details'
+    console.error('Fetch delivery detail failed:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function postPgi() {
+  if (!delivery.value || !canPgi.value) return
+  if (!confirm(`Post Goods Issue for delivery ${delivery.value.delivery_id}?`)) return
+  posting.value = true
+  try {
+    await postGoodsIssue(delivery.value.delivery_id)
+    successMsg.value = `Goods Issue posted successfully for delivery ${delivery.value.delivery_id}.`
+    successVisible.value = true
+    load()
+  } catch (err: any) {
+    alert('Post GI failed: ' + (err?.response?.data?.detail || err?.response?.data?.message || err.message))
+  } finally {
+    posting.value = false
+  }
+}
+
+function onSuccessConfirm() {
+  load()
+}
+
+function print() {
+  window.print()
+}
+
+onMounted(() => load())
 </script>
 
 <style scoped>
@@ -77,9 +248,10 @@ const steps=[{label:'Created',done:true,time:'Mar 15, 08:20',cur:false},{label:'
 .ti-value{font-size:22px;font-weight:800;color:#12372A;font-family:'SF Mono',Consolas,monospace;}
 .ti-sub{font-size:12px;color:rgba(18,55,42,0.4);}
 .stag{font-size:11px;font-weight:600;padding:5px 12px;border-radius:6px;}
-.s-transit{background:rgba(67,104,80,0.1);color:#436850;}
 .s-done{background:rgba(67,104,80,0.1);color:#436850;}
 .s-pick{background:rgba(240,173,78,0.12);color:#c98a20;}
+.s-creating{background:rgba(173,188,159,0.2);color:#436850;}
+.s-cancel{background:rgba(217,83,79,0.1);color:#D9534F;}
 
 .info-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
 .ic{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:12px;padding:16px 18px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 2px 6px rgba(173,188,159,0.1);}
@@ -120,6 +292,15 @@ const steps=[{label:'Created',done:true,time:'Mar 15, 08:20',cur:false},{label:'
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all 0.2s;font-family:inherit;}
 .btn-primary{background:linear-gradient(135deg,#436850,#365440);color:#FBFADA;border:none;box-shadow:0 2px 8px rgba(67,104,80,0.25);}
 .btn-primary:hover{transform:translateY(-1px);}
+.btn-primary:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
 .btn-outline{background:none;color:rgba(18,55,42,0.5);border:1px solid rgba(173,188,159,0.35);}
 .btn-outline:hover{border-color:#436850;color:#436850;}
+.error-msg {
+  color: #D9534F;
+  font-size: 13px;
+  padding: 10px 14px;
+  background: rgba(217, 83, 79, 0.08);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
 </style>

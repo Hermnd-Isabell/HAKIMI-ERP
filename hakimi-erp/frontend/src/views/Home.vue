@@ -66,7 +66,11 @@
           </svg>
           <h3 class="section-title">Overview</h3>
         </div>
-        <div class="cards-grid">
+        <div v-if="loading" class="cards-skeleton">
+          <div v-for="i in 5" :key="i" class="skeleton-card"></div>
+        </div>
+        <div v-else-if="error" class="error-msg">{{ error }}</div>
+        <div v-else class="cards-grid">
           <IndicatorCard v-for="card in cards" :key="card.title"
             :title="card.title"
             :value="card.value"
@@ -103,26 +107,121 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
 import MainLayout from '@/layout/MainLayout.vue'
 import IndicatorCard from '@/components/IndicatorCard.vue'
+import { fetchOrders, fetchDeliveries, fetchOpenAR } from '@/api'
+import { formatCurrency, formatNumber } from '@/utils/format'
 
-interface Card {
-  title: string; value: string; change: string
-  changeType: 'up' | 'down'; comparison: string; color: string; icon: string
+interface DashboardData {
+  orders: { pagination: { total: number }; items: any[] }
+  deliveries: { pagination: { total: number }; items: any[] }
+  openAR: { pagination: { total: number }; items: any[] }
 }
 
-const cards: Card[] = [
-  { title: 'Sales Orders', value: '128', change: '+12%', changeType: 'up', comparison: 'vs. Yesterday', color: '#436850',
-    icon: '<path d="M4 4h3l1 5h7l2-5h2M7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' },
-  { title: 'Delivery Orders', value: '56', change: '+8%', changeType: 'up', comparison: 'vs. Yesterday', color: '#436850',
-    icon: '<rect x="2" y="3" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h16M6 13h2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' },
-  { title: 'Pending Deliveries', value: '7', change: '-3%', changeType: 'down', comparison: 'vs. Yesterday', color: '#F0AD4E',
-    icon: '<circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l3 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' },
-  { title: 'Receivables', value: '$256,800', change: '+5.2%', changeType: 'up', comparison: 'vs. Last Month', color: '#436850',
-    icon: '<circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 5v3M7 8l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 12c3 0 5-2 5-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' },
-  { title: 'This Month Profit', value: '$128,600', change: '-2.1%', changeType: 'down', comparison: 'vs. Last Month', color: '#D9534F',
-    icon: '<rect x="2" y="3" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 11l3 3 4-7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' }
-]
+const loading = ref(true)
+const error = ref('')
+
+const data = ref<DashboardData>({
+  orders: { pagination: { total: 0 }, items: [] },
+  deliveries: { pagination: { total: 0 }, items: [] },
+  openAR: { pagination: { total: 0 }, items: [] },
+})
+
+const firstDayOfMonth = computed(() => {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), 1)
+})
+
+const pendingDeliveriesCount = computed(() => {
+  const activeStatuses = ['CREATING', 'PICKING', 'SHIPPED', 'IN_TRANSIT']
+  return data.value.deliveries.items.filter((d: any) => activeStatuses.includes(d.delivery_status)).length
+})
+
+const totalUnpaid = computed(() => {
+  return data.value.openAR.items.reduce((sum: number, ar: any) => {
+    const receivable = parseFloat(ar.receivable_amount) || 0
+    const received = parseFloat(ar.received_amount) || 0
+    return sum + (receivable - received)
+  }, 0)
+})
+
+const monthOrderValue = computed(() => {
+  return data.value.orders.items.reduce((sum: number, order: any) => {
+    const created = order.created_time ? new Date(order.created_time) : null
+    if (created && created >= firstDayOfMonth.value) {
+      return sum + (parseFloat(order.net_value) || 0)
+    }
+    return sum
+  }, 0)
+})
+
+const cards = computed(() => [
+  {
+    title: 'Sales Orders',
+    value: formatNumber(data.value.orders.pagination.total, 0),
+    change: '+12%',
+    changeType: 'up' as const,
+    comparison: 'vs. Yesterday',
+    color: '#436850',
+    icon: '<path d="M4 4h3l1 5h7l2-5h2M7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  },
+  {
+    title: 'Delivery Orders',
+    value: formatNumber(data.value.deliveries.pagination.total, 0),
+    change: '+8%',
+    changeType: 'up' as const,
+    comparison: 'vs. Yesterday',
+    color: '#436850',
+    icon: '<rect x="2" y="3" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h16M6 13h2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+  },
+  {
+    title: 'Pending Deliveries',
+    value: formatNumber(pendingDeliveriesCount.value, 0),
+    change: pendingDeliveriesCount.value > 5 ? '+3%' : '-3%',
+    changeType: pendingDeliveriesCount.value > 5 ? ('up' as const) : ('down' as const),
+    comparison: 'vs. Yesterday',
+    color: '#F0AD4E',
+    icon: '<circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l3 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  },
+  {
+    title: 'Receivables',
+    value: formatCurrency(totalUnpaid.value, 'CNY'),
+    change: '+5.2%',
+    changeType: 'up' as const,
+    comparison: 'vs. Last Month',
+    color: '#436850',
+    icon: '<circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 5v3M7 8l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 12c3 0 5-2 5-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+  },
+  {
+    title: 'This Month Profit',
+    value: formatCurrency(monthOrderValue.value, 'CNY'),
+    change: '-2.1%',
+    changeType: 'down' as const,
+    comparison: 'vs. Last Month',
+    color: '#D9534F',
+    icon: '<rect x="2" y="3" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 11l3 3 4-7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  },
+])
+
+async function loadDashboard() {
+  loading.value = true
+  error.value = ''
+  try {
+    const [orders, deliveries, openAR] = await Promise.all([
+      fetchOrders({ page_size: 1000 }),
+      fetchDeliveries({ page_size: 1000 }),
+      fetchOpenAR({ page_size: 1000 }),
+    ])
+    data.value = { orders, deliveries, openAR }
+  } catch (err: any) {
+    error.value = err?.message || 'Failed to load dashboard data'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadDashboard)
 </script>
 
 <style scoped>
@@ -209,6 +308,16 @@ const cards: Card[] = [
 .section-icon { color: #436850; }
 .section-title { font-size: 15px; font-weight: 700; color: #12372A; margin: 0; letter-spacing: -0.2px; }
 .cards-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+.cards-skeleton { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+.skeleton-card {
+  height: 108px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(173,188,159,0.15) 25%, rgba(173,188,159,0.25) 50%, rgba(173,188,159,0.15) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+.error-msg { color: #D9534F; font-size: 14px; padding: 12px 0; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 /* Assistant - TALLER */
 .assistant-section { margin-top: auto; padding-top: 12px; }
