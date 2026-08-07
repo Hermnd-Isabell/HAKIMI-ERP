@@ -37,7 +37,12 @@ export const FINANCE_API = {
   invoices: `${API_BASE}/v1/finance/invoices`,
   invoiceById: (id: string) => `${API_BASE}/v1/finance/invoices/${id}`,
   invoiceFromDelivery: (deliveryId: string) => `${API_BASE}/v1/finance/invoices/from-delivery/${deliveryId}`,
+  invoiceVoid: (id: string) => `${API_BASE}/v1/finance/invoices/${id}/void`,
+  invoiceDocumentFlow: (id: string) => `${API_BASE}/v1/finance/invoices/${id}/document-flow`,
   arOpen: `${API_BASE}/v1/finance/ar/open`,
+  arOpenByInvoice: (id: string) => `${API_BASE}/v1/finance/ar/open/${id}`,
   arClosed: `${API_BASE}/v1/finance/ar/closed`,
+  arClosedByInvoice: (id: string) => `${API_BASE}/v1/finance/ar/closed/${id}`,
   receipts: `${API_BASE}/v1/finance/receipts`,
+  receiptById: (id: string) => `${API_BASE}/v1/finance/receipts/${id}`,
 } as const

@@ -15,14 +15,13 @@
         <div class="hc-icon"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="10" fill="none" stroke="#436850" stroke-width="1.8"/><path d="M7 14l3 3 7-7" fill="none" stroke="#436850" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <div class="top-info">
           <span class="ti-label">Invoice No.</span><span class="ti-value mono">{{ invoice.invoice_id }}</span>
-          <span class="ti-sub">{{ customerName }} &middot; Sales Order {{ invoice.sales_order_id || 'N/A' }} &middot; Due {{ invoice.billing_date || 'N/A' }}</span>
+          <span class="ti-sub">{{ customerName }} &middot; Sales Order {{ invoice.sales_order_id || 'N/A' }} &middot; Due {{ dueDate || 'N/A' }}</span>
         </div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
           <span class="stag" :class="statusClass">{{ statusLabel }}</span>
-          <button class="btn btn-primary" @click="collect" :disabled="posting || unpaidAmount <= 0">
+          <button class="btn btn-primary" @click="openCollect" :disabled="posting || unpaidAmount <= 0">
             {{ posting ? 'Posting...' : 'Collect' }}
           </button>
-          <button class="btn btn-outline" @click="print">Export</button>
         </div>
       </div>
 
@@ -49,7 +48,7 @@
           <h3 class="sc-title">Customer &amp; Terms</h3>
           <div class="si-grid">
             <div class="si-item"><span class="si-label">Customer</span><span class="si-value">{{ customerName }}</span></div>
-            <div class="si-item"><span class="si-label">Contact</span><span class="si-value">{{ customerEmail || 'N/A' }}</span></div>
+            <div class="si-item"><span class="si-label">Contact</span><span class="si-value">{{ customerEmail }}</span></div>
             <div class="si-item"><span class="si-label">Payment Terms</span><span class="si-value">Net 30</span></div>
             <div class="si-item"><span class="si-label">Currency</span><span class="si-value mono">{{ invoice.currency }}</span></div>
             <div class="si-item"><span class="si-label">Risk Level</span><span class="si-value"><span class="risk-tag" :class="riskClass">{{ riskLabel }}</span></span></div>
@@ -60,10 +59,10 @@
           <table class="data-table">
             <thead><tr><th>Date</th><th>Method</th><th class="num">Amount</th><th>Reference</th></tr></thead>
             <tbody>
-              <tr v-for="pmt in paymentHistory" :key="pmt.id">
+              <tr v-for="pmt in paymentHistory" :key="pmt.receipt_id">
                 <td>{{ pmt.date }}</td><td>{{ pmt.method }}</td><td class="num mono">{{ fmt(pmt.amount) }}</td><td class="mono">{{ pmt.ref }}</td>
               </tr>
-              <tr v-if="paymentHistory.length === 0"><td colspan="4" style="text-align:center;padding:20px;color:#999">No payment records.</td></tr>
+              <tr v-if="paymentHistory.length === 0"><td colspan="4" style="text-align:center;padding:20px;color:rgba(18,55,42,0.3)">No payment records.</td></tr>
               <tr v-if="unpaidAmount > 0"><td colspan="2" class="pending-row">Pending</td><td class="num mono" style="color:#D9534F">{{ fmt(unpaidAmount) }}</td><td class="mono"><span class="stag" :class="statusClass">{{ statusLabel }}</span></td></tr>
             </tbody>
           </table>
@@ -86,6 +85,54 @@
         </table>
       </div>
     </div>
+
+    <!-- Collect Modal -->
+    <Teleport to="body">
+      <div class="modal-overlay" v-if="collectVisible" @click.self="collectVisible = false">
+        <div class="collect-card">
+          <div class="cc-header">
+            <h3 class="cc-title">Collect Payment</h3>
+            <button class="cc-close" @click="collectVisible = false">✕</button>
+          </div>
+          <div class="cc-body">
+            <div class="cc-row">
+              <span class="cc-label">Invoice</span>
+              <span class="cc-value mono">{{ invoice?.invoice_id }}</span>
+            </div>
+            <div class="cc-row">
+              <span class="cc-label">Customer</span>
+              <span class="cc-value">{{ customerName }}</span>
+            </div>
+            <div class="cc-row">
+              <span class="cc-label">Unpaid Amount</span>
+              <span class="cc-value mono strong">{{ fmt(unpaidAmount) }}</span>
+            </div>
+            <div class="cc-field">
+              <label class="cc-field-label">Payment Amount</label>
+              <input type="number" class="cc-input" v-model.number="collectForm.amount" :max="unpaidAmount" step="0.01" />
+            </div>
+            <div class="cc-field">
+              <label class="cc-field-label">Payment Method</label>
+              <select class="cc-select" v-model="collectForm.paymentMethod">
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CASH">Cash</option>
+                <option value="CHECK">Check</option>
+                <option value="CREDIT_CARD">Credit Card</option>
+              </select>
+            </div>
+            <div class="cc-field">
+              <label class="cc-field-label">Reference No.</label>
+              <input type="text" class="cc-input" v-model="collectForm.referenceNo" placeholder="Optional" />
+            </div>
+          </div>
+          <div class="cc-footer">
+            <button class="btn btn-outline" @click="collectVisible = false">Cancel</button>
+            <button class="btn btn-primary" @click="submitCollect" :disabled="posting">Confirm</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <SuccessModal
       v-model:visible="successVisible"
       title="Payment Collected"
@@ -96,44 +143,61 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, reactive, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import MainLayout from '@/layout/MainLayout.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
-import { fetchInvoiceById, fetchOpenAR, fetchClosedAR, fetchPartners, createReceipt } from '@/api'
-import type { Invoice, OpenAccountReceivable, ClosedAccountReceivable } from '@/api/modules/finance'
+import { fetchInvoiceById, fetchOpenAR, fetchClosedAR, fetchReceipts, createReceipt, fetchPartners } from '@/api'
+import type { Invoice, OpenAccountReceivable, ClosedAccountReceivable, Receipt } from '@/api/modules/finance'
 import type { Partner } from '@/api/modules/master'
 
 const route = useRoute()
-const router = useRouter()
 const invoiceId = computed(() => route.params.id as string)
 
 const invoice = ref<Invoice | null>(null)
 const partnerMap = ref<Record<string, Partner>>({})
 const openAr = ref<OpenAccountReceivable | null>(null)
 const closedAr = ref<ClosedAccountReceivable | null>(null)
+const receiptList = ref<Receipt[]>([])
 const loading = ref(false)
 const error = ref('')
 const posting = ref(false)
 const successVisible = ref(false)
 const successMsg = ref('')
 
+// collect modal
+const collectVisible = ref(false)
+const collectForm = reactive({ amount: 0, paymentMethod: 'BANK_TRANSFER', referenceNo: '' })
+
 const currencySymbol = computed(() => invoice.value?.currency === 'USD' ? '$' : '¥')
 const totalAmount = computed(() => Number(invoice.value?.total_amount || 0))
-const receivedAmount = computed(() => Number(openAr.value?.received_amount || 0))
+const receivedAmount = computed(() => {
+  if (openAr.value) return Number(openAr.value.received_amount) || 0
+  if (closedAr.value) return Number(closedAr.value.received_amount) || 0
+  return 0
+})
 const unpaidAmount = computed(() => Math.max(0, totalAmount.value - receivedAmount.value))
+const dueDate = computed(() => {
+  if (openAr.value?.due_date) return openAr.value.due_date
+  if (closedAr.value?.closed_time) return closedAr.value.closed_time.split('T')[0]
+  return invoice.value?.billing_date || 'N/A'
+})
 const daysOverdue = computed(() => {
-  if (!invoice.value?.billing_date || unpaidAmount.value <= 0) return 0
-  const due = new Date(invoice.value.billing_date)
+  const due = openAr.value?.due_date
+  if (!due || unpaidAmount.value <= 0) return 0
+  const dueD = new Date(due)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  due.setHours(0, 0, 0, 0)
-  const diff = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24))
+  dueD.setHours(0, 0, 0, 0)
+  const diff = Math.floor((today.getTime() - dueD.getTime()) / (1000 * 60 * 60 * 24))
   return diff > 0 ? diff : 0
 })
 const collectionRatio = computed(() => totalAmount.value > 0 ? Math.round((receivedAmount.value / totalAmount.value) * 100) : 0)
 
-const customer = computed(() => invoice.value ? partnerMap.value[invoice.value.payer || invoice.value.sold_to_party || ''] : null)
+const customer = computed(() => {
+  const bpId = invoice.value?.payer || invoice.value?.sold_to_party || ''
+  return partnerMap.value[bpId] || null
+})
 const customerName = computed(() => customer.value?.bp_name || invoice.value?.payer || invoice.value?.sold_to_party || 'Unknown')
 const customerEmail = computed(() => customer.value?.email || 'N/A')
 
@@ -160,25 +224,13 @@ const riskLabel = computed(() => {
 const riskClass = computed(() => riskLabel.value === 'High' ? 'high' : riskLabel.value === 'Medium' ? 'medium' : 'low')
 
 const paymentHistory = computed(() => {
-  const list: { id: string; date: string; method: string; amount: number; ref: string }[] = []
-  if (closedAr.value) {
-    list.push({
-      id: closedAr.value.closed_ar_id,
-      date: closedAr.value.closed_time ? closedAr.value.closed_time.split('T')[0] : 'N/A',
-      method: 'Bank Transfer',
-      amount: Number(closedAr.value.receivable_amount || 0),
-      ref: closedAr.value.closed_ar_id
-    })
-  } else if (openAr.value && receivedAmount.value > 0) {
-    list.push({
-      id: openAr.value.open_ar_id,
-      date: openAr.value.created_time ? openAr.value.created_time.split('T')[0] : 'N/A',
-      method: 'Bank Transfer',
-      amount: receivedAmount.value,
-      ref: openAr.value.open_ar_id
-    })
-  }
-  return list
+  return (receiptList.value || []).map((r: Receipt) => ({
+    receipt_id: r.receipt_id,
+    date: r.receipt_date ? r.receipt_date.split('T')[0] : 'N/A',
+    method: r.payment_method || 'N/A',
+    amount: Number(r.receipt_amount) || 0,
+    ref: r.reference_no || r.receipt_id,
+  }))
 })
 
 const steps = computed(() => {
@@ -202,54 +254,51 @@ function fmt(n: number) {
   return `${currencySymbol.value}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-async function loadInvoiceById(id: string) {
-  const res = await fetchInvoiceById(id)
-  invoice.value = res.data
-}
-
-async function findARAndInvoice(id: string) {
-  const [openRes, closedRes] = await Promise.all([fetchOpenAR({ limit: 1000 }), fetchClosedAR({ limit: 1000 })])
-  const openItems = openRes.data.items || []
-  const closedItems = closedRes.data.items || []
-  const open = openItems.find((i: any) => i.open_ar_id === id || i.invoice_id === id)
-  const closed = closedItems.find((i: any) => i.closed_ar_id === id || i.invoice_id === id)
-  if (open) openAr.value = open
-  if (closed) closedAr.value = closed
-  const targetInvoiceId = open?.invoice_id || closed?.invoice_id || id
-  await loadInvoiceById(targetInvoiceId)
-}
-
-async function loadPartners() {
-  const res = await fetchPartners({ limit: 1000 })
-  partnerMap.value = (res.data.items || []).reduce((acc: Record<string, Partner>, p: Partner) => {
-    if (p.bp_id) acc[p.bp_id] = p
-    return acc
-  }, {})
-}
-
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    await loadPartners()
-    try {
-      await loadInvoiceById(invoiceId.value)
-    } catch (e) {
-      await findARAndInvoice(invoiceId.value)
-    }
+    const [partners, invoices] = await Promise.all([
+      fetchPartners({ limit: 1000 }),
+      fetchInvoiceById(invoiceId.value),
+    ])
+    invoice.value = invoices
+    partnerMap.value = (partners.items || []).reduce((acc: Record<string, Partner>, p: Partner) => {
+      if (p.bp_id) acc[p.bp_id] = p
+      return acc
+    }, {})
+
+    // Load AR and receipts in parallel
+    const [openRes, closedRes, receiptRes] = await Promise.all([
+      fetchOpenAR({ page_size: 1000 }),
+      fetchClosedAR({ page_size: 1000 }),
+      fetchReceipts({ page_size: 1000 }),
+    ])
+
+    const openItem = (openRes.items || []).find((ar: OpenAccountReceivable) => ar.invoice_id === invoiceId.value)
+    const closedItem = (closedRes.items || []).find((ar: ClosedAccountReceivable) => ar.invoice_id === invoiceId.value)
+    if (openItem) openAr.value = openItem
+    if (closedItem) closedAr.value = closedItem
+
+    receiptList.value = (receiptRes.items || []).filter((r: Receipt) => r.invoice_id === invoiceId.value)
   } catch (err: any) {
-    error.value = err?.response?.data?.detail || err.message || 'Failed to load receivable details'
+    error.value = err?.message || 'Failed to load receivable details'
     console.error('Fetch receivable detail failed:', err)
   } finally {
     loading.value = false
   }
 }
 
-async function collect() {
-  if (!invoice.value || unpaidAmount.value <= 0) return
-  const amount = prompt(`Enter payment amount for invoice ${invoice.value.invoice_id}:`, unpaidAmount.value.toString())
-  if (!amount) return
-  const payAmt = parseFloat(amount)
+function openCollect() {
+  collectForm.amount = unpaidAmount.value
+  collectForm.paymentMethod = 'BANK_TRANSFER'
+  collectForm.referenceNo = ''
+  collectVisible.value = true
+}
+
+async function submitCollect() {
+  if (!invoice.value || posting.value) return
+  const payAmt = collectForm.amount
   if (isNaN(payAmt) || payAmt <= 0) {
     alert('Invalid amount')
     return
@@ -259,21 +308,20 @@ async function collect() {
     return
   }
   posting.value = true
+  collectVisible.value = false
   try {
     await createReceipt({
-      receipt_id: `RCT${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
       invoice_id: invoice.value.invoice_id,
-      payer: invoice.value.payer || '',
       receipt_amount: payAmt,
-      payment_method: 'BANK_TRANSFER',
+      payment_method: collectForm.paymentMethod,
       currency: invoice.value.currency || 'CNY',
-      receipt_date: new Date().toISOString().split('T')[0]
+      reference_no: collectForm.referenceNo || undefined,
     })
     successMsg.value = `Payment ${fmt(payAmt)} collected successfully for invoice ${invoice.value.invoice_id}.`
     successVisible.value = true
     load()
   } catch (err: any) {
-    alert('Collect failed: ' + (err?.response?.data?.detail || err?.response?.data?.message || err.message))
+    alert('Collect failed: ' + (err?.message || 'Unknown error'))
   } finally {
     posting.value = false
   }
@@ -281,10 +329,6 @@ async function collect() {
 
 function onSuccessConfirm() {
   load()
-}
-
-function print() {
-  window.print()
 }
 
 onMounted(() => load())
@@ -364,12 +408,21 @@ onMounted(() => load())
 .btn-primary:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
 .btn-outline{background:none;color:rgba(18,55,42,0.5);border:1px solid rgba(173,188,159,0.35);}
 .btn-outline:hover{border-color:#436850;color:#436850;}
-.error-msg {
-  color: #D9534F;
-  font-size: 13px;
-  padding: 10px 14px;
-  background: rgba(217, 83, 79, 0.08);
-  border-radius: 8px;
-  margin-bottom: 14px;
-}
+.error-msg{color:#D9534F;font-size:13px;padding:10px 14px;background:rgba(217,83,79,0.08);border-radius:8px;margin-bottom:14px;}
+
+/* Collect Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(18,55,42,0.3);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:2000;}
+.collect-card{width:480px;background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:18px;box-shadow:0 20px 60px rgba(18,55,42,0.22);border:1px solid rgba(173,188,159,0.2);overflow:hidden;}
+.cc-header{display:flex;align-items:center;justify-content:space-between;padding:22px 28px 16px;border-bottom:1px solid rgba(173,188,159,0.12);}
+.cc-title{font-size:18px;font-weight:800;color:#436850;margin:0;}
+.cc-close{background:none;border:none;font-size:18px;color:rgba(18,55,42,0.35);cursor:pointer;padding:4px;}
+.cc-body{padding:20px 28px;display:flex;flex-direction:column;gap:14px;}
+.cc-row{display:flex;justify-content:space-between;align-items:center;}
+.cc-label{font-size:12px;color:rgba(18,55,42,0.4);font-weight:600;}
+.cc-value{font-size:14px;color:#12372A;}
+.cc-field{display:flex;flex-direction:column;gap:6px;}
+.cc-field-label{font-size:12px;color:rgba(18,55,42,0.5);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
+.cc-input,.cc-select{height:40px;border:1px solid rgba(173,188,159,0.4);border-radius:8px;padding:0 12px;font-size:14px;color:#12372A;background:#fff;font-family:inherit;outline:none;}
+.cc-input:focus,.cc-select:focus{border-color:#436850;box-shadow:0 0 0 3px rgba(67,104,80,0.06);}
+.cc-footer{display:flex;justify-content:flex-end;gap:10px;padding:14px 28px;background:rgba(251,250,218,0.25);border-top:1px solid rgba(173,188,159,0.1);}
 </style>

@@ -13,7 +13,6 @@
         <div class="hc-right">
           <label class="auto-refresh"><input type="checkbox" v-model="autoRefresh" /> Auto Refresh</label>
           <select class="form-select form-select-sm" v-model="refreshInterval"><option>30s</option><option>60s</option><option>5min</option></select>
-          <button class="btn-icon" title="Export" @click="exportData"><svg viewBox="0 0 20 20" width="16" height="16"><path d="M10 3v10M6 9l4 4 4-4M3 17h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
       </div>
 
@@ -27,17 +26,12 @@
 
       <!-- Filter Bar -->
       <div class="filter-bar">
-        <input type="text" class="form-input" v-model="f.customer" placeholder="Customer Name" />
-        <input type="text" class="form-input" v-model="f.invoice" placeholder="Invoice No." />
-        <select class="form-select" v-model="f.status"><option value="">All Statuses</option><option>Unpaid</option><option>Partially Paid</option><option>Overdue</option><option>Paid</option></select>
-        <div class="date-range">
-          <svg viewBox="0 0 20 20" width="14" height="14" class="date-icon"><rect x="2" y="4" width="16" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h16M6 2v4M14 2v4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-          <input type="date" class="form-input date-input" v-model="f.from" placeholder="Start Date" />
-        </div>
-        <div class="date-range">
-          <svg viewBox="0 0 20 20" width="14" height="14" class="date-icon"><rect x="2" y="4" width="16" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h16M6 2v4M14 2v4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-          <input type="date" class="form-input date-input" v-model="f.to" placeholder="End Date" />
-        </div>
+        <input type="text" class="form-input" v-model="f.customer" placeholder="Customer (BP ID)" @keyup.enter="search" />
+        <input type="text" class="form-input" v-model="f.invoice" placeholder="Invoice No." @keyup.enter="search" />
+        <select class="form-select" v-model="f.status">
+          <option value="">All Statuses</option>
+          <option>Unpaid</option><option>Partially Paid</option><option>Overdue</option>
+        </select>
         <button class="btn btn-primary" @click="search" :disabled="loading">Search</button>
         <button class="btn btn-outline" @click="reset" :disabled="loading">Reset</button>
       </div>
@@ -48,15 +42,15 @@
       <div class="data-card">
         <table class="data-table">
           <thead><tr>
-            <th>Invoice No.</th><th>Customer Name</th><th>Invoice Date</th><th>Due Date</th>
+            <th>Invoice No.</th><th>Customer</th><th>Invoice Date</th><th>Due Date</th>
             <th class="num">Invoice Amount</th><th class="num">Received Amount</th><th class="num">Unpaid Amount</th>
             <th>Status</th><th>Collection Progress</th><th>Action</th>
           </tr></thead>
           <tbody>
-            <tr v-if="loading && displayedRows.length === 0">
+            <tr v-if="loading && pagedRows.length === 0">
               <td colspan="10" class="empty-cell">Loading receivables...</td>
             </tr>
-            <tr v-for="row in displayedRows" :key="row.id" class="data-row">
+            <tr v-for="row in pagedRows" :key="row.id" class="data-row">
               <td class="mono">{{ row.inv }}</td><td>{{ row.cust }}</td><td>{{ row.date }}</td><td>{{ row.due }}</td>
               <td class="num mono">¥{{ format(row.amt) }}</td>
               <td class="num mono">¥{{ format(row.rcv) }}</td>
@@ -64,21 +58,78 @@
               <td><span class="stag" :class="sc(row.st)">{{ row.st }}</span></td>
               <td><div class="prog-cell"><div class="prog-bar"><div class="prog-fill" :style="{width:row.pct+'%'}"></div></div><span class="prog-pct">{{ row.pct }}%</span></div></td>
               <td>
-                <a class="link" :class="{disabled: postingId === row.id}" @click="handleClear(row)">
+                <a class="link" :class="{disabled: postingId === row.id}" @click="handleOpenCollect(row)">
                   {{ postingId === row.id ? 'Posting...' : 'Post Payment' }}
                 </a>
               </td>
             </tr>
-            <tr v-if="!loading && displayedRows.length === 0"><td colspan="10" class="empty-cell">No unpaid receivables found.</td></tr>
+            <tr v-if="!loading && pagedRows.length === 0"><td colspan="10" class="empty-cell">No unpaid receivables found.</td></tr>
           </tbody>
         </table>
         <div class="table-footer">
-          <div class="tf-left"><span class="tf-total">Total {{ displayedRows.length }} items</span><select class="form-select form-select-sm" style="width:80px"><option>10 / page</option><option>20</option><option>50</option></select></div>
-          <div class="pager"><button class="pg-btn">1</button><button class="pg-btn active">2</button><button class="pg-btn">3</button></div>
-          <div class="tf-right"><span class="tf-label">Go to</span><input type="text" class="pg-input" placeholder="page" /></div>
+          <div class="tf-left">
+            <span class="tf-total">共 {{ displayedRows.length }} 条</span>
+            <select class="form-select form-select-sm" v-model.number="pageSize">
+              <option :value="20">20 / 页</option><option :value="50">50 / 页</option><option :value="100">100 / 页</option>
+            </select>
+          </div>
+          <div class="pager">
+            <button class="pg-btn" :disabled="currentPage <= 1" @click="currentPage--">‹</button>
+            <button v-for="p in pageNumbers" :key="p" class="pg-btn" :class="{active: p === currentPage}" @click="currentPage = p">{{ p }}</button>
+            <button class="pg-btn" :disabled="currentPage >= totalPages" @click="currentPage++">›</button>
+          </div>
+          <div class="tf-right"><span class="tf-label">Go to</span><input type="text" class="pg-input" v-model="goToPage" @keyup.enter="goToPageNum(parseInt(goToPage))" placeholder="page" /></div>
         </div>
       </div>
     </div>
+
+    <!-- Collect Drawer -->
+    <Teleport to="body">
+      <div class="modal-overlay" v-if="collectVisible" @click.self="collectVisible = false">
+        <div class="collect-card">
+          <div class="cc-header">
+            <h3 class="cc-title">Post Payment</h3>
+            <button class="cc-close" @click="collectVisible = false">✕</button>
+          </div>
+          <div class="cc-body">
+            <div class="cc-row">
+              <span class="cc-label">Invoice</span>
+              <span class="cc-value mono">{{ collectRow?.inv }}</span>
+            </div>
+            <div class="cc-row">
+              <span class="cc-label">Customer</span>
+              <span class="cc-value">{{ collectRow?.cust }}</span>
+            </div>
+            <div class="cc-row">
+              <span class="cc-label">Unpaid Amount</span>
+              <span class="cc-value mono strong">¥{{ format(collectRow?.unp || 0) }}</span>
+            </div>
+            <div class="cc-field">
+              <label class="cc-field-label">Payment Amount</label>
+              <input type="number" class="cc-input" v-model.number="collectForm.amount" :max="collectRow?.unp" step="0.01" />
+            </div>
+            <div class="cc-field">
+              <label class="cc-field-label">Payment Method</label>
+              <select class="cc-select" v-model="collectForm.paymentMethod">
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CASH">Cash</option>
+                <option value="CHECK">Check</option>
+                <option value="CREDIT_CARD">Credit Card</option>
+              </select>
+            </div>
+            <div class="cc-field">
+              <label class="cc-field-label">Reference No.</label>
+              <input type="text" class="cc-input" v-model="collectForm.referenceNo" placeholder="Optional" />
+            </div>
+          </div>
+          <div class="cc-footer">
+            <button class="btn btn-outline" @click="collectVisible = false">Cancel</button>
+            <button class="btn btn-primary" @click="submitCollect" :disabled="postingId !== ''">Confirm</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <SuccessModal
       v-model:visible="successVisible"
       title="Payment Posted"
@@ -92,8 +143,10 @@
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import MainLayout from '@/layout/MainLayout.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
-import { fetchOpenAR, fetchInvoices, createReceipt } from '@/api'
+import { fetchOpenAR, fetchReceipts, createReceipt, fetchPartners } from '@/api'
 import type { OpenAccountReceivable, Invoice } from '@/api/modules/finance'
+import type { Partner } from '@/api/modules/master'
+import { fetchInvoices } from '@/api'
 
 const autoRefresh = ref(true)
 const refreshInterval = ref('30s')
@@ -101,11 +154,23 @@ const f = reactive({ customer: '', invoice: '', status: '', from: '', to: '' })
 
 const rawOpenAR = ref<OpenAccountReceivable[]>([])
 const invoiceMap = ref<Record<string, Invoice>>({})
+const partnerMap = ref<Record<string, Partner>>({})
+const monthReceiptsTotal = ref(0)
 const loading = ref(false)
 const error = ref('')
 const postingId = ref('')
 const successVisible = ref(false)
 const successMsg = ref('')
+
+// pagination
+const currentPage = ref(1)
+const pageSize = ref(20)
+const goToPage = ref('')
+
+// collect drawer
+const collectVisible = ref(false)
+const collectRow = ref<any>(null)
+const collectForm = reactive({ amount: 0, paymentMethod: 'BANK_TRANSFER', referenceNo: '' })
 
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
@@ -114,6 +179,7 @@ const allRows = computed(() => {
   today.setHours(0, 0, 0, 0)
   return rawOpenAR.value.map((i: any) => {
     const invoice = invoiceMap.value[i.invoice_id]
+    const bpId = invoice?.payer || invoice?.sold_to_party || i.invoice_id
     const amt = parseFloat(i.receivable_amount) || 0
     const rcv = parseFloat(i.received_amount) || 0
     const unp = Math.max(0, amt - rcv)
@@ -122,38 +188,48 @@ const allRows = computed(() => {
     if (rcv >= amt) st = 'Paid'
     else if (rcv > 0) st = 'Partially Paid'
     if (dueDate && dueDate < today && rcv < amt) st = 'Overdue'
-    const invoiceDate = invoice?.invoice_date || i.invoice_date || 'N/A'
+    const invoiceDate = invoice?.invoice_date || 'N/A'
     return {
       id: i.open_ar_id,
       inv: i.invoice_id,
-      cust: invoice?.payer || invoice?.sold_to_party || 'Unknown',
+      cust: partnerMap.value[bpId]?.bp_name || bpId,
       date: invoiceDate,
       due: i.due_date || 'N/A',
-      amt,
-      rcv,
-      unp,
-      st,
+      amt, rcv, unp, st,
       pct: amt > 0 ? Math.round((rcv / amt) * 100) : 0,
-      rawDue: i.due_date || '',
     }
   })
 })
 
 const displayedRows = computed(() => {
   return allRows.value.filter(r => {
-    if (f.customer && !r.cust.toLowerCase().includes(f.customer.toLowerCase())) return false
+    if (f.customer && !r.cust.toLowerCase().includes(f.customer.toLowerCase()) && !r.inv.toLowerCase().includes(f.customer.toLowerCase())) return false
     if (f.invoice && !r.inv.toLowerCase().includes(f.invoice.toLowerCase())) return false
     if (f.status && r.st !== f.status) return false
-    if (f.from && r.date && r.date < f.from) return false
-    if (f.to && r.date && r.date > f.to) return false
     return true
   })
+})
+
+const totalPages = computed(() => Math.ceil(displayedRows.value.length / pageSize.value) || 1)
+const pagedRows = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return displayedRows.value.slice(start, start + pageSize.value)
+})
+const pageNumbers = computed(() => {
+  const tp = totalPages.value
+  const cur = currentPage.value
+  const arr: number[] = []
+  let start = Math.max(1, cur - 2)
+  let end = Math.min(tp, start + 4)
+  start = Math.max(1, end - 4)
+  for (let i = start; i <= end; i++) arr.push(i)
+  return arr
 })
 
 const kpis = computed(() => {
   const totalUnpaid = displayedRows.value.reduce((acc, r) => acc + r.unp, 0)
   const overdue = displayedRows.value.filter(r => r.st === 'Overdue').reduce((acc, r) => acc + r.unp, 0)
-  const collected = displayedRows.value.reduce((acc, r) => acc + r.rcv, 0)
+  const collected = monthReceiptsTotal.value
   return {
     totalUnpaid,
     overdue,
@@ -171,22 +247,48 @@ function sc(s: string) {
   return m[s] || ''
 }
 
+function goToPageNum(p: number) {
+  if (p < 1 || p > totalPages.value) return
+  currentPage.value = p
+  goToPage.value = ''
+}
+
 async function fetchData() {
   loading.value = true
   error.value = ''
   try {
-    const [arRes, invRes] = await Promise.all([
-      fetchOpenAR({ limit: 1000 }),
-      fetchInvoices({ limit: 1000 })
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    const [arRes, invRes, receiptRes, partnerRes] = await Promise.all([
+      fetchOpenAR({ page_size: 1000 }),
+      fetchInvoices({ page_size: 1000 }),
+      fetchReceipts({ page_size: 1000 }),
+      fetchPartners({ limit: 1000 }),
     ])
-    rawOpenAR.value = arRes.data.items || []
-    const invItems = invRes.data.items || []
-    invoiceMap.value = invItems.reduce((acc: Record<string, Invoice>, inv: Invoice) => {
+
+    rawOpenAR.value = arRes.items || []
+    invoiceMap.value = (invRes.items || []).reduce((acc: Record<string, Invoice>, inv: Invoice) => {
       if (inv.invoice_id) acc[inv.invoice_id] = inv
       return acc
     }, {})
+    partnerMap.value = (partnerRes.items || []).reduce((acc: Record<string, Partner>, p: Partner) => {
+      if (p.bp_id) acc[p.bp_id] = p
+      return acc
+    }, {})
+
+    // KPI: Collected This Month — sum receipts in current month
+    monthReceiptsTotal.value = (receiptRes.items || [])
+      .filter((r: any) => {
+        if (!r.receipt_date) return false
+        const d = new Date(r.receipt_date)
+        return d >= monthStart && d <= now
+      })
+      .reduce((sum: number, r: any) => sum + (Number(r.receipt_amount) || 0), 0)
+
+    currentPage.value = 1
   } catch (err: any) {
-    error.value = err?.response?.data?.detail || err.message || 'Failed to load receivables'
+    error.value = err?.message || 'Failed to load receivables'
     console.error('Fetch open AR failed:', err)
   } finally {
     loading.value = false
@@ -200,45 +302,48 @@ function startRefreshTimer() {
   refreshTimer = setInterval(() => fetchData(), ms)
 }
 
-function search() { fetchData() }
+function search() { currentPage.value = 1; fetchData() }
 function reset() {
   Object.assign(f, { customer: '', invoice: '', status: '', from: '', to: '' })
+  currentPage.value = 1
   fetchData()
 }
 
-function exportData() {
-  alert('Export feature will be implemented in the reporting module.')
+function handleOpenCollect(row: any) {
+  if (postingId.value) return
+  collectRow.value = row
+  collectForm.amount = row.unp
+  collectForm.paymentMethod = 'BANK_TRANSFER'
+  collectForm.referenceNo = ''
+  collectVisible.value = true
 }
 
-async function handleClear(row: any) {
-  if (postingId.value) return
-  const amount = prompt(`Enter payment amount for invoice ${row.inv}:`, row.unp.toString())
-  if (!amount) return
-  const payAmt = parseFloat(amount)
+async function submitCollect() {
+  if (!collectRow.value || postingId.value) return
+  const payAmt = collectForm.amount
   if (isNaN(payAmt) || payAmt <= 0) {
     alert('Invalid amount')
     return
   }
-  if (payAmt > row.unp) {
+  if (payAmt > collectRow.value.unp) {
     alert('Payment amount cannot exceed unpaid amount')
     return
   }
-  postingId.value = row.id
+  postingId.value = collectRow.value.id
+  collectVisible.value = false
   try {
     await createReceipt({
-      receipt_id: `RCT${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
-      invoice_id: row.inv,
-      payer: row.cust,
+      invoice_id: collectRow.value.inv,
       receipt_amount: payAmt,
-      payment_method: 'BANK_TRANSFER',
+      payment_method: collectForm.paymentMethod,
       currency: 'CNY',
-      receipt_date: new Date().toISOString().split('T')[0]
+      reference_no: collectForm.referenceNo || undefined,
     })
-    successMsg.value = `Payment ¥${payAmt.toLocaleString()} posted successfully for invoice ${row.inv}.`
+    successMsg.value = `Payment ¥${payAmt.toLocaleString()} posted successfully for invoice ${collectRow.value.inv}.`
     successVisible.value = true
     fetchData()
   } catch (err: any) {
-    alert('Post receipt failed: ' + (err?.response?.data?.detail || err?.response?.data?.message || err.message))
+    alert('Post receipt failed: ' + (err?.message || 'Unknown error'))
   } finally {
     postingId.value = ''
   }
@@ -258,10 +363,11 @@ onUnmounted(() => {
 })
 
 watch([autoRefresh, refreshInterval], startRefreshTimer)
+watch(displayedRows, () => { if (currentPage.value > totalPages.value) currentPage.value = 1 })
 </script>
 
 <style scoped>
-.page{padding:28px 36px;max-width:1340px;margin:0 auto;}
+.page{padding:28px 36px;max-width:1400px;margin:0 auto;}
 
 .header-card{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:16px;padding:20px 24px;border:1px solid rgba(173,188,159,0.18);box-shadow:0 2px 8px rgba(173,188,159,0.12);margin-bottom:20px;}
 .hc-left{display:flex;align-items:center;gap:14px;}
@@ -282,18 +388,8 @@ watch([autoRefresh, refreshInterval], startRefreshTimer)
 .filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
 .form-input,.form-select{height:38px;border:1px solid rgba(173,188,159,0.4);border-radius:8px;padding:0 12px;font-size:13px;color:#12372A;background:rgba(251,250,218,0.35);font-family:inherit;outline:none;min-width:130px;transition:all 0.2s;}
 .form-input:focus,.form-select:focus{border-color:#436850;box-shadow:0 0 0 3px rgba(67,104,80,0.06);background:#fff;}
-.date-range{position:relative;display:flex;align-items:center;}
-.date-icon{position:absolute;left:10px;color:rgba(18,55,42,0.3);pointer-events:none;z-index:1;}
-.date-input{padding-left:30px;min-width:150px;}
 
-.error-msg {
-  color: #D9534F;
-  font-size: 13px;
-  padding: 10px 14px;
-  background: rgba(217, 83, 79, 0.08);
-  border-radius: 8px;
-  margin-bottom: 14px;
-}
+.error-msg{color:#D9534F;font-size:13px;padding:10px 14px;background:rgba(217,83,79,0.08);border-radius:8px;margin-bottom:14px;}
 
 .data-card{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:14px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 2px 6px rgba(173,188,159,0.1);overflow:hidden;}
 .data-table{width:100%;border-collapse:collapse;font-size:13px;}
@@ -329,6 +425,7 @@ watch([autoRefresh, refreshInterval], startRefreshTimer)
 .pager{display:flex;gap:4px;}
 .pg-btn{min-width:30px;height:30px;border:1px solid rgba(173,188,159,0.25);border-radius:6px;background:rgba(251,250,218,0.3);font-size:12px;color:#12372A;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .pg-btn.active{background:#436850;color:#FBFADA;border-color:#436850;}
+.pg-btn:disabled{opacity:0.4;cursor:not-allowed;}
 
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all 0.2s;font-family:inherit;}
 .btn-primary{background:linear-gradient(135deg,#436850,#365440);color:#FBFADA;border:none;box-shadow:0 2px 8px rgba(67,104,80,0.25);}
@@ -337,6 +434,20 @@ watch([autoRefresh, refreshInterval], startRefreshTimer)
 .btn-outline{background:none;color:rgba(18,55,42,0.5);border:1px solid rgba(173,188,159,0.35);}
 .btn-outline:hover{border-color:rgba(18,55,42,0.3);color:#12372A;}
 .btn-outline:disabled{opacity:0.6;cursor:not-allowed;}
-.btn-icon{background:none;border:1px solid rgba(173,188,159,0.3);border-radius:8px;padding:6px;cursor:pointer;color:rgba(18,55,42,0.45);display:flex;transition:all 0.2s;}
-.btn-icon:hover{border-color:#436850;color:#436850;background:rgba(67,104,80,0.05);}
+
+/* Collect Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(18,55,42,0.3);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:2000;}
+.collect-card{width:480px;background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:18px;box-shadow:0 20px 60px rgba(18,55,42,0.22);border:1px solid rgba(173,188,159,0.2);overflow:hidden;}
+.cc-header{display:flex;align-items:center;justify-content:space-between;padding:22px 28px 16px;border-bottom:1px solid rgba(173,188,159,0.12);}
+.cc-title{font-size:18px;font-weight:800;color:#436850;margin:0;}
+.cc-close{background:none;border:none;font-size:18px;color:rgba(18,55,42,0.35);cursor:pointer;padding:4px;}
+.cc-body{padding:20px 28px;display:flex;flex-direction:column;gap:14px;}
+.cc-row{display:flex;justify-content:space-between;align-items:center;}
+.cc-label{font-size:12px;color:rgba(18,55,42,0.4);font-weight:600;}
+.cc-value{font-size:14px;color:#12372A;}
+.cc-field{display:flex;flex-direction:column;gap:6px;}
+.cc-field-label{font-size:12px;color:rgba(18,55,42,0.5);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
+.cc-input,.cc-select{height:40px;border:1px solid rgba(173,188,159,0.4);border-radius:8px;padding:0 12px;font-size:14px;color:#12372A;background:#fff;font-family:inherit;outline:none;}
+.cc-input:focus,.cc-select:focus{border-color:#436850;box-shadow:0 0 0 3px rgba(67,104,80,0.06);}
+.cc-footer{display:flex;justify-content:flex-end;gap:10px;padding:14px 28px;background:rgba(251,250,218,0.25);border-top:1px solid rgba(173,188,159,0.1);}
 </style>

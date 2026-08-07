@@ -8,63 +8,192 @@
         </div>
       </div>
       <div class="filter-bar">
-        <input type="text" class="form-input" placeholder="Invoice No." /><input type="text" class="form-input" placeholder="Customer" />
-        <select class="form-select"><option>All Statuses</option><option>Open</option><option>Partial</option><option>Cleared</option><option>Void</option></select>
-        <button class="btn btn-primary">Search</button><button class="btn btn-outline">Reset</button>
+        <input type="text" class="form-input" v-model="f.invoiceNo" placeholder="Invoice No." @keyup.enter="search" />
+        <input type="text" class="form-input" v-model="f.customer" placeholder="Customer (BP ID)" @keyup.enter="search" />
+        <select class="form-select" v-model="f.status">
+          <option value="">All Statuses</option>
+          <option value="OPEN">Open</option>
+          <option value="PARTIAL">Partial</option>
+          <option value="CLEARED">Cleared</option>
+          <option value="VOID">Void</option>
+        </select>
+        <button class="btn btn-primary" @click="search" :disabled="loading">Search</button>
+        <button class="btn btn-outline" @click="reset" :disabled="loading">Reset</button>
       </div>
-      <div class="data-card"><table class="data-table">
-        <thead><tr><th>Invoice No.</th><th>Customer</th><th>Date</th><th class="num">Amount</th><th class="num">Received</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody>
-          <tr v-for="r in rows" :key="r.id" class="data-row">
-            <td class="mono">{{ r.no }}</td><td>{{ r.cust }}</td><td>{{ r.date }}</td><td class="num mono">{{ r.amt }}</td><td class="num mono">{{ r.rcv }}</td>
-            <td><span class="stag" :class="sc(r.st)">{{ r.st }}</span></td>
-            <td><a class="link" @click="$router.push('/finance/receivable/'+r.id)">View Details</a></td>
-          </tr>
-        </tbody>
-      </table></div>
+      <div v-if="error" class="error-msg">{{ error }}</div>
+      <div class="data-card">
+        <table class="data-table">
+          <thead><tr>
+            <th>Invoice No.</th><th>Customer</th><th>Date</th>
+            <th class="num">Amount</th><th class="num">Received</th><th>Status</th><th>Action</th>
+          </tr></thead>
+          <tbody>
+            <tr v-if="loading && rows.length === 0"><td colspan="7" class="empty-cell">Loading invoices...</td></tr>
+            <tr v-for="r in rows" :key="r.invoiceId" class="data-row">
+              <td class="mono">{{ r.invoiceId }}</td>
+              <td>{{ r.customerName }}</td>
+              <td>{{ r.date }}</td>
+              <td class="num mono">{{ fmt(r.amount) }}</td>
+              <td class="num mono">{{ fmt(r.received) }}</td>
+              <td><span class="stag" :class="sc(r.status)">{{ r.status }}</span></td>
+              <td><a class="link" @click="$router.push('/finance/receivable/' + r.invoiceId)">View Details</a></td>
+            </tr>
+            <tr v-if="!loading && rows.length === 0"><td colspan="7" class="empty-cell">No invoices found.</td></tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <div class="tf-left">
+            <span class="tf-total">共 {{ pagination.total }} 条</span>
+            <select class="form-select form-select-sm" v-model="pageSize" @change="loadData">
+              <option :value="20">20 / 页</option><option :value="50">50 / 页</option><option :value="100">100 / 页</option>
+            </select>
+          </div>
+          <div class="pager">
+            <button class="pg-btn" :disabled="pagination.page <= 1" @click="goPage(pagination.page - 1)">‹</button>
+            <button v-for="p in pageNumbers" :key="p" class="pg-btn" :class="{ active: p === pagination.page }" @click="goPage(p)">{{ p }}</button>
+            <button class="pg-btn" :disabled="pagination.page >= pagination.totalPages" @click="goPage(pagination.page + 1)">›</button>
+          </div>
+          <div class="tf-right"><span class="tf-label">Go to</span><input type="text" class="pg-input" v-model="goToPage" @keyup.enter="goPage(parseInt(goToPage))" placeholder="page" /></div>
+        </div>
+      </div>
     </div>
   </MainLayout>
 </template>
+
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import MainLayout from '@/layout/MainLayout.vue'
-import axios from 'axios'
+import { fetchInvoices, fetchOpenAR, fetchClosedAR, fetchPartners } from '@/api'
+import type { Invoice, OpenAccountReceivable, ClosedAccountReceivable } from '@/api/modules/finance'
+import type { Partner } from '@/api/modules/master'
 
-interface R{id:string;no:string;cust:string;date:string;amt:string;rcv:string;st:string}
-const rows = ref<R[]>([])
+const f = reactive({ invoiceNo: '', customer: '', status: '' })
+const loading = ref(false)
+const error = ref('')
+const rows = ref<RowData[]>([])
+const page = ref(1)
+const pageSize = ref(20)
+const goToPage = ref('')
+const partnerMap = ref<Record<string, Partner>>({})
 
-async function fetchData() {
+interface RowData {
+  invoiceId: string
+  customerName: string
+  date: string
+  amount: number
+  received: number
+  status: string
+}
+
+const pagination = ref({ page: 1, page_size: 20, total: 0, total_pages: 0 })
+
+const pageNumbers = computed(() => {
+  const tp = pagination.value.total_pages
+  const cur = pagination.value.page
+  const arr: number[] = []
+  let start = Math.max(1, cur - 2)
+  let end = Math.min(tp, start + 4)
+  start = Math.max(1, end - 4)
+  for (let i = start; i <= end; i++) arr.push(i)
+  return arr
+})
+
+function fmt(n: number) {
+  return '¥' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function sc(s: string) {
+  const m: Record<string, string> = { OPEN: 's-open', PARTIAL: 's-partial', CLEARED: 's-done', VOID: 's-cancel' }
+  return m[s] || ''
+}
+
+async function loadPartners() {
   try {
-    const res = await axios.get("/api/v1/finance/invoices")
-    if (res.data.success) {
-      rows.value = res.data.data.items.map((i: any) => ({
-        id: i.invoice_id,
-        no: i.invoice_id,
-        cust: i.payer,
-        date: i.invoice_date,
-        amt: i.total_amount ? `¥${i.total_amount.toLocaleString()}` : '¥0.00',
-        rcv: i.status === 'CLEARED' ? (i.total_amount ? `¥${i.total_amount.toLocaleString()}` : '¥0.00') : '¥0.00', // Simplified
-        st: i.status
-      }))
+    const res = await fetchPartners({ limit: 1000 })
+    partnerMap.value = (res.items || []).reduce((acc: Record<string, Partner>, p: Partner) => {
+      if (p.bp_id) acc[p.bp_id] = p
+      return acc
+    }, {})
+  } catch { /* silent */ }
+}
+
+async function loadData() {
+  loading.value = true
+  error.value = ''
+  try {
+    const params: Record<string, any> = {
+      page: page.value,
+      page_size: pageSize.value,
     }
-  } catch (err) {
-    console.error("Fetch invoices failed:", err)
+    if (f.invoiceNo) params.invoice_no = f.invoiceNo
+    if (f.customer) params.customer = f.customer
+    if (f.status) params.status = f.status
+
+    const [invRes, openRes, closedRes] = await Promise.all([
+      fetchInvoices(params),
+      fetchOpenAR({ page_size: 1000 }),
+      fetchClosedAR({ page_size: 1000 }),
+    ])
+
+    const receivedMap: Record<string, number> = {}
+    for (const ar of openRes.items || []) {
+      receivedMap[ar.invoice_id] = Number(ar.received_amount) || 0
+    }
+    for (const ar of closedRes.items || []) {
+      receivedMap[ar.invoice_id] = Number(ar.received_amount) || 0
+    }
+
+    rows.value = (invRes.items || []).map((inv: Invoice) => {
+      const bpId = inv.payer || inv.sold_to_party || ''
+      return {
+        invoiceId: inv.invoice_id,
+        customerName: partnerMap.value[bpId]?.bp_name || bpId || 'Unknown',
+        date: inv.invoice_date || 'N/A',
+        amount: Number(inv.total_amount) || 0,
+        received: receivedMap[inv.invoice_id] || 0,
+        status: inv.status,
+      }
+    })
+    pagination.value = invRes.pagination
+  } catch (err: any) {
+    error.value = err?.message || 'Failed to load invoices'
+    console.error('Fetch invoices failed:', err)
+  } finally {
+    loading.value = false
   }
 }
 
-onMounted(fetchData)
+function search() { page.value = 1; loadData() }
+function reset() {
+  Object.assign(f, { invoiceNo: '', customer: '', status: '' })
+  page.value = 1
+  loadData()
+}
+function goPage(p: number) {
+  if (p < 1 || p > pagination.value.total_pages) return
+  page.value = p
+  goToPage.value = ''
+  loadData()
+}
 
-function sc(s:string){const m:Record<string,string>={'OPEN':'s-open','PARTIAL':'s-partial','CLEARED':'s-done','VOID':'s-cancel'};return m[s]||''}
+onMounted(async () => {
+  await loadPartners()
+  loadData()
+})
 </script>
+
 <style scoped>
-.page{padding:28px 36px;max-width:1200px;margin:0 auto;}
+.page{padding:28px 36px;max-width:1400px;margin:0 auto;}
 .header-card{display:flex;align-items:center;background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:16px;padding:20px 24px;border:1px solid rgba(173,188,159,0.18);box-shadow:0 2px 8px rgba(173,188,159,0.12);margin-bottom:20px;}
 .hc-left{display:flex;align-items:center;gap:14px;}
 .hc-icon{width:44px;height:44px;border-radius:12px;background:rgba(67,104,80,0.08);display:flex;align-items:center;justify-content:center;}
 .hc-title{font-size:18px;font-weight:800;color:#12372A;margin:0;}
 .hc-sub{font-size:12px;color:rgba(18,55,42,0.45);margin:2px 0 0;}
 .filter-bar{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;}
-.form-input,.form-select{height:38px;border:1px solid rgba(173,188,159,0.4);border-radius:8px;padding:0 12px;font-size:13px;color:#12372A;background:rgba(251,250,218,0.35);font-family:inherit;outline:none;min-width:130px;}
+.form-input,.form-select{height:38px;border:1px solid rgba(173,188,159,0.4);border-radius:8px;padding:0 12px;font-size:13px;color:#12372A;background:rgba(251,250,218,0.35);font-family:inherit;outline:none;min-width:130px;transition:all 0.2s;}
+.form-input:focus,.form-select:focus{border-color:#436850;box-shadow:0 0 0 3px rgba(67,104,80,0.06);background:#fff;}
+.form-select-sm{height:32px;padding:0 8px;font-size:11px;}
+.error-msg{color:#D9534F;font-size:13px;padding:10px 14px;background:rgba(217,83,79,0.08);border-radius:8px;margin-bottom:14px;}
 .data-card{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:14px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 2px 6px rgba(173,188,159,0.1);overflow:hidden;}
 .data-table{width:100%;border-collapse:collapse;font-size:13px;}
 .data-table th{text-align:left;padding:12px 14px;font-size:10px;font-weight:700;color:rgba(18,55,42,0.45);text-transform:uppercase;letter-spacing:0.8px;background:rgba(173,188,159,0.08);border-bottom:1px solid rgba(173,188,159,0.2);}
@@ -73,6 +202,7 @@ function sc(s:string){const m:Record<string,string>={'OPEN':'s-open','PARTIAL':'
 .data-table td.num{text-align:right;}
 .data-row:hover{background:rgba(67,104,80,0.025);}
 .mono{font-family:'SF Mono',Consolas,monospace;font-size:12px;}
+.empty-cell{text-align:center;padding:40px;color:rgba(18,55,42,0.4);}
 .stag{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;}
 .s-open{background:rgba(67,104,80,0.1);color:#436850;}
 .s-partial{background:rgba(240,173,78,0.12);color:#c98a20;}
@@ -81,7 +211,20 @@ function sc(s:string){const m:Record<string,string>={'OPEN':'s-open','PARTIAL':'
 .link{color:#436850;cursor:pointer;font-weight:600;font-size:12px;}
 .link:hover{text-decoration:underline;}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all 0.2s;font-family:inherit;}
-.btn-primary{background:linear-gradient(135deg,#436850,#365440);color:#FBFADA;border:none;}.btn-primary:hover{transform:translateY(-1px);}
+.btn-primary{background:linear-gradient(135deg,#436850,#365440);color:#FBFADA;border:none;box-shadow:0 2px 8px rgba(67,104,80,0.25);}
+.btn-primary:hover{transform:translateY(-1px);}
+.btn-primary:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
 .btn-outline{background:none;color:rgba(18,55,42,0.5);border:1px solid rgba(173,188,159,0.35);}
 .btn-outline:hover{border-color:rgba(18,55,42,0.3);color:#12372A;}
+.btn-outline:disabled{opacity:0.6;cursor:not-allowed;}
+.table-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid rgba(173,188,159,0.15);}
+.tf-left{display:flex;align-items:center;gap:10px;}
+.tf-total{font-size:12px;color:rgba(18,55,42,0.4);}
+.tf-right{display:flex;align-items:center;gap:8px;}
+.tf-label{font-size:11px;color:rgba(18,55,42,0.35);}
+.pg-input{width:50px;height:30px;border:1px solid rgba(173,188,159,0.35);border-radius:6px;text-align:center;font-size:12px;outline:none;}
+.pager{display:flex;gap:4px;}
+.pg-btn{min-width:30px;height:30px;border:1px solid rgba(173,188,159,0.25);border-radius:6px;background:rgba(251,250,218,0.3);font-size:12px;color:#12372A;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.pg-btn.active{background:#436850;color:#FBFADA;border-color:#436850;}
+.pg-btn:disabled{opacity:0.4;cursor:not-allowed;}
 </style>
