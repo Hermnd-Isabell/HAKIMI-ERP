@@ -11,7 +11,7 @@
     </div>
     <div class="page" v-else-if="invoice">
       <div class="top-bar">
-        <button class="back-btn" @click="$router.push('/finance/unpaid')"><svg viewBox="0 0 20 20" width="16" height="16"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
+        <button class="back-btn" @click="goBack"><svg viewBox="0 0 20 20" width="16" height="16"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
         <div class="hc-icon"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="10" fill="none" stroke="#436850" stroke-width="1.8"/><path d="M7 14l3 3 7-7" fill="none" stroke="#436850" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <div class="top-info">
           <span class="ti-label">Invoice No.</span><span class="ti-value mono">{{ invoice.invoice_id }}</span>
@@ -19,7 +19,8 @@
         </div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
           <span class="stag" :class="statusClass">{{ statusLabel }}</span>
-          <button class="btn btn-primary" @click="openCollect" :disabled="posting || unpaidAmount <= 0">
+          <button class="btn btn-outline" @click="exportInvoice">Export</button>
+          <button class="btn btn-primary" @click="openCollect" :disabled="posting || unpaidAmount <= 0 || invoice?.status === 'VOID'">
             {{ posting ? 'Posting...' : 'Collect' }}
           </button>
         </div>
@@ -36,8 +37,8 @@
         <h3 class="sc-title">Collection Progress</h3>
         <p class="sc-hint">Current stage reflects the invoice and receivable status.</p>
         <div class="timeline">
-          <div v-for="(s,i) in steps" :key="i" class="tl-step" :class="{done:s.done,cur:s.cur,alert:s.alert}">
-            <div class="tl-dot"></div><div v-if="i<3" class="tl-line"></div>
+          <div v-for="(s,i) in steps" :key="i" class="tl-step" :class="{done:s.done,cur:s.cur,alert:s.alert,future:s.future}">
+            <div class="tl-dot"></div><div v-if="i<3" class="tl-line" :class="{future:s.future}"></div>
             <div class="tl-info"><span class="tl-status">{{ s.label }}</span><span class="tl-time">{{ s.time }}</span></div>
           </div>
         </div>
@@ -144,7 +145,7 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import MainLayout from '@/layout/MainLayout.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
 import { fetchInvoiceById, fetchOpenAR, fetchClosedAR, fetchReceipts, createReceipt, fetchPartners } from '@/api'
@@ -152,6 +153,7 @@ import type { Invoice, OpenAccountReceivable, ClosedAccountReceivable, Receipt }
 import type { Partner } from '@/api/modules/master'
 
 const route = useRoute()
+const router = useRouter()
 const invoiceId = computed(() => route.params.id as string)
 
 const invoice = ref<Invoice | null>(null)
@@ -202,7 +204,8 @@ const customerName = computed(() => customer.value?.bp_name || invoice.value?.pa
 const customerEmail = computed(() => customer.value?.email || 'N/A')
 
 const statusLabel = computed(() => {
-  if (unpaidAmount.value === 0) return 'Closed'
+  if (invoice.value?.status === 'VOID') return 'Void'
+  if (unpaidAmount.value === 0 && receivedAmount.value > 0) return 'Closed'
   if (daysOverdue.value > 0) return 'Overdue'
   if (receivedAmount.value > 0) return 'Partially Paid'
   return 'Open'
@@ -212,6 +215,7 @@ const statusClass = computed(() => {
     case 'Closed': return 's-done'
     case 'Overdue': return 's-overdue'
     case 'Partially Paid': return 's-partial'
+    case 'Void': return 's-void'
     default: return 's-open'
   }
 })
@@ -234,19 +238,22 @@ const paymentHistory = computed(() => {
 })
 
 const steps = computed(() => {
+  const isVoid = invoice.value?.status === 'VOID'
   const issued = true
   const partial = receivedAmount.value > 0
   const overdue = daysOverdue.value > 0 && unpaidAmount.value > 0
-  const closed = unpaidAmount.value === 0
-  let cur = 0
-  if (closed) cur = -1
+  const closed = unpaidAmount.value === 0 && receivedAmount.value > 0
+  let cur = -1
+  if (isVoid) cur = -2
+  else if (closed) cur = 3
   else if (overdue) cur = 2
   else if (partial) cur = 1
+  else cur = 0
   return [
-    { label: 'Invoice Issued', done: issued, time: invoice.value?.invoice_date || 'Pending', cur: cur === 0, alert: false },
-    { label: 'Partially Paid', done: partial, time: partial ? 'Received' : 'Pending', cur: cur === 1, alert: false },
-    { label: 'Overdue Notice', done: overdue, time: overdue ? 'Sent' : 'Pending', cur: cur === 2, alert: overdue },
-    { label: 'Closed', done: closed, time: closed ? 'Done' : 'Pending', cur: cur === 3, alert: false }
+    { label: 'Invoice Issued', done: issued && !isVoid, time: invoice.value?.invoice_date || 'Pending', cur: cur === 0, alert: false, future: isVoid },
+    { label: 'Partially Paid', done: partial, time: partial ? 'Received' : 'Pending', cur: cur === 1, alert: false, future: !partial && cur < 1 && !isVoid },
+    { label: 'Overdue Notice', done: overdue, time: overdue ? 'Sent' : 'Pending', cur: cur === 2, alert: overdue, future: !overdue && cur < 2 && !isVoid },
+    { label: 'Closed', done: closed, time: closed ? 'Done' : 'Pending', cur: cur === 3, alert: false, future: !closed && cur < 3 && !isVoid },
   ]
 })
 
@@ -287,6 +294,18 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+function goBack() {
+  if (window.history.length > 1) {
+    router.back()
+  } else {
+    router.push('/finance/invoice')
+  }
+}
+
+function exportInvoice() {
+  window.print()
 }
 
 function openCollect() {
@@ -349,6 +368,7 @@ onMounted(() => load())
 .s-partial{background:rgba(240,173,78,0.12);color:#c98a20;}
 .s-done{background:rgba(67,104,80,0.12);color:#2d4a38;}
 .s-overdue{background:rgba(217,83,79,0.1);color:#D9534F;}
+.s-void{background:rgba(120,120,120,0.12);color:#888;}
 
 .info-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
 .ic{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:12px;padding:16px 18px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 2px 6px rgba(173,188,159,0.1);}
@@ -368,8 +388,12 @@ onMounted(() => load())
 .tl-step{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;}
 .tl-dot{width:13px;height:13px;border-radius:50%;border:2px solid rgba(173,188,159,0.35);background:#FBFADA;z-index:1;}
 .tl-step.done .tl-dot{background:#436850;border-color:#436850;}
-.tl-step.cur .tl-dot{background:#436850;border-color:#436850;box-shadow:0 0 0 4px rgba(67,104,80,0.12);}
+.tl-step.cur:not(.future) .tl-dot{background:#436850;border-color:#436850;box-shadow:0 0 0 4px rgba(67,104,80,0.12);}
+.tl-step.cur.future .tl-dot{background:#FBFADA;border:2px dashed rgba(120,120,120,0.4);box-shadow:none;}
 .tl-step.alert .tl-dot{background:#D9534F;border-color:#D9534F;box-shadow:0 0 0 4px rgba(217,83,79,0.12);}
+.tl-step.future:not(.cur) .tl-dot{background:#FBFADA;border:2px solid rgba(120,120,120,0.25);}
+.tl-step.future .tl-line{background:rgba(120,120,120,0.12);}
+.tl-step.future .tl-status{color:rgba(120,120,120,0.5);}
 .tl-line{position:absolute;top:6px;left:50%;width:100%;height:2px;background:rgba(173,188,159,0.25);}
 .tl-step.done .tl-line{background:#436850;}
 .tl-info{margin-top:10px;text-align:center;}
