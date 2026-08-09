@@ -1,6 +1,5 @@
-﻿<template>
-  <MainLayout>
-    <div class="page" v-if="loading">
+<template>
+  <div class="page" v-if="loading">
       <div class="section-card" style="padding:40px;text-align:center;color:rgba(18,55,42,0.4)">
         <p>Loading delivery details...</p>
         <p style="font-size:11px;margin-top:8px">{{ loadMsg }}</p>
@@ -22,12 +21,12 @@
         </div>
         <div class="top-info">
           <span class="ti-label">Delivery No.</span>
-          <span class="ti-value">{{ delivery.delivery_id }}</span>
-          <span class="ti-sub">SO {{ delivery.sales_order_id || 'N/A' }} &middot; {{ delivery.ship_to_party_name || delivery.ship_to_party }}</span>
+          <span class="ti-value">{{ delivery.deliveryId }}</span>
+          <span class="ti-sub">SO {{ delivery.salesOrderId || 'N/A' }} &middot; {{ delivery.shipToPartyName || delivery.shipToParty }}</span>
         </div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
           <span class="stag" :class="statusClass">{{ statusLabel }}</span>
-          <template v-if="delivery.delivery_status === 'PICKING'">
+          <template v-if="delivery.deliveryStatus === 'PICKING'">
             <button class="btn btn-primary" @click="showPickDialog = true">Pick Batch</button>
             <button class="btn btn-outline" @click="doConfirmPicking" :disabled="!allFullyPicked || posting">
               {{ posting ? '...' : 'Confirm Picking Complete' }}
@@ -44,9 +43,9 @@
 
       <!-- Info Cards -->
       <div class="info-cards">
-        <div class="ic"><span class="ic-label">Delivery Date</span><span class="ic-value">{{ delivery.planned_delivery_date || 'N/A' }}</span></div>
-        <div class="ic"><span class="ic-label">Planned GI Date</span><span class="ic-value">{{ delivery.planned_gi_date || 'N/A' }}</span></div>
-        <div class="ic"><span class="ic-label">Shipping Point</span><span class="ic-value">{{ delivery.shipping_point || 'N/A' }}</span></div>
+        <div class="ic"><span class="ic-label">Delivery Date</span><span class="ic-value">{{ delivery.plannedDeliveryDate || 'N/A' }}</span></div>
+        <div class="ic"><span class="ic-label">Planned GI Date</span><span class="ic-value">{{ delivery.plannedGiDate || 'N/A' }}</span></div>
+        <div class="ic"><span class="ic-label">Shipping Point</span><span class="ic-value">{{ delivery.shippingPoint || 'N/A' }}</span></div>
         <div class="ic"><span class="ic-label">Picked / Total</span><span class="ic-value mono">{{ pickedTotal }} / {{ totalQty }}</span></div>
       </div>
 
@@ -90,13 +89,13 @@
           <table class="data-table">
             <thead><tr><th>Batch</th><th>Material</th><th class="num">Pick Qty</th><th>Location</th><th>Time</th><th>By</th></tr></thead>
             <tbody>
-              <tr v-for="pr in pickRecords" :key="pr.pick_id">
-                <td><span class="batch-badge">#{{ pr.batch_no }}</span></td>
-                <td>{{ pr.material_name || pr.material_id }}</td>
-                <td class="num">{{ fmtNum(pr.pick_quantity) }}</td>
-                <td>{{ pr.storage_location || '-' }}</td>
-                <td class="time-cell">{{ fmtTs(pr.pick_date) }}</td>
-                <td>{{ pr.picked_by || '-' }}</td>
+              <tr v-for="pr in pickRecords" :key="pr.pickId">
+                <td><span class="batch-badge">#{{ pr.batchNo }}</span></td>
+                <td>{{ pr.materialName || pr.materialId }}</td>
+                <td class="num">{{ fmtNum(pr.pickQuantity) }}</td>
+                <td>{{ pr.storageLocation || '-' }}</td>
+                <td class="time-cell">{{ fmtTs(pr.pickDate) }}</td>
+                <td>{{ pr.pickedBy || '-' }}</td>
               </tr>
             </tbody>
           </table>
@@ -110,11 +109,11 @@
           <table class="data-table">
             <thead><tr><th>Batch</th><th>Material</th><th class="num">GI Qty</th><th>Date</th><th>Warehouse</th></tr></thead>
             <tbody>
-              <tr v-for="gi in giRecords" :key="gi.goods_issue_id">
-                <td><span class="batch-badge">#{{ gi.batch_no }}</span></td>
-                <td>{{ gi.material_name || gi.material_id }}</td>
-                <td class="num">{{ fmtNum(gi.actual_quantity) }}</td>
-                <td>{{ gi.posting_date ? gi.posting_date.split('T')[0] : '-' }}</td>
+              <tr v-for="gi in giRecords" :key="gi.goodsIssueId">
+                <td><span class="batch-badge">#{{ gi.batchNo }}</span></td>
+                <td>{{ gi.materialName || gi.materialId }}</td>
+                <td class="num">{{ fmtNum(gi.actualQuantity) }}</td>
+                <td>{{ gi.postingDate ? gi.postingDate.split('T')[0] : '-' }}</td>
                 <td>{{ gi.warehouse || '-' }}</td>
               </tr>
             </tbody>
@@ -126,12 +125,12 @@
       <div class="section-card">
         <h3 class="sc-title">Shipment Information</h3>
         <div class="si-grid">
-          <div class="si-item"><span class="si-label">Ship-to</span><span class="si-value">{{ delivery.ship_to_party_name || delivery.ship_to_party }}</span></div>
-          <div class="si-item"><span class="si-label">Address</span><span class="si-value mono">{{ delivery.ship_to_address || 'N/A' }}</span></div>
-          <div class="si-item"><span class="si-label">Shipping Point</span><span class="si-value">{{ delivery.shipping_point || 'N/A' }}</span></div>
+          <div class="si-item"><span class="si-label">Ship-to</span><span class="si-value">{{ delivery.shipToPartyName || delivery.shipToParty }}</span></div>
+          <div class="si-item"><span class="si-label">Address</span><span class="si-value mono">{{ delivery.shipToAddress || 'N/A' }}</span></div>
+          <div class="si-item"><span class="si-label">Shipping Point</span><span class="si-value">{{ delivery.shippingPoint || 'N/A' }}</span></div>
           <div class="si-item"><span class="si-label">Route</span><span class="si-value">{{ delivery.route || 'N/A' }}</span></div>
-          <div class="si-item"><span class="si-label">Carrier / Driver</span><span class="si-value">{{ delivery.carrier || 'N/A' }}{{ delivery.driver_name ? ' . ' + delivery.driver_name : '' }}</span></div>
-          <div class="si-item"><span class="si-label">Tracking No.</span><span class="si-value">{{ delivery.tracking_no || 'N/A' }}</span></div>
+          <div class="si-item"><span class="si-label">Carrier / Driver</span><span class="si-value">{{ delivery.carrier || 'N/A' }}{{ delivery.driverName ? ' . ' + delivery.driverName : '' }}</span></div>
+          <div class="si-item"><span class="si-label">Tracking No.</span><span class="si-value">{{ delivery.trackingNo || 'N/A' }}</span></div>
         </div>
       </div>
     </div>
@@ -188,13 +187,13 @@
             <table class="data-table">
               <thead><tr><th>Location</th><th>Name</th><th>Plant</th><th>Warehouse</th><th>Type</th><th>Bin</th></tr></thead>
               <tbody>
-                <tr v-for="sl in slocList" :key="sl.sloc_id" class="data-row" style="cursor:pointer" @click="selectSloc(sl)">
-                  <td class="mono">{{ sl.sloc_id }}</td>
-                  <td>{{ sl.sloc_name }}</td>
+                <tr v-for="sl in slocList" :key="sl.slocId" class="data-row" style="cursor:pointer" @click="selectSloc(sl)">
+                  <td class="mono">{{ sl.slocId }}</td>
+                  <td>{{ sl.slocName }}</td>
                   <td>{{ sl.plant }}</td>
-                  <td>{{ sl.warehouse_no || '-' }}</td>
-                  <td>{{ sl.storage_type || '-' }}</td>
-                  <td class="mono">{{ sl.storage_bin || '-' }}</td>
+                  <td>{{ sl.warehouseNo || '-' }}</td>
+                  <td>{{ sl.storageType || '-' }}</td>
+                  <td class="mono">{{ sl.storageBin || '-' }}</td>
                 </tr>
                 <tr v-if="slocList.length===0"><td colspan="6" style="text-align:center;padding:16px;color:rgba(18,55,42,0.4)">No locations found. Try a different keyword.</td></tr>
               </tbody>
@@ -295,15 +294,22 @@
         </div>
       </div>
     </div>
-
-  </MainLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import MainLayout from '@/layout/MainLayout.vue'
-import { fetchDeliveryById, startPicking, confirmPicking, shipDelivery, pickBatch, fetchPickRecords, postGoodsIssue, fetchGoodsIssues, fetchStorageLocations } from '@/api/modules/logistics'
+import { 
+  fetchDeliveryById, 
+  startPicking, 
+  confirmPicking, 
+  shipDelivery, 
+  pickBatch, 
+  fetchPickRecords, 
+  postGoodsIssue, 
+  fetchGoodsIssues, 
+  fetchStorageLocations 
+} from '@/api/modules/logistics'
 
 const route = useRoute()
 const router = useRouter()
@@ -358,13 +364,13 @@ const SC: Record<string, string> = { PGI_DONE: 's-done', SHIPPED: 's-pick', PICK
 const SM: Record<string, string> = { OPEN: 'Open', PARTIAL_PICKED: 'Partial', PICKED: 'Picked', COMPLETED: 'Done', PARTIAL_ISSUED: 'Partial GI' }
 const CL: Record<string, string> = { OPEN: 'is-open', PARTIAL_PICKED: 'is-partial', PICKED: 'is-picked', COMPLETED: 'is-done', PARTIAL_ISSUED: 'is-partial' }
 
-const statusLabel = computed(() => delivery.value ? (S[delivery.value.delivery_status] || delivery.value.delivery_status) : '')
-const statusClass = computed(() => delivery.value ? (SC[delivery.value.delivery_status] || '') : '')
-const nextActionLabel = computed(() => delivery.value ? (A[delivery.value.delivery_status] || '') : '')
-const totalQty = computed(() => delivery.value ? Number(delivery.value.total_quantity || 0).toFixed(0) : '0')
+const statusLabel = computed(() => delivery.value ? (S[delivery.value.deliveryStatus] || delivery.value.deliveryStatus) : '')
+const statusClass = computed(() => delivery.value ? (SC[delivery.value.deliveryStatus] || '') : '')
+const nextActionLabel = computed(() => delivery.value ? (A[delivery.value.deliveryStatus] || '') : '')
+const totalQty = computed(() => delivery.value ? Number(delivery.value.totalQuantity || 0).toFixed(0) : '0')
 const pickedTotal = computed(() => {
   if (!delivery.value) return '0'
-  return (delivery.value.items || []).reduce((s: number, it: any) => s + (it.picked_quantity || 0), 0).toString()
+  return (delivery.value.items || []).reduce((s: number, it: any) => s + (it.pickedQuantity || 0), 0).toString()
 })
 
 const batchLocDisplay = computed(() => {
@@ -376,19 +382,35 @@ const batchLocDisplay = computed(() => {
 const dItems = computed(() => {
   if (!delivery.value?.items) return []
   return delivery.value.items.map((it: any) => {
-    const dq = Math.floor(Number(it.delivery_quantity || 0))
-    const pk = Math.floor(Number(it.picked_quantity || 0))
+    const dq = Math.floor(Number(it.deliveryQuantity || 0))
+    const pk = Math.floor(Number(it.pickedQuantity || 0))
     const rem = Math.max(0, dq - pk)
-    const st = it.item_status || 'OPEN'
+    const st = it.itemStatus || 'OPEN'
+    
+    // Calculate issued quantity from giRecords
+    const issuedNum = (giRecords.value || [])
+      .filter((gi: any) => gi.deliveryItemId === it.deliveryItemId)
+      .reduce((sum: number, gi: any) => sum + Number(gi.actualQuantity || 0), 0)
+
     return {
-      id: it.delivery_item_id, matId: it.material_id, matName: it.material_name || it.material_id,
-      orderQty: Math.floor(Number(it.order_quantity || 0)).toString(),
-      delQty: dq.toString(), delQtyNum: dq, uom: it.base_unit || it.sales_unit || '',
+      id: it.deliveryItemId, matId: it.materialId, matName: it.materialName || it.materialId,
+      orderQty: Math.floor(Number(it.orderQuantity || 0)).toString(),
+      delQty: dq.toString(), delQtyNum: dq, uom: it.baseUnit || it.salesUnit || '',
       picked: pk.toString(), pickedNum: pk, rem: rem.toString(), remNum: rem,
-      issued: '--', issuedNum: 0,
+      issued: issuedNum.toString(), issuedNum: issuedNum,
       stLbl: SM[st] || st, stCls: CL[st] || 'is-open',
     }
   })
+})
+
+watch(showPgiDialog, (v) => {
+  if (v && delivery.value) {
+    // Pre-fill PGI quantities with remaining to issue
+    dItems.value.forEach(it => {
+      const remainingToIssue = it.pickedNum - it.issuedNum
+      pgiIn[it.id] = remainingToIssue > 0 ? remainingToIssue : 0
+    })
+  }
 })
 
 const allFullyPicked = computed(() => dItems.value.every((it: any) => it.remNum <= 0))
@@ -397,12 +419,12 @@ const remainingCount = computed(() => dItems.value.filter((it: any) => it.remNum
 const steps = computed(() => {
   if (!delivery.value) return []
   const m: Record<string, number> = { OPEN: 0, PICKING: 1, SHIPPED: 2, IN_TRANSIT: 2, PGI_DONE: 3, CANCELLED: -1 }
-  const si = m[delivery.value.delivery_status] ?? 0
+  const si = m[delivery.value.deliveryStatus] ?? 0
   return [
     { label: 'Created', time: '', done: si >= 0, cur: si === 0 },
-    { label: 'Picking', time: delivery.value.picking_date || '', done: si >= 1, cur: si === 1 },
-    { label: 'Picked', time: (si >= 2 ? (delivery.value.planned_gi_date || '') : ''), done: si >= 2, cur: si === 2 },
-    { label: 'Goods Issue', time: delivery.value.actual_gi_date ? delivery.value.actual_gi_date.split('T')[0] : '', done: si >= 3, cur: si === 3 },
+    { label: 'Picking', time: delivery.value.pickingDate || '', done: si >= 1, cur: si === 1 },
+    { label: 'Picked', time: (si >= 2 ? (delivery.value.plannedGiDate || '') : ''), done: si >= 2, cur: si === 2 },
+    { label: 'Goods Issue', time: delivery.value.actualGiDate ? delivery.value.actualGiDate.split('T')[0] : '', done: si >= 3, cur: si === 3 },
   ]
 })
 
@@ -432,7 +454,8 @@ async function searchSloc() {
   } catch { slocList.value = [] }
 }
 function selectSloc(sl: any) {
-  batchLoc.value = sl.sloc_id
+  batchLoc.value = sl.slocId
+  batchLocName.value = sl.slocName
   showSlocF4.value = false
 }
 watch(showSlocF4, (v) => { if (v) { slocKeyword.value = ''; searchSloc() } })
@@ -451,46 +474,46 @@ async function loadData() {
     delivery.value = res
     loadMsg.value = 'Initializing...'
     for (const it of (res.items || [])) {
-      pickIn[it.delivery_item_id] = 0; pgiIn[it.delivery_item_id] = 0
+      pickIn[it.deliveryItemId] = 0; pgiIn[it.deliveryItemId] = 0
     }
     loadMsg.value = 'Loading pick history...'
     try { const pr: any = await fetchPickRecords(id); pickRecords.value = pr || [] } catch { pickRecords.value = [] }
     loadMsg.value = 'Loading GI history...'
     try { const gi: any = await fetchGoodsIssues(id); giRecords.value = gi || [] } catch { giRecords.value = [] }
   } catch (err: any) {
-    error.value = err?.message || 'Failed to load delivery'; console.error(err)
+    error.value = err.message || 'Failed to load delivery'; console.error(err)
   } finally { loading.value = false }
 }
 
 async function handleAction() {
   if (!delivery.value) return
-  const s = delivery.value.delivery_status
+  const s = delivery.value.deliveryStatus
   if (s === 'IN_TRANSIT') { showPgiDialog.value = true; return }
   const label = A[s]
   if (!label) return
-  const ok = await askConfirm(label, `${label} for delivery ${delivery.value.delivery_id}?`)
+  const ok = await askConfirm(label, `${label} for delivery ${delivery.value.deliveryId}?`)
   if (!ok) return
   posting.value = true
   try {
-    if (s === 'OPEN') await startPicking(delivery.value.delivery_id)
-    else if (s === 'SHIPPED') await shipDelivery(delivery.value.delivery_id)
+    if (s === 'OPEN') await startPicking(delivery.value.deliveryId)
+    else if (s === 'SHIPPED') await shipDelivery(delivery.value.deliveryId)
     showResult(true, 'Success', `${label} completed successfully.`)
     await loadData()
   } catch (err: any) {
-    showResult(false, 'Error', `${label} failed: ${err?.message || 'Unknown error'}`)
+    showResult(false, 'Error', `${label} failed: ${err.message || 'Unknown error'}`)
   } finally { posting.value = false }
 }
 
 async function doPickBatch() {
   if (!delivery.value) return
-  const items = dItems.value.filter((it: any) => (pickIn[it.id] || 0) > 0).map((it: any) => ({ delivery_item_id: it.id, quantity: pickIn[it.id] }))
+  const items = dItems.value.filter((it: any) => (pickIn[it.id] || 0) > 0).map((it: any) => ({ deliveryItemId: it.id, quantity: pickIn[it.id] }))
   if (items.length === 0) { showResult(false, 'Invalid Input', 'Please enter at least one pick quantity.'); return }
   pickBusy.value = true
   try {
-    await pickBatch(delivery.value.delivery_id, {
+    await pickBatch(delivery.value.deliveryId, {
       items,
-      storage_location: batchLoc.value || undefined,
-      picked_by: batchBy.value || undefined,
+      storageLocation: batchLoc.value || undefined,
+      pickedBy: batchBy.value || undefined,
     })
     // Build summary
     const summary = dItems.value.filter((it: any) => (pickIn[it.id] || 0) > 0).map((it: any) => {
@@ -504,7 +527,7 @@ async function doPickBatch() {
     await loadData()
     showPickSummary.value = true
   } catch (err: any) {
-    showResult(false, 'Pick Batch Failed', err?.message || 'Unknown error')
+    showResult(false, 'Pick Batch Failed', err.message || 'Unknown error')
   } finally { pickBusy.value = false }
 }
 
@@ -514,27 +537,27 @@ async function doConfirmPicking() {
   if (!ok) return
   posting.value = true
   try {
-    await confirmPicking(delivery.value.delivery_id)
+    await confirmPicking(delivery.value.deliveryId)
     showResult(true, 'Picking Confirmed', 'All items are now in Picked status. Delivery is ready to ship.')
     await loadData()
   } catch (err: any) {
-    showResult(false, 'Confirmation Failed', err?.message || 'Unknown error')
+    showResult(false, 'Confirmation Failed', err.message || 'Unknown error')
   } finally { posting.value = false }
 }
 
 async function doPostGi() {
   if (!delivery.value) return
-  const items = dItems.value.filter((it: any) => (pgiIn[it.id] || 0) > 0).map((it: any) => ({ delivery_item_id: it.id, quantity: pgiIn[it.id] }))
+  const items = dItems.value.filter((it: any) => (pgiIn[it.id] || 0) > 0).map((it: any) => ({ deliveryItemId: it.id, quantity: pgiIn[it.id] }))
   if (items.length === 0) { showResult(false, 'Invalid Input', 'Please enter at least one GI quantity.'); return }
   pgiBusy.value = true
   try {
-    await postGoodsIssue(delivery.value.delivery_id, { items })
+    await postGoodsIssue(delivery.value.deliveryId, { items })
     showPgiDialog.value = false
     for (const k in pgiIn) pgiIn[k] = 0
     showResult(true, 'Goods Issue Posted', 'Goods issue recorded successfully.')
     await loadData()
   } catch (err: any) {
-    showResult(false, 'Post GI Failed', err?.message || 'Unknown error')
+    showResult(false, 'Post GI Failed', err.message || 'Unknown error')
   } finally { pgiBusy.value = false }
 }
 
@@ -640,4 +663,39 @@ onMounted(() => loadData())
 .f4-btn-inline{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid rgba(173,188,159,0.4);border-left:none;border-radius:0 6px 6px 0;background:rgba(67,104,80,0.06);color:#436850;cursor:pointer;padding:0;}
 .f4-btn-inline:hover{background:rgba(67,104,80,0.12);}
 .error-msg{color:#D9534F;font-size:13px;padding:10px 14px;background:rgba(217,83,79,0.08);border-radius:8px;margin-bottom:14px;}
+
+/* Print Styles for Delivery Note */
+@media print {
+  .top-bar .btn, .top-bar .back-btn, .hc-icon, .timeline, .modal-overlay, .tf-right {
+    display: none !important;
+  }
+  .page {
+    padding: 0 !important;
+    max-width: 100% !important;
+    background: #fff !important;
+  }
+  .section-card {
+    background: #fff !important;
+    border: 1px solid #eee !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  .ti-value {
+    font-size: 28px !important;
+  }
+  .data-table th {
+    background: #f9f9f9 !important;
+    color: #000 !important;
+    border-bottom: 2px solid #000 !important;
+  }
+  .data-table td {
+    border-bottom: 1px solid #eee !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .MainLayout {
+    padding: 0 !important;
+  }
+}
 </style>

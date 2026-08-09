@@ -1,69 +1,88 @@
-﻿<template>
-  <MainLayout>
-    <div class="page">
-      <div class="header-card">
-        <div class="hc-left">
-          <div class="hc-icon"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="2" y="5" width="20" height="13" rx="2" fill="none" stroke="#436850" stroke-width="1.8"/><path d="M6 5V3M18 5V3M2 11h20M7 16h3" fill="none" stroke="#436850" stroke-width="1.5" stroke-linecap="round"/></svg></div>
-          <div class="hc-text"><h2 class="hc-title">Delivery List</h2><p class="hc-sub">View and manage all delivery orders.</p></div>
+<template>
+  <div class="page">
+    <div class="header-card">
+      <div class="hc-left">
+        <div class="hc-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22">
+            <rect x="2" y="5" width="20" height="13" rx="2" fill="none" stroke="#436850" stroke-width="1.8"/>
+            <path d="M6 5V3M18 5V3M2 11h20M7 16h3" fill="none" stroke="#436850" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="hc-text">
+          <h2 class="hc-title">Delivery List</h2>
+          <p class="hc-sub">View and manage all delivery orders.</p>
         </div>
       </div>
-
-      <div class="filter-bar">
-        <input type="text" class="form-input" v-model="filters.deliveryNo" placeholder="Delivery No." />
-        <input type="text" class="form-input" v-model="filters.salesOrder" placeholder="Sales Order" />
-        <input type="text" class="form-input" v-model="filters.customer" placeholder="Customer" />
-        <select class="form-select" v-model="filters.status">
-          <option value="">All Statuses</option>
-          <option value="Creating">Creating</option>
-          <option value="Picking">Picking</option>
-          <option value="Picked">Picked</option>
-          <option value="In Transit">In Transit</option>
-          <option value="Completed">Completed</option>
-          <option value="Cancelled">Cancelled</option>
-        </select>
-        <button class="btn btn-primary" @click="search">Search</button>
-        <button class="btn btn-outline" @click="reset">Reset</button>
-      </div>
-
-      <div v-if="error" class="error-msg">{{ error }}</div>
-
-      <div class="data-card">
-        <table class="data-table">
-          <thead><tr><th>Delivery No.</th><th>Sales Order</th><th>Customer</th><th>GI Date</th><th>Status</th><th>Action</th></tr></thead>
-          <tbody>
-            <tr v-if="loading"><td colspan="6" style="text-align:center;padding:40px;color:#999;">Loading deliveries...</td></tr>
-            <template v-else>
-              <tr v-for="r in rows" :key="r.id" class="data-row">
-                <td class="mono">{{ r.no }}</td>
-                <td class="mono">{{ r.so }}</td>
-                <td>{{ r.cust }}</td>
-                <td>{{ r.date }}</td>
-                <td><span class="stag" :class="sc(r.st)">{{ r.st }}</span></td>
-                <td>
-                  <a class="link" @click="viewDetail(r.id)">View</a>
-                  <template v-if="r.canPgi">
-                    <span class="divider">|</span>
-                  <a class="link" @click="processDelivery(r)">{{ r.actionLabel }}</a>
-                  </template>
-                  <template v-if="r.st === 'Completed'">
-                    <span class="divider">|</span>
-                    <a class="link" @click="createInvoice(r.id)">Create Invoice</a>
-                  </template>
-                </td>
-              </tr>
-            </template>
-            <tr v-if="!loading && rows.length === 0"><td colspan="6" style="text-align:center;padding:40px;color:#999;">No deliveries found.</td></tr>
-          </tbody>
-        </table>
-      </div>
     </div>
-  </MainLayout>
+
+    <div class="filter-bar">
+      <input type="text" class="form-input search-so" v-model="filters.salesOrder" placeholder="Sales Order" />
+      <input type="text" class="form-input search-cust" v-model="filters.customer" placeholder="Customer" />
+      <select class="form-select search-st" v-model="filters.status">
+        <option value="">All Statuses</option>
+        <option value="Creating">Creating</option>
+        <option value="Picking">Picking</option>
+        <option value="Picked">Picked</option>
+        <option value="In Transit">In Transit</option>
+        <option value="Completed">Completed</option>
+        <option value="Cancelled">Cancelled</option>
+      </select>
+      <button class="btn btn-primary" @click="search">Search</button>
+      <button class="btn btn-outline" @click="reset">Reset</button>
+    </div>
+
+    <div v-if="error" class="error-msg">{{ error }}</div>
+
+    <div class="data-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Delivery No.</th>
+            <th>Sales Order</th>
+            <th>Customer</th>
+            <th>GI Date</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="loading">
+            <td colspan="6" style="text-align:center;padding:40px;color:#999;">Loading deliveries...</td>
+          </tr>
+          <template v-else>
+            <tr v-for="r in rows" :key="r.id" class="data-row">
+              <td class="mono">{{ r.no }}</td>
+              <td class="mono">{{ r.so }}</td>
+              <td>{{ r.cust }}</td>
+              <td>{{ r.date }}</td>
+              <td><span class="stag" :class="sc(r.st)">{{ r.st }}</span></td>
+              <td>
+                <a class="link" @click="viewDetail(r.id)">View</a>
+                <template v-if="r.canPgi">
+                  <span class="divider">|</span>
+                  <a class="link" @click="processDelivery(r)">{{ r.actionLabel }}</a>
+                </template>
+                <template v-if="r.st === 'Completed'">
+                  <span class="divider">|</span>
+                  <a class="link" @click="createInvoice(r.id)">Create Invoice</a>
+                </template>
+              </td>
+            </tr>
+          </template>
+          <tr v-if="!loading && rows.length === 0">
+            <td colspan="6" style="text-align:center;padding:40px;color:#999;">No deliveries found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </template>
+
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import MainLayout from '@/layout/MainLayout.vue'
 import { confirmPicking, fetchDeliveries, postGoodsIssue, shipDelivery, startPicking } from '@/api/modules/logistics'
+import { createInvoiceFromDelivery } from '@/api/modules/finance'
 import type { DeliveryListItem } from '@/api/modules/logistics'
 
 const router = useRouter()
@@ -96,23 +115,23 @@ async function fetchData() {
   loading.value = true
   error.value = ''
   try {
-    const params: Record<string, any> = { page: 1, page_size: 100 }
-    if (filters.deliveryNo) params.delivery_no = filters.deliveryNo
-    if (filters.salesOrder) params.sales_order_no = filters.salesOrder
-    if (filters.customer) params.customer_name = filters.customer
+    const params: Record<string, any> = { page: 1, pageSize: 100 }
+    if (filters.deliveryNo) params.deliveryNo = filters.deliveryNo
+    if (filters.salesOrder) params.salesOrderNo = filters.salesOrder
+    if (filters.customer) params.customerName = filters.customer
     if (filters.status) params.status = filters.status
 
     const res = await fetchDeliveries(params)
     rows.value = (res.items || []).map((i: DeliveryListItem) => ({
-      id: i.delivery_id,
-      no: i.delivery_id,
-      so: i.sales_order_id || 'N/A',
-      cust: i.ship_to_party_name || i.ship_to_party || 'N/A',
-      date: i.actual_gi_date?.split('T')[0] || i.planned_gi_date || 'N/A',
-      st: STATUS_LABEL[i.delivery_status] || i.delivery_status,
-      rawStatus: i.delivery_status,
-      canPgi: i.delivery_status !== 'PGI_DONE' && i.delivery_status !== 'CANCELLED',
-      actionLabel: ACTION_LABEL[i.delivery_status] || '',
+      id: i.deliveryId,
+      no: i.deliveryId,
+      so: i.salesOrderId || 'N/A',
+      cust: i.shipToPartyName || i.shipToParty || 'N/A',
+      date: i.actualGiDate?.split('T')[0] || i.plannedGiDate || 'N/A',
+      st: STATUS_LABEL[i.deliveryStatus] || i.deliveryStatus,
+      rawStatus: i.deliveryStatus,
+      canPgi: i.deliveryStatus !== 'PGI_DONE' && i.deliveryStatus !== 'CANCELLED',
+      actionLabel: ACTION_LABEL[i.deliveryStatus] || '',
     }))
   } catch (err: any) {
     error.value = err?.message || 'Failed to load deliveries'
@@ -142,11 +161,14 @@ function viewDetail(id: string) {
 }
 
 async function processDelivery(row: Row) {
+  if (row.rawStatus === 'PICKING') {
+    router.push('/delivery/detail/' + row.id)
+    return
+  }
   if (!row.actionLabel) return
   if (!confirm(`${row.actionLabel} for delivery ${row.id}?`)) return
   try {
     if (row.rawStatus === 'OPEN') await startPicking(row.id)
-    else if (row.rawStatus === 'PICKING') await confirmPicking(row.id)
     else if (row.rawStatus === 'SHIPPED') await shipDelivery(row.id)
     else if (row.rawStatus === 'IN_TRANSIT') await postGoodsIssue(row.id)
     alert(`${row.actionLabel} completed`)
@@ -159,14 +181,11 @@ async function processDelivery(row: Row) {
 async function createInvoice(id: string) {
   if (!confirm(`Create invoice for delivery ${id}?`)) return
   try {
-    const axios = (await import('axios')).default
-    const res = await axios.post(`/api/v1/finance/invoices/from-delivery/${id}`)
-    if (res.data.success) {
-      alert(`Invoice ${res.data.data.invoice_id} created successfully!`)
-      router.push('/finance/invoice')
-    }
+    const res = await createInvoiceFromDelivery(id)
+    alert(`Invoice ${res.invoiceId} created successfully!`)
+    router.push('/finance/invoice')
   } catch (err: any) {
-    alert('Failed to create invoice: ' + (err?.response?.data?.detail || err?.message || 'Unknown error'))
+    alert('Failed to create invoice: ' + (err.message || 'Unknown error'))
   }
 }
 
@@ -181,7 +200,10 @@ onMounted(fetchData)
 .hc-title{font-size:18px;font-weight:800;color:#12372A;margin:0;}
 .hc-sub{font-size:12px;color:rgba(18,55,42,0.45);margin:2px 0 0;}
 .filter-bar{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;}
-.form-input,.form-select{height:38px;border:1px solid rgba(173,188,159,0.4);border-radius:8px;padding:0 12px;font-size:13px;color:#12372A;background:rgba(251,250,218,0.35);font-family:inherit;outline:none;min-width:130px;}
+.search-so{width:140px;}
+.search-cust{width:200px;}
+.search-st{width:130px;}
+.form-input,.form-select{height:38px;border:1px solid rgba(173,188,159,0.4);border-radius:8px;padding:0 12px;font-size:13px;color:#12372A;background:rgba(251,250,218,0.35);font-family:inherit;outline:none;transition:all 0.2s;}
 .data-card{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:14px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 2px 6px rgba(173,188,159,0.1);overflow:hidden;}
 .data-table{width:100%;border-collapse:collapse;font-size:13px;}
 .data-table th{text-align:left;padding:12px 14px;font-size:10px;font-weight:700;color:rgba(18,55,42,0.45);text-transform:uppercase;letter-spacing:0.8px;background:rgba(173,188,159,0.08);border-bottom:1px solid rgba(173,188,159,0.2);}

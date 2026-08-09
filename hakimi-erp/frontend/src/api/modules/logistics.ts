@@ -1,71 +1,70 @@
-﻿import { get, post, put } from '../request'
-import { LOGISTICS_API } from '@/constants/api'
+import { get, post, put } from '../request'
 
 // --- Delivery Item ---
 export interface DeliveryItem {
-  delivery_item_id: string
-  delivery_id: string
-  item_no: number
-  so_item_id?: string
-  material_id: string
-  material_name?: string
-  base_unit?: string
-  order_quantity?: number
-  delivery_quantity: number
-  picked_quantity?: number
-  sales_unit?: string
+  deliveryItemId: string
+  deliveryId: string
+  itemNo: number
+  soItemId?: string
+  materialId: string
+  materialName?: string
+  baseUnit?: string
+  orderQuantity?: number
+  deliveryQuantity: number
+  pickedQuantity?: number
+  salesUnit?: string
   plant?: string
-  storage_location?: string
-  item_description?: string
-  item_status?: string
+  storageLocation?: string
+  itemDescription?: string
+  itemStatus?: string
 }
 
 // --- Delivery (Detail) ---
 export interface Delivery {
-  delivery_id: string
-  sales_order_id?: string
-  delivery_type: string
-  delivery_status: string
-  ship_to_party: string
-  ship_to_party_name?: string
-  ship_to_address?: string
-  planned_delivery_date?: string
-  planned_gi_date?: string
-  actual_gi_date?: string
-  picking_date?: string
-  shipping_point?: string
+  deliveryId: string
+  salesOrderId?: string
+  deliveryType: string
+  deliveryStatus: string
+  shipToParty: string
+  shipToPartyName?: string
+  shipToAddress?: string
+  plannedDeliveryDate?: string
+  plannedGiDate?: string
+  actualGiDate?: string
+  pickingDate?: string
+  shippingPoint?: string
   carrier?: string
-  driver_name?: string
+  driverName?: string
   route?: string
-  tracking_no?: string
-  total_quantity?: number
-  delivered_quantity?: number
+  trackingNo?: string
+  totalQuantity?: number
+  deliveredQuantity?: number
   items: DeliveryItem[]
 }
 
 // --- Delivery List Item ---
 export interface DeliveryListItem {
-  delivery_id: string
-  sales_order_id?: string
-  delivery_type: string
-  delivery_status: string
-  ship_to_party: string
-  ship_to_party_name?: string
-  planned_delivery_date?: string
-  planned_gi_date?: string
-  actual_gi_date?: string
-  picking_date?: string
-  shipping_point?: string
-  total_quantity?: number
-  delivered_quantity?: number
+  deliveryId: string
+  salesOrderId?: string
+  deliveryType: string
+  deliveryStatus: string
+  shipToParty: string
+  shipToPartyName?: string
+  plannedDeliveryDate?: string
+  plannedGiDate?: string
+  actualGiDate?: string
+  pickingDate?: string
+  shippingPoint?: string
+  totalQuantity?: number
+  deliveredQuantity?: number
 }
 
 // --- Pagination ---
 export interface Pagination {
   page: number
-  page_size: number
+  pageSize: number
   total: number
-  total_pages: number
+  totalPages: number
 }
 
 // --- Delivery List Response ---
@@ -76,20 +75,21 @@ export interface DeliveryListResponse {
 
 // --- Goods Issue ---
 export interface GoodsIssue {
-  goods_issue_id: string
-  delivery_item_id: string
-  actual_quantity: number
-  posting_date: string
-  goods_issue_time: string
+  goodsIssueId: string
+  deliveryItemId: string
+  actualQuantity: number
+  postingDate: string
+  goodsIssueTime: string
   warehouse?: string
-  material_id?: string
-  material_name?: string
+  materialId?: string
+  materialName?: string
+  batchNo: number
 }
 
 
 // --- Partial Picking / PGI ---
 export interface PartialItemQuantity {
-  delivery_item_id: string
+  deliveryItemId: string
   quantity: number
 }
 
@@ -103,43 +103,43 @@ export interface PartialPgiRequest {
 
 // --- SO Remaining Quantities ---
 export interface SoItemRemaining {
-  so_item_id: string
-  material_id: string
-  material_name?: string
-  order_quantity: number
-  already_delivered: number
-  remaining_quantity: number
-  sales_unit?: string
+  soItemId: string
+  materialId: string
+  materialName?: string
+  orderQuantity: number
+  alreadyDelivered: number
+  remainingQuantity: number
+  salesUnit?: string
 }
 
 
 // --- Pick Record (batch picking) ---
 export interface PickRecord {
-  pick_id: string
-  delivery_item_id: string
-  batch_no: number
-  pick_quantity: number
-  storage_location?: string
-  pick_date: string
-  picked_by?: string
-  material_id?: string
-  material_name?: string
+  pickId: string
+  deliveryItemId: string
+  batchNo: number
+  pickQuantity: number
+  storageLocation?: string
+  pickDate: string
+  pickedBy?: string
+  materialId?: string
+  materialName?: string
 }
 
 export interface PickBatchRequest {
   items: PartialItemQuantity[]
-  storage_location?: string
-  picked_by?: string
+  storageLocation?: string
+  pickedBy?: string
 }
 
 
 export interface StorageLocation {
-  sloc_id: string
-  sloc_name: string
+  slocId: string
+  slocName: string
   plant: string
-  warehouse_no?: string
-  storage_type?: string
-  storage_bin?: string
+  warehouseNo?: string
+  storageType?: string
+  storageBin?: string
   description?: string
 }
 // --- Status Labels ---
@@ -149,65 +149,63 @@ export interface StatusLabels {
 
 // === API Functions ===
 
+const BASE = '/api/v1/logistics'
+
 export function fetchDeliveries(params?: {
   page?: number
-  page_size?: number
-  delivery_no?: string
-  sales_order_no?: string
-  customer_name?: string
+  pageSize?: number
+  deliveryNo?: string
+  salesOrderNo?: string
+  customerName?: string
   status?: string
 }) {
-  return get<DeliveryListResponse>(LOGISTICS_API.deliveries, { params })
+  return get<DeliveryListResponse>(`${BASE}/deliveries`, { params })
 }
 
 export function fetchDeliveryById(id: string) {
-  return get<Delivery>(LOGISTICS_API.deliveryById(id))
+  return get<Delivery>(`${BASE}/deliveries/${id}`)
 }
 
 export function createDeliveryFromSalesOrder(soId: string) {
-  return post<Delivery>(LOGISTICS_API.createFromSo(soId))
+  return post<Delivery>(`${BASE}/deliveries/from-so/${soId}`)
 }
 
 export function startPicking(deliveryId: string) {
-  return post<Delivery>(LOGISTICS_API.startPicking(deliveryId))
+  return post<Delivery>(`${BASE}/deliveries/${deliveryId}/start-picking`)
 }
 
 export function confirmPicking(deliveryId: string) {
-  return post<Delivery>(LOGISTICS_API.confirmPicking(deliveryId))
+  return post<Delivery>(`${BASE}/deliveries/${deliveryId}/confirm-picking`)
 }
 
 export function shipDelivery(deliveryId: string) {
-  return post<Delivery>(LOGISTICS_API.ship(deliveryId))
+  return post<Delivery>(`${BASE}/deliveries/${deliveryId}/ship`)
 }
 
 export function postGoodsIssue(deliveryId: string, body?: PartialPgiRequest) {
-  return post<Delivery>(LOGISTICS_API.postPgi(deliveryId), body)
+  return post<Delivery>(`${BASE}/deliveries/${deliveryId}/pgi`, body)
 }
 
 export function fetchGoodsIssues(deliveryId: string) {
-  return get<GoodsIssue[]>(`${LOGISTICS_API.deliveryById(deliveryId)}/goods-issues`)
+  return get<GoodsIssue[]>(`${BASE}/deliveries/${deliveryId}/goods-issues`)
 }
 
 export function pickBatch(deliveryId: string, body: PickBatchRequest) {
-  return post<Delivery>(LOGISTICS_API.pickBatch(deliveryId), body)
+  return post<Delivery>(`${BASE}/deliveries/${deliveryId}/pick-batch`, body)
 }
 
 export function fetchPickRecords(deliveryId: string) {
-  return get<PickRecord[]>(LOGISTICS_API.pickRecords(deliveryId))
+  return get<PickRecord[]>(`${BASE}/deliveries/${deliveryId}/pick-records`)
 }
 
 export function fetchSoRemaining(soId: string) {
-  return get<SoItemRemaining[]>(LOGISTICS_API.soRemaining(soId))
+  return get<SoItemRemaining[]>(`${BASE}/sales-orders/${soId}/remaining-quantities`)
 }
 
 export function fetchStorageLocations(params?: { keyword?: string; plant?: string }) {
-  return get<StorageLocation[]>(LOGISTICS_API.storageLocations, { params })
+  return get<StorageLocation[]>(`${BASE}/storage-locations`, { params })
 }
 
 export function fetchStatusLabels() {
-  return get<StatusLabels>(`${LOGISTICS_API.deliveries.replace('/deliveries', '/delivery-status-labels')}`)
-}
-
-export function updateDelivery(id: string, data: Partial<Delivery>) {
-  return put<Delivery>(LOGISTICS_API.deliveryById(id), data)
+  return get<StatusLabels>(`${BASE}/delivery-status-labels`)
 }

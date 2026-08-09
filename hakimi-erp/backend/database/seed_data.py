@@ -1,7 +1,9 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """HAKIMI-ERP 测试数据批量导入脚本"""
 import sys, os
-sys.path.insert(0, os.path.dirname(__file__))
+# 调整路径以导入 app 模块
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from app.core.database import SessionLocal
 from app.models.customer import BusinessPartner, CustomerSalesData, CustomerFinanceData, Contact
 from app.models.material import Material
@@ -41,16 +43,16 @@ try:
     # 2. Customer Sales Data
     # ──────────────────────────────────────────────
     sales_orgs = [
-        {"bp_id": "BP00001", "sales_org": "1000", "distribution_channel": "10", "division": "01", "currency": "CNY", "price_group": "PG01", "delivery_priority": "01", "shipping_condition": "FOB", "delivering_plant": "PL01", "incoterms": "FOB"},
-        {"bp_id": "BP00002", "sales_org": "1000", "distribution_channel": "10", "division": "02", "currency": "CNY", "price_group": "PG02", "delivery_priority": "02", "shipping_condition": "CIF", "delivering_plant": "PL02", "incoterms": "CIF"},
-        {"bp_id": "BP00003", "sales_org": "2000", "distribution_channel": "10", "division": "01", "currency": "CNY", "price_group": "PG01", "delivery_priority": "01", "shipping_condition": "FOB", "delivering_plant": "PL01", "incoterms": "FOB"},
-        {"bp_id": "BP00004", "sales_org": "2000", "distribution_channel": "20", "division": "01", "currency": "CNY", "price_group": "PG03", "delivery_priority": "03", "shipping_condition": "EXW", "delivering_plant": "PL03", "incoterms": "EXW"},
-        {"bp_id": "BP00005", "sales_org": "3000", "distribution_channel": "10", "division": "01", "currency": "CNY", "price_group": "PG01", "delivery_priority": "01", "shipping_condition": "FOB", "delivering_plant": "PL01", "incoterms": "FOB"},
-        {"bp_id": "BP00006", "sales_org": "3000", "distribution_channel": "20", "division": "02", "currency": "CNY", "price_group": "PG02", "delivery_priority": "02", "shipping_condition": "CIF", "delivering_plant": "PL02", "incoterms": "CIF"},
-        {"bp_id": "BP00007", "sales_org": "1000", "distribution_channel": "10", "division": "01", "currency": "CNY", "price_group": "PG01", "delivery_priority": "01", "shipping_condition": "FOB", "delivering_plant": "PL01", "incoterms": "FOB"},
-        {"bp_id": "BP00008", "sales_org": "2000", "distribution_channel": "10", "division": "01", "currency": "CNY", "price_group": "PG01", "delivery_priority": "01", "shipping_condition": "FOB", "delivering_plant": "PL01", "incoterms": "FOB"},
-        {"bp_id": "BP00009", "sales_org": "3000", "distribution_channel": "10", "division": "01", "currency": "CNY", "price_group": "PG01", "delivery_priority": "01", "shipping_condition": "FOB", "delivering_plant": "PL01", "incoterms": "FOB"},
-        {"bp_id": "BP00010", "sales_org": "1000", "distribution_channel": "20", "division": "02", "currency": "CNY", "price_group": "PG02", "delivery_priority": "02", "shipping_condition": "CIF", "delivering_plant": "PL02", "incoterms": "CIF"},
+        {"bp_id": "BP00001", "sales_org": "1000", "distribution_channel": "10", "division": "01", "currency": "CNY", "price_group": "PG01", "delivery_priority": "01", "shipping_condition": "01", "delivering_plant": "PL01", "incoterms": "FOB"},
+        {"bp_id": "BP00002", "sales_org": "1000", "distribution_channel": "10", "division": "02", "currency": "CNY", "price_group": "PG02", "delivery_priority": "02", "shipping_condition": "01", "delivering_plant": "PL02", "incoterms": "CIF"},
+        {"bp_id": "BP00003", "sales_org": "2000", "distribution_channel": "10", "division": "01", "currency": "CNY", "price_group": "PG01", "delivery_priority": "01", "shipping_condition": "01", "delivering_plant": "PL01", "incoterms": "FOB"},
+        {"bp_id": "BP00004", "sales_org": "2000", "distribution_channel": "20", "division": "01", "currency": "CNY", "price_group": "PG03", "delivery_priority": "03", "shipping_condition": "02", "delivering_plant": "PL03", "incoterms": "EXW"},
+        {"bp_id": "BP00005", "sales_org": "3000", "distribution_channel": "10", "division": "01", "currency": "CNY", "price_group": "PG01", "delivery_priority": "01", "shipping_condition": "01", "delivering_plant": "PL01", "incoterms": "FOB"},
+        {"bp_id": "BP00006", "sales_org": "3000", "distribution_channel": "20", "division": "02", "currency": "CNY", "price_group": "PG02", "delivery_priority": "02", "shipping_condition": "01", "delivering_plant": "PL02", "incoterms": "CIF"},
+        {"bp_id": "BP00007", "sales_org": "1000", "distribution_channel": "10", "division": "01", "currency": "CNY", "price_group": "PG01", "delivery_priority": "01", "shipping_condition": "01", "delivering_plant": "PL01", "incoterms": "FOB"},
+        {"bp_id": "BP00008", "sales_org": "2000", "distribution_channel": "10", "division": "01", "currency": "CNY", "price_group": "PG01", "delivery_priority": "01", "shipping_condition": "01", "delivering_plant": "PL01", "incoterms": "FOB"},
+        {"bp_id": "BP00009", "sales_org": "3000", "distribution_channel": "10", "division": "01", "currency": "CNY", "price_group": "PG01", "delivery_priority": "01", "shipping_condition": "01", "delivering_plant": "PL01", "incoterms": "FOB"},
+        {"bp_id": "BP00010", "sales_org": "1000", "distribution_channel": "20", "division": "02", "currency": "CNY", "price_group": "PG02", "delivery_priority": "02", "shipping_condition": "01", "delivering_plant": "PL02", "incoterms": "CIF"},
     ]
     for s in sales_orgs:
         db.add(CustomerSalesData(**s))
@@ -94,7 +96,7 @@ try:
     # ──────────────────────────────────────────────
     # 5. Materials
     # ──────────────────────────────────────────────
-    materials = [
+    materials_data = [
         {"material_id": "MAT0001", "material_name": "高碳钢钢管", "description": "直径50mm×壁厚3mm，Q235B标准", "base_unit": "KG", "standard_price": Decimal("28.50"), "weight": Decimal("3.850"), "volume": Decimal("0.012"), "search_term": "钢管 高碳钢"},
         {"material_id": "MAT0002", "material_name": "不锈钢法兰", "description": "DN100 PN16 304不锈钢", "base_unit": "PC", "standard_price": Decimal("185.00"), "weight": Decimal("2.300"), "volume": Decimal("0.005"), "search_term": "法兰 不锈钢"},
         {"material_id": "MAT0003", "material_name": "工业轴承6205", "description": "深沟球轴承，内径25mm×外径52mm", "base_unit": "PC", "standard_price": Decimal("12.80"), "weight": Decimal("0.128"), "volume": Decimal("0.001"), "search_term": "轴承 6205"},
@@ -111,10 +113,10 @@ try:
         {"material_id": "MAT0014", "material_name": "数字万用表", "description": "真有效值测量，CAT III 1000V", "base_unit": "PC", "standard_price": Decimal("380.00"), "weight": Decimal("0.420"), "volume": Decimal("0.003"), "search_term": "万用表 数字"},
         {"material_id": "MAT0015", "material_name": "工业显示屏10寸", "description": "10.1寸 TFT LCD 1024×600 触摸屏", "base_unit": "PC", "standard_price": Decimal("680.00"), "weight": Decimal("0.850"), "volume": Decimal("0.006"), "search_term": "显示屏 工业"},
     ]
-    for m in materials:
+    for m in materials_data:
         db.add(Material(**m))
     db.flush()
-    print(f"  [OK] {len(materials)} Materials created")
+    print(f"  [OK] {len(materials_data)} Materials created")
 
     # ──────────────────────────────────────────────
     # 6. Sales Flow: Inquiry → Quotation → Sales Order → Delivery → Invoice
@@ -142,7 +144,8 @@ try:
         total_inq_val = Decimal("0.00")
         for item_no, mat_id in enumerate(mat_ids, start=1):
             qty = Decimal(str(random.randint(10, 500)))
-            price = materials[int(mat_id[3:])-1]["standard_price"]
+            # 从本地变量获取价格
+            price = next(m["standard_price"] for m in materials_data if m["material_id"] == mat_id)
             net = qty * price
             total_inq_val += net
             db.add(InquiryItem(
@@ -165,7 +168,7 @@ try:
         db.add(qt)
         db.flush()
         for item_no, mat_id in enumerate(mat_ids, start=1):
-            price = materials[int(mat_id[3:])-1]["standard_price"] * Decimal("0.95")
+            price = next(m["standard_price"] for m in materials_data if m["material_id"] == mat_id) * Decimal("0.95")
             qty = Decimal(str(random.randint(10, 500)))
             db.add(QuotationItem(
                 quotation_item_id=f"QI{str(i).zfill(3)}{str(item_no).zfill(3)}",
@@ -181,7 +184,7 @@ try:
             customer_id=bp_id, sold_to_party=bp_id,
             requested_delivery_date=today + timedelta(days=random.randint(3, 20)),
             payment_terms="NET30", incoterms="FOB", delivering_plant=f"PL{str(random.randint(1,3)).zfill(2)}",
-            shipping_condition="FOB", delivery_priority="01",
+            shipping_condition="01", delivery_priority="01",
             net_value=Decimal("0.00"),
         )
         db.add(so)
@@ -189,7 +192,7 @@ try:
 
         so_total = Decimal("0.00")
         for item_no, mat_id in enumerate(mat_ids, start=1):
-            price = materials[int(mat_id[3:])-1]["standard_price"] * Decimal("0.95")
+            price = next(m["standard_price"] for m in materials_data if m["material_id"] == mat_id) * Decimal("0.95")
             qty = Decimal(str(random.randint(5, 200)))
             net = qty * price
             so_total += net
@@ -255,7 +258,7 @@ try:
         db.flush()
 
         for item_no, mat_id in enumerate(mat_ids, start=1):
-            price = materials[int(mat_id[3:])-1]["standard_price"] * Decimal("0.95")
+            price = next(m["standard_price"] for m in materials_data if m["material_id"] == mat_id) * Decimal("0.95")
             qty = Decimal(str(random.randint(5, 100)))
             tax = qty * price * Decimal("0.13")
             db.add(InvoiceItem(

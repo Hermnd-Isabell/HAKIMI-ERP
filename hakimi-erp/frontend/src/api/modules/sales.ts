@@ -3,28 +3,52 @@ import { SALES_API } from '@/constants/api'
 
 export interface InquiryItem {
   inquiry_item_id: string
+  inquiry_id?: string
   item_no: number
   material_id: string
   item_description?: string
   order_quantity: number
-  expected_order_value?: number
   sales_unit: string
+  expected_order_value?: number
+  unit_price?: number
+  discount?: number
+  net_price?: number
+  remark?: string
+  search_term?: string
 }
 
 export interface Inquiry {
   inquiry_id: string
   inquiry_type: string
+  status: string
   customer_id: string
+  sold_to_party?: string
+  ship_to_party?: string
+  sales_area?: string
   customer_reference?: string
+  customer_reference_date?: string
+  sales_org?: string
+  distribution_channel?: string
+  division?: string
+  sales_office?: string
+  sales_group?: string
+  requested_delivery_date?: string
   valid_from?: string
   valid_to?: string
-  requested_delivery_date?: string
-  sales_org: string
-  distribution_channel: string
-  division: string
-  status: string
-  items: InquiryItem[]
+  pricing_date?: string
+  currency?: string
+  delivering_plant?: string
+  incoterms?: string
+  delivery_location?: string
+  payment_terms?: string
+  max_partial_deliveries?: number
+  net_value?: number
+  inquiry_address?: string
+  remark?: string
+  search_term?: string
   created_time?: string
+  created_by?: string
+  items: InquiryItem[]
 }
 
 export interface InquiryList {
@@ -34,25 +58,51 @@ export interface InquiryList {
 
 export interface QuotationItem {
   quotation_item_id: string
+  quotation_id?: string
   item_no: number
   material_id: string
+  item_description?: string
   order_quantity: number
   sales_unit: string
+  expected_order_value?: number
   unit_price?: number
+  discount?: number
   net_price?: number
+  remark?: string
+  search_term?: string
 }
 
 export interface Quotation {
   quotation_id: string
-  quotation_type: string
   inquiry_id?: string
+  quotation_type: string
+  status: string
   customer_id: string
+  sold_to_party?: string
+  ship_to_party?: string
+  sales_area?: string
+  customer_reference?: string
+  customer_reference_date?: string
+  sales_org?: string
+  distribution_channel?: string
+  division?: string
+  sales_office?: string
+  sales_group?: string
+  requested_delivery_date?: string
   valid_from?: string
   valid_to?: string
-  payment_terms?: string
+  pricing_date?: string
+  currency?: string
+  delivering_plant?: string
   incoterms?: string
-  status: string
+  payment_terms?: string
+  max_partial_deliveries?: number
   net_value?: number
+  quotation_address?: string
+  remark?: string
+  search_term?: string
+  created_time?: string
+  created_by?: string
   items: QuotationItem[]
 }
 
@@ -63,28 +113,59 @@ export interface QuotationList {
 
 export interface SalesOrderItem {
   so_item_id: string
+  sales_order_id?: string
   item_no: number
   material_id: string
+  item_description?: string
   item_category?: string
   order_quantity: number
-  plant?: string
+  confirmed_quantity?: number
   sales_unit: string
+  plant?: string
+  storage_location?: string
+  shipping_point?: string
+  unit_price?: number
+  discount?: number
+  net_price?: number
+  availability_status?: string
+  remark?: string
+  search_term?: string
 }
 
 export interface SalesOrder {
   sales_order_id: string
-  order_type: string
   quotation_id?: string
+  order_type: string
+  reference_type?: string
+  reference_document?: string
+  status: string
   customer_id: string
+  sold_to_party?: string
+  ship_to_party?: string
   customer_reference?: string
+  customer_reference_date?: string
+  sales_org?: string
+  distribution_channel?: string
+  division?: string
+  sales_office?: string
+  sales_group?: string
   requested_delivery_date?: string
   pricing_date?: string
+  currency?: string
+  payment_terms?: string
+  incoterms?: string
+  delivering_plant?: string
   shipping_condition?: string
   delivery_priority?: string
-  status: string
+  billing_block?: string
+  delivery_block?: string
+  max_partial_deliveries?: number
   net_value?: number
-  items: SalesOrderItem[]
+  remark?: string
+  search_term?: string
   created_time?: string
+  created_by?: string
+  items: SalesOrderItem[]
 }
 
 export interface SalesOrderList {

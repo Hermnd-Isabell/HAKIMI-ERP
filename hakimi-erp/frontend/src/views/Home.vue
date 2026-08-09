@@ -1,7 +1,6 @@
 <template>
-  <MainLayout>
-    <div class="home-page">
-      <section class="hero-section">
+  <div class="home-page">
+    <section class="hero-section">
         <div class="hero-left">
           <span class="hero-badge">SAP SD Simplified</span>
           <h2 class="hero-title">
@@ -12,7 +11,7 @@
             Streamline your sales and distribution operations with an intuitive,
             enterprise-grade management platform built for modern teams.
           </p>
-          <button class="cta-btn">
+          <button class="cta-btn" @click="scrollToOverview">
             <span>Go to Dashboard</span>
             <svg viewBox="0 0 20 20" width="16" height="16">
               <path d="M4 10h12M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -101,119 +100,84 @@
           </div>
           <button class="assistant-cta">Ask a question</button>
         </div>
-      </section>
-    </div>
-  </MainLayout>
+    </section>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import MainLayout from '@/layout/MainLayout.vue'
 import IndicatorCard from '@/components/IndicatorCard.vue'
-import { fetchOrders, fetchDeliveries, fetchOpenAR } from '@/api'
+import { fetchDashboardSummary } from '@/api/modules/report'
 import { formatCurrency, formatNumber } from '@/utils/format'
-
-interface DashboardData {
-  orders: { total: number; items: any[] }
-  deliveries: { total: number; items: any[] }
-  openAR: { total: number; items: any[] }
-}
 
 const loading = ref(true)
 const error = ref('')
+const summary = ref<any>(null)
 
-const data = ref<DashboardData>({
-  orders: { total: 0, items: [] },
-  deliveries: { total: 0, items: [] },
-  openAR: { total: 0, items: [] },
+function scrollToOverview() {
+  const el = document.querySelector('.kpi-section')
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' })
+  }
+}
+
+const cards = computed(() => {
+  if (!summary.value) return []
+  
+  return [
+    {
+      title: 'Sales Orders',
+      value: formatNumber(summary.value.salesOrders.value, 0),
+      change: summary.value.salesOrders.change,
+      changeType: summary.value.salesOrders.type as 'up' | 'down',
+      comparison: summary.value.salesOrders.comparison,
+      color: '#436850',
+      icon: '<path d="M4 4h3l1 5h7l2-5h2M7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    },
+    {
+      title: 'Delivery Orders',
+      value: formatNumber(summary.value.deliveryOrders.value, 0),
+      change: summary.value.deliveryOrders.change,
+      changeType: summary.value.deliveryOrders.type as 'up' | 'down',
+      comparison: summary.value.deliveryOrders.comparison,
+      color: '#436850',
+      icon: '<rect x="2" y="3" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h16M6 13h2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+    },
+    {
+      title: 'Pending Deliveries',
+      value: formatNumber(summary.value.pendingDeliveries.value, 0),
+      change: summary.value.pendingDeliveries.change,
+      changeType: summary.value.pendingDeliveries.type as 'up' | 'down',
+      comparison: summary.value.pendingDeliveries.comparison,
+      color: '#F0AD4E',
+      icon: '<circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l3 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    },
+    {
+      title: 'Receivables',
+      value: formatCurrency(summary.value.receivables.value, 'CNY'),
+      change: summary.value.receivables.change,
+      changeType: summary.value.receivables.type as 'up' | 'down',
+      comparison: summary.value.receivables.comparison,
+      color: '#436850',
+      icon: '<circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 5v3M7 8l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 12c3 0 5-2 5-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+    },
+    {
+      title: 'This Month Profit',
+      value: formatCurrency(summary.value.monthProfit.value, 'CNY'),
+      change: summary.value.monthProfit.change,
+      changeType: summary.value.monthProfit.type as 'up' | 'down',
+      comparison: summary.value.monthProfit.comparison,
+      color: '#D9534F',
+      icon: '<rect x="2" y="3" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 11l3 3 4-7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    },
+  ]
 })
-
-const firstDayOfMonth = computed(() => {
-  const now = new Date()
-  return new Date(now.getFullYear(), now.getMonth(), 1)
-})
-
-const pendingDeliveriesCount = computed(() => {
-  const activeStatuses = ['CREATING', 'PICKING', 'SHIPPED', 'IN_TRANSIT']
-  return data.value.deliveries.items.filter((d: any) => activeStatuses.includes(d.delivery_status)).length
-})
-
-const totalUnpaid = computed(() => {
-  return data.value.openAR.items.reduce((sum: number, ar: any) => {
-    const receivable = parseFloat(ar.receivable_amount) || 0
-    const received = parseFloat(ar.received_amount) || 0
-    return sum + (receivable - received)
-  }, 0)
-})
-
-const monthOrderValue = computed(() => {
-  return data.value.orders.items.reduce((sum: number, order: any) => {
-    const created = order.created_time ? new Date(order.created_time) : null
-    if (created && created >= firstDayOfMonth.value) {
-      return sum + (parseFloat(order.net_value) || 0)
-    }
-    return sum
-  }, 0)
-})
-
-const cards = computed(() => [
-  {
-    title: 'Sales Orders',
-    value: formatNumber(data.value.orders.total, 0),
-    change: '+12%',
-    changeType: 'up' as const,
-    comparison: 'vs. Yesterday',
-    color: '#436850',
-    icon: '<path d="M4 4h3l1 5h7l2-5h2M7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-  },
-  {
-    title: 'Delivery Orders',
-    value: formatNumber(data.value.deliveries.total, 0),
-    change: '+8%',
-    changeType: 'up' as const,
-    comparison: 'vs. Yesterday',
-    color: '#436850',
-    icon: '<rect x="2" y="3" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h16M6 13h2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
-  },
-  {
-    title: 'Pending Deliveries',
-    value: formatNumber(pendingDeliveriesCount.value, 0),
-    change: pendingDeliveriesCount.value > 5 ? '+3%' : '-3%',
-    changeType: pendingDeliveriesCount.value > 5 ? ('up' as const) : ('down' as const),
-    comparison: 'vs. Yesterday',
-    color: '#F0AD4E',
-    icon: '<circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l3 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-  },
-  {
-    title: 'Receivables',
-    value: formatCurrency(totalUnpaid.value, 'CNY'),
-    change: '+5.2%',
-    changeType: 'up' as const,
-    comparison: 'vs. Last Month',
-    color: '#436850',
-    icon: '<circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 5v3M7 8l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 12c3 0 5-2 5-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
-  },
-  {
-    title: 'This Month Profit',
-    value: formatCurrency(monthOrderValue.value, 'CNY'),
-    change: '-2.1%',
-    changeType: 'down' as const,
-    comparison: 'vs. Last Month',
-    color: '#D9534F',
-    icon: '<rect x="2" y="3" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6 11l3 3 4-7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-  },
-])
 
 async function loadDashboard() {
   loading.value = true
   error.value = ''
   try {
-    const [orders, deliveries, openAR] = await Promise.all([
-      fetchOrders({ page_size: 1000 }),
-      fetchDeliveries({ page_size: 1000 }),
-      fetchOpenAR({ page_size: 1000 }),
-    ])
-    data.value = { orders, deliveries, openAR }
+    summary.value = await fetchDashboardSummary()
   } catch (err: any) {
     error.value = err?.message || 'Failed to load dashboard data'
   } finally {

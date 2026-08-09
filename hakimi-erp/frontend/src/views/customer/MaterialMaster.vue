@@ -1,7 +1,6 @@
 ﻿<template>
-  <MainLayout>
-    <div class="page">
-      <div class="header-card">
+  <div class="page">
+    <div class="header-card">
         <div class="hc-left">
           <div class="hc-icon"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="3" y="3" width="8" height="8" rx="1.5" fill="none" stroke="#436850" stroke-width="1.8"/><rect x="13" y="3" width="8" height="8" rx="1.5" fill="none" stroke="#436850" stroke-width="1.8"/><rect x="3" y="13" width="8" height="8" rx="1.5" fill="none" stroke="#436850" stroke-width="1.8"/><rect x="13" y="13" width="8" height="8" rx="1.5" fill="none" stroke="#436850" stroke-width="1.8"/></svg></div>
           <div class="hc-text"><h2 class="hc-title">Material Master</h2><p class="hc-sub">Create and manage material master records across all organizational levels.</p></div>
@@ -11,14 +10,14 @@
       <!-- Form with F4 Search -->
       <div class="form-card">
         <div class="form-row form-row-4">
-          <div class="form-group"><label class="fl">Material No.</label><input class="fi" v-model="form.matId" placeholder="Input ID or leave for random" /></div>
+          <div class="form-group"><label class="fl">Material No.</label><input class="fi" v-model="form.materialId" placeholder="Input ID or leave for random" /></div>
           <div class="form-group"><label class="fl required">Material Type</label>
-            <div class="input-with-f4-inline"><select class="fs" v-model="form.matType"><option>FERT - Finished Product</option><option>ROH - Raw Material</option><option>HAWA - Trading Goods</option><option>HALB - Semi-Finished</option></select><button class="f4-trigger-sm" @click="openF4(`matType`)" title="F4 Search"><svg viewBox="0 0 20 20" width="12" height="12"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
+            <div class="input-with-f4-inline"><select class="fs" v-model="form.materialType"><option value="FERT">FERT - Finished Product</option><option value="ROH">ROH - Raw Material</option><option value="HAWA">HAWA - Trading Goods</option><option value="HALB">HALB - Semi-Finished</option></select><button class="f4-trigger-sm" @click="openF4(`matType`)" title="F4 Search"><svg viewBox="0 0 20 20" width="12" height="12"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
           </div>
           <div class="form-group"><label class="fl required">Industry Sector</label>
-            <div class="input-with-f4-inline"><select class="fs" v-model="form.industry"><option>M - Mechanical Engineering</option><option>C - Chemical Industry</option><option>E - Electrical</option></select><button class="f4-trigger-sm" @click="openF4(`industry`)" title="F4 Search"><svg viewBox="0 0 20 20" width="12" height="12"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
+            <div class="input-with-f4-inline"><select class="fs" v-model="form.industrySector"><option value="M">M - Mechanical Engineering</option><option value="C">C - Chemical Industry</option><option value="E">E - Electrical</option></select><button class="f4-trigger-sm" @click="openF4(`industry`)" title="F4 Search"><svg viewBox="0 0 20 20" width="12" height="12"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
           </div>
-          <div class="form-group"><label class="fl required">Base UoM</label><select class="fs" v-model="form.uom"><option>EA - Each</option><option>KG - Kilogram</option><option>M - Meter</option><option>L - Liter</option></select></div>
+          <div class="form-group"><label class="fl required">Base UoM</label><select class="fs" v-model="form.baseUnit"><option value="EA">EA - Each</option><option value="KG">KG - Kilogram</option><option value="M">M - Meter</option><option value="L">L - Liter</option></select></div>
         </div>
       </div>
 
@@ -29,19 +28,19 @@
         <div class="tab-content" v-show="active===`Basic Data`">
           <fieldset class="fb"><legend class="bt">General Data</legend>
             <div class="form-row form-row-4">
-              <div class="form-group"><label class="fl required">Material Desc.</label><input class="fi" v-model="form.desc" placeholder="e.g. Industrial Sensor X200" /></div>
-              <div class="form-group"><label class="fl">Old Material No.</label><input class="fi" v-model="form.oldNo" placeholder="Legacy system ID" /></div>
+              <div class="form-group"><label class="fl required">Material Desc.</label><input class="fi" v-model="form.materialName" placeholder="e.g. Industrial Sensor X200" /></div>
+              <div class="form-group"><label class="fl">Old Material No.</label><input class="fi" v-model="form.oldMaterialNo" placeholder="Legacy system ID" /></div>
               <div class="form-group"><label class="fl">Material Group</label>
-                <div class="input-with-f4-inline"><select class="fs" v-model="form.matGroup"><option>01 - Electronics</option><option>02 - Mechanical</option></select><button class="f4-trigger-sm" @click="openF4(`matGroup`)" title="F4 Search"><svg viewBox="0 0 20 20" width="12" height="12"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
+                <div class="input-with-f4-inline"><select class="fs" v-model="form.materialGroup"><option value="01">01 - Electronics</option><option value="02">02 - Mechanical</option></select><button class="f4-trigger-sm" @click="openF4(`matGroup`)" title="F4 Search"><svg viewBox="0 0 20 20" width="12" height="12"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
               </div>
-              <div class="form-group"><label class="fl">Division</label><select class="fs" v-model="form.division"><option>10 - Standard</option><option>20 - Special</option></select></div>
+              <div class="form-group"><label class="fl">Division</label><select class="fs" v-model="form.division"><option value="10">10 - Standard</option><option value="20">20 - Special</option></select></div>
             </div>
           </fieldset>
           <fieldset class="fb"><legend class="bt">Dimensions</legend>
             <div class="form-row form-row-4">
-              <div class="form-group"><label class="fl">Gross Weight</label><div class="iu"><input class="fi" v-model="form.grossWt" placeholder="0.000" /><span class="uu">KG</span></div></div>
-              <div class="form-group"><label class="fl">Net Weight</label><div class="iu"><input class="fi" v-model="form.netWt" placeholder="0.000" /><span class="uu">KG</span></div></div>
-              <div class="form-group"><label class="fl">Weight Unit</label><select class="fs"><option>KG</option><option>LB</option></select></div>
+              <div class="form-group"><label class="fl">Gross Weight</label><div class="iu"><input class="fi" v-model="form.weight" placeholder="0.000" /><span class="uu">KG</span></div></div>
+              <div class="form-group"><label class="fl">Net Weight</label><div class="iu"><input class="fi" v-model="form.weight" placeholder="0.000" /><span class="uu">KG</span></div></div>
+              <div class="form-group"><label class="fl">Weight Unit</label><select class="fs" v-model="form.weightUnit"><option value="KG">KG</option><option value="LB">LB</option></select></div>
               <div class="form-group"><label class="fl">Volume</label><div class="iu"><input class="fi" v-model="form.volume" placeholder="0.000" /><span class="uu">M3</span></div></div>
             </div>
           </fieldset>
@@ -53,68 +52,72 @@
         <h3 class="sc-title">Material List</h3>
         <table class="dt"><thead><tr><th>Material</th><th>Description</th><th>Type</th><th>UoM</th><th>Group</th><th>Status</th><th>Action</th></tr></thead>
           <tbody>
+            <tr v-if="loading"><td colspan="7" style="text-align:center;padding:20px;color:#999">Loading materials...</td></tr>
             <tr v-for="m in mats" :key="m.id" class="dr"><td class="mono">{{ m.id }}</td><td>{{ m.desc }}</td><td>{{ m.type }}</td><td>{{ m.uom }}</td><td>{{ m.grp }}</td><td><span class="stag s-done">{{ m.st }}</span></td><td><a class="link" @click="viewDetail(m.id)">Edit</a></td></tr>
+            <tr v-if="!loading && mats.length === 0"><td colspan="7" style="text-align:center;padding:20px;color:#999">No materials found.</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="action-bar">
-        <button class="btn btn-primary" @click="saveMaterial">Save</button>
-        <button class="btn btn-secondary" @click="alert(`Material saved. Continue editing?`);">Save &amp; Continue</button>
+        <button class="btn btn-primary" @click="saveMaterial" :disabled="saving">{{ saving ? 'Saving...' : 'Save' }}</button>
+        <button class="btn btn-secondary" @click="saveMaterial(true)">Save &amp; Continue</button>
         <button class="btn btn-outline" @click="$router.push(`/`)">Cancel</button>
       </div>
-    </div>
 
-    <F4SearchModal :visible="f4Visible" :title="f4Title" @update:visible="f4Visible=$event" @confirm="onF4Confirm" />
-  </MainLayout>
+      <F4SearchModal :visible="f4Visible" :title="f4Title" @update:visible="f4Visible=$event" @confirm="onF4Confirm" />
+    </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue"
-import MainLayout from "@/layout/MainLayout.vue"
 import F4SearchModal from "@/components/F4SearchModal.vue"
-import axios from "axios"
+import { fetchMaterials, createMaterial } from "@/api"
 
 const active=ref("Basic Data")
 const tabs=["Basic Data","Sales Data","Purchasing","MRP","Accounting","Storage","Quality"]
+const loading = ref(false)
+const saving = ref(false)
 
 const form=reactive({
-  matId: "", // Added for creation
-  matType:"FERT - Finished Product",
-  industry:"M - Mechanical Engineering",
-  uom:"EA - Each",
-  desc:"",
-  oldNo:"",
-  matGroup:"01 - Electronics",
-  division:"10 - Standard",
-  grossWt:"",
-  netWt:"",
-  volume:"",
+  materialId: "",
+  materialType: "FERT",
+  industrySector: "M",
+  baseUnit: "EA",
+  materialName: "",
+  oldMaterialNo: "",
+  materialGroup: "01",
+  division: "10",
+  weight: "",
+  weightUnit: "KG",
+  volume: "",
+  volumeUnit: "M3",
+  searchTerm: ""
 })
 
 const mats = ref<any[]>([])
 
-// Fetch materials from backend
-async function fetchMaterials() {
+async function loadMaterials() {
+  loading.value = true
   try {
-    const res = await axios.get("/api/v1/master/materials/")
-    if (res.data.success) {
-      mats.value = res.data.data.items.map((item: any) => ({
-        id: item.material_id,
-        desc: item.material_name,
-        type: item.base_unit, // Simplified for display
-        uom: item.base_unit,
-        grp: item.search_term || "N/A",
-        st: "Active"
-      }))
-    }
+    const data = await fetchMaterials({ limit: 1000 })
+    mats.value = (data.items || []).map((item: any) => ({
+      id: item.materialId,
+      desc: item.materialName,
+      type: item.materialType || 'N/A',
+      uom: item.baseUnit,
+      grp: item.materialGroup || "N/A",
+      st: "Active"
+    }))
   } catch (err) {
     console.error("Failed to fetch materials:", err)
+  } finally {
+    loading.value = false
   }
 }
 
 onMounted(() => {
-  fetchMaterials()
+  loadMaterials()
 })
 
 // F4 Search
@@ -127,48 +130,55 @@ function openF4(ctx:string){
 }
 function onF4Confirm(idx:number){f4Visible.value=false;alert(`F4 selection confirmed at index ${idx}`)}
 
-async function saveMaterial(){
+async function saveMaterial(cont = false){
+  if (!form.materialName) { alert("Please enter material description"); return }
+  saving.value = true
   try {
     const payload = {
-      material_id: form.matId || `M${Math.floor(Math.random() * 1000)}`,
-      material_name: form.desc,
-      description: form.desc,
-      base_unit: form.uom.split(" - ")[0],
-      standard_price: 0,
-      weight: parseFloat(form.netWt) || 0,
+      ...form,
+      materialId: form.materialId || `M${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
+      description: form.materialName,
+      weight: parseFloat(form.weight) || 0,
       volume: parseFloat(form.volume) || 0,
-      search_term: form.matGroup.split(" - ")[0]
+      standardPrice: 0
     }
-    const res = await axios.post("/api/v1/master/materials/", payload)
-    if (res.data.success) {
-      alert("Material saved successfully!")
-      fetchMaterials()
+    await createMaterial(payload)
+    alert("Material saved successfully!")
+    if (!cont) {
+      resetForm()
     }
+    loadMaterials()
   } catch (err: any) {
-    alert("Save failed: " + (err.response?.data?.detail || err.message))
+    alert("Save failed: " + err.message)
+  } finally {
+    saving.value = false
   }
 }
+
+function resetForm() {
+  Object.assign(form, {
+    materialId: "",
+    materialType: "FERT",
+    industrySector: "M",
+    baseUnit: "EA",
+    materialName: "",
+    oldMaterialNo: "",
+    materialGroup: "01",
+    division: "10",
+    weight: "",
+    weightUnit: "KG",
+    volume: "",
+    volumeUnit: "M3",
+    searchTerm: ""
+  })
+}
+
 function viewDetail(id:string){alert(`Editing material ${id}`)}
 </script>
 
 <style scoped>
 .page{padding:28px 36px;max-width:1200px;margin:0 auto;}
-.header-card{display:flex;align-items:center;background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:16px;padding:20px 24px;border:1px solid rgba(173,188,159,0.18);box-shadow:0 2px 8px rgba(173,188,159,0.12);margin-bottom:20px;}
-.hc-left{display:flex;align-items:center;gap:14px;}
-.hc-icon{width:44px;height:44px;border-radius:12px;background:rgba(67,104,80,0.08);display:flex;align-items:center;justify-content:center;}
-.hc-title{font-size:18px;font-weight:800;color:#12372A;margin:0;}
-.hc-sub{font-size:12px;color:rgba(18,55,42,0.45);margin:2px 0 0;}
 
-.form-card{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:14px;padding:20px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 2px 6px rgba(173,188,159,0.1);margin-bottom:16px;}
-.form-card-tabs{padding-top:0;overflow:hidden;}
-.form-row{display:grid;gap:18px;margin-bottom:14px;}
-.form-row-4{grid-template-columns:1fr 1fr 1fr 1fr;}
-.form-group{display:flex;flex-direction:column;gap:6px;}
-.fl{font-size:11px;font-weight:600;color:rgba(18,55,42,0.55);text-transform:uppercase;letter-spacing:0.5px;}
-.fl.required::after{content:" *";color:#D9534F;}
-.fi,.fs{height:36px;border:1px solid rgba(173,188,159,0.4);border-radius:8px;padding:0 12px;font-size:13px;color:#12372A;background:rgba(251,250,218,0.4);font-family:inherit;outline:none;width:100%;}
-.fi:focus,.fs:focus{border-color:#436850;box-shadow:0 0 0 3px rgba(67,104,80,0.06);}
-.fs{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg viewBox=\"0 0 20 20\" width=\"12\" height=\"12\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cpath d=\"M5 7l5 5 5-5\" fill=\"none\" stroke=\"%2312372A\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" opacity=\"0.4\"/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;}
 .ir{height:36px;display:flex;align-items:center;padding:0 12px;font-size:13px;color:rgba(18,55,42,0.35);background:rgba(173,188,159,0.12);border-radius:8px;border:1px dashed rgba(173,188,159,0.3);}
 .iu{display:flex;}.iu .fi{border-radius:8px 0 0 8px;flex:1;}.uu{display:flex;align-items:center;padding:0 10px;height:36px;font-size:11px;font-weight:600;color:rgba(18,55,42,0.45);background:rgba(173,188,159,0.12);border:1px solid rgba(173,188,159,0.4);border-left:none;border-radius:0 8px 8px 0;}
 
@@ -188,24 +198,9 @@ function viewDetail(id:string){alert(`Editing material ${id}`)}
 .bt{font-size:12px;font-weight:700;color:#436850;display:flex;align-items:center;gap:8px;margin-bottom:12px;}
 .bt::before{content:"";width:3px;height:12px;background:#436850;border-radius:2px;}
 
-.data-card{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:14px;padding:18px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 2px 6px rgba(173,188,159,0.1);margin-bottom:18px;}
 .sc-title{font-size:13px;font-weight:700;color:#436850;margin:0 0 14px;}
-.dt{width:100%;border-collapse:collapse;font-size:13px;}
-.dt th{text-align:left;padding:9px 12px;font-size:10px;font-weight:700;color:rgba(18,55,42,0.4);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid rgba(173,188,159,0.2);}
-.dt td{padding:9px 12px;border-bottom:1px solid rgba(173,188,159,0.07);color:#12372A;}
-.dr:hover{background:rgba(67,104,80,0.025);}
-.mono{font-family:"SF Mono",Consolas,monospace;font-size:12px;}
-.stag{font-size:10px;font-weight:600;padding:3px 8px;border-radius:5px;}
-.s-done{background:rgba(67,104,80,0.1);color:#436850;}
 .link{color:#436850;cursor:pointer;font-weight:600;font-size:12px;}
 .link:hover{text-decoration:underline;}
 
 .action-bar{display:flex;gap:12px;padding:16px 0;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all 0.2s;font-family:inherit;}
-.btn-primary{background:linear-gradient(135deg,#436850,#365440);color:#FBFADA;border:none;box-shadow:0 2px 8px rgba(67,104,80,0.25);}
-.btn-primary:hover{transform:translateY(-1px);}
-.btn-secondary{background:rgba(173,188,159,0.2);color:#436850;border:1px solid rgba(173,188,159,0.35);}
-.btn-secondary:hover{background:rgba(173,188,159,0.3);}
-.btn-outline{background:none;color:rgba(18,55,42,0.5);border:1px solid rgba(173,188,159,0.35);}
-.btn-outline:hover{border-color:rgba(18,55,42,0.3);color:#12372A;}
 </style>

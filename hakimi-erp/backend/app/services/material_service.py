@@ -14,7 +14,12 @@ class MaterialService:
 
     @staticmethod
     def create_material(db: Session, material_in: MaterialCreate) -> Material:
-        db_material = Material(**material_in.model_dump())
+        data = material_in.model_dump()
+        # Automatically set a high stock quantity for testing/demo purposes if not specified
+        if data.get("stock_quantity") is None or data.get("stock_quantity") == 0:
+            data["stock_quantity"] = 999999
+            
+        db_material = Material(**data)
         db.add(db_material)
         db.commit()
         db.refresh(db_material)

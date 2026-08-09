@@ -62,7 +62,7 @@ CREATE TABLE `sales_organization` (
   `country` varchar(3) DEFAULT 'CN' COMMENT '所属国家',
   `status` varchar(10) DEFAULT 'ACTIVE' COMMENT '状态',
   PRIMARY KEY (`sales_org_id`,`distribution_channel`,`division`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table: pricing_condition
 CREATE TABLE `pricing_condition` (
@@ -78,7 +78,19 @@ CREATE TABLE `pricing_condition` (
   `valid_to` date DEFAULT NULL,
   `status` varchar(10) DEFAULT 'ACTIVE',
   PRIMARY KEY (`condition_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table: storage_location
+CREATE TABLE `storage_location` (
+    `sloc_id` VARCHAR(10) NOT NULL COMMENT 'Storage location ID',
+    `sloc_name` VARCHAR(100) NOT NULL COMMENT 'Storage location name',
+    `plant` VARCHAR(20) NOT NULL COMMENT 'Associated plant',
+    `warehouse_no` VARCHAR(10) COMMENT 'Warehouse number',
+    `storage_type` VARCHAR(20) COMMENT 'Storage type: RAW/SEMI/FERT/BULK/HAZ/COLD/PICK/STAG',
+    `storage_bin` VARCHAR(20) COMMENT 'Shelf/bin coordinate',
+    `description` VARCHAR(255) COMMENT 'Description',
+    PRIMARY KEY (`sloc_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Warehouse storage location master data';
 
 -- Table: customer_sales_data
 CREATE TABLE `customer_sales_data` (
@@ -126,7 +138,7 @@ CREATE TABLE `customer_finance_data` (
 -- Table: contact
 CREATE TABLE `contact` (
   `contact_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `bp_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `bp_id" varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
   `contact_type` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `contact_role` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `first_name` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -231,7 +243,7 @@ CREATE TABLE `quotation` (
 
 -- Table: quotation_item
 CREATE TABLE `quotation_item` (
-  `quotation_item_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `quotation_item_id" varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
   `quotation_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
   `item_no` int NOT NULL,
   `material_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -304,7 +316,7 @@ CREATE TABLE `delivery` (
   `delivery_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
   `sales_order_id` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `delivery_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `delivery_status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'OPEN/PGI_DONE/CANCELLED',
+  `delivery_status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'OPEN/PICKING/SHIPPED/IN_TRANSIT/PGI_DONE/CANCELLED',
   `ship_to_party` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
   `planned_delivery_date` date DEFAULT NULL,
   `planned_gi_date` date DEFAULT NULL,
@@ -315,6 +327,7 @@ CREATE TABLE `delivery` (
   `driver_name` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Driver name',
   `route` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Route',
   `tracking_no` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Tracking No',
+  `created_time` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`delivery_id`),
   KEY `ship_to_party` (`ship_to_party`),
   KEY `sales_order_id` (`sales_order_id`),
@@ -329,14 +342,14 @@ CREATE TABLE `delivery_item` (
   `item_no` int NOT NULL,
   `so_item_id` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `material_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `order_quantity` decimal(15,3) DEFAULT '0.000',
   `delivery_quantity` decimal(15,3) DEFAULT NULL,
-  `sales_unit` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `item_description` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `picked_quantity` decimal(15,3) DEFAULT '0.000',
+  `sales_unit` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `plant` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `storage_location` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `item_description` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `item_status` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT 'OPEN',
-  `order_quantity` decimal(15,3) DEFAULT '0.000',
   PRIMARY KEY (`delivery_item_id`),
   UNIQUE KEY `uk_delivery_item` (`delivery_id`,`item_no`),
   KEY `material_id` (`material_id`),
@@ -359,6 +372,19 @@ CREATE TABLE `goods_issue` (
   KEY `delivery_item_id` (`delivery_item_id`),
   CONSTRAINT `goods_issue_ibfk_1` FOREIGN KEY (`delivery_item_id`) REFERENCES `delivery_item` (`delivery_item_id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='发货过账';
+
+-- Table: pick_record
+CREATE TABLE `pick_record` (
+    `pick_id` VARCHAR(20) NOT NULL,
+    `delivery_item_id` VARCHAR(20) NOT NULL,
+    `batch_no` INT NOT NULL COMMENT 'Pick batch number within the delivery',
+    `pick_quantity` DECIMAL(15,3) NOT NULL DEFAULT 0,
+    `storage_location` VARCHAR(10) COMMENT 'Storage location where pick occurred',
+    `pick_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Pick date and time',
+    `picked_by` VARCHAR(50) COMMENT 'Operator who performed the pick',
+    PRIMARY KEY (`pick_id`),
+    CONSTRAINT `pick_record_ibfk_1` FOREIGN KEY (`delivery_item_id`) REFERENCES `delivery_item` (`delivery_item_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Pick record for batch picking operations';
 
 -- Table: invoice
 CREATE TABLE `invoice` (

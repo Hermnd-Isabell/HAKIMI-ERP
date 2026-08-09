@@ -1,7 +1,6 @@
 <template>
-  <MainLayout>
-    <div class="page">
-      <div class="header-card">
+  <div class="page">
+    <div class="header-card">
         <div class="hc-left">
           <div class="hc-icon">
             <svg viewBox="0 0 24 24" width="22" height="22">
@@ -24,17 +23,17 @@
         </div>
       </div>
 
-      <div class="filter-bar">
-        <input type="text" class="form-input" placeholder="Quotation No." />
-        <input type="text" class="form-input" placeholder="Customer" />
-        <select class="form-select">
-          <option>All Statuses</option>
-          <option>Open</option>
-          <option>Closed</option>
-        </select>
-        <button class="btn btn-primary">Search</button>
-        <button class="btn btn-outline">Reset</button>
-      </div>
+    <div class="filter-bar">
+      <input type="text" class="form-input search-qt" v-model="filter.quotationNo" placeholder="Quotation No." />
+      <input type="text" class="form-input search-cust" v-model="filter.customerName" placeholder="Customer" />
+      <select class="form-select search-st" v-model="filter.status">
+        <option value="">All Statuses</option>
+        <option value="OPEN">Open</option>
+        <option value="CLOSED">Closed</option>
+      </select>
+      <button class="btn btn-primary" @click="loadQuotations">Search</button>
+      <button class="btn btn-outline" @click="resetFilter">Reset</button>
+    </div>
 
       <div class="data-card">
         <table class="data-table">
@@ -63,8 +62,11 @@
                 <a class="link" v-if="r.st === 'OPEN'" @click="convertToOrder(r.id)">Convert to Order</a>
               </td>
             </tr>
-            <tr v-if="rows.length === 0">
+            <tr v-if="rows.length === 0 && !loading">
               <td colspan="7" style="text-align:center;padding:40px;color:#999;">No quotations found.</td>
+            </tr>
+            <tr v-if="loading">
+              <td colspan="7" style="text-align:center;padding:40px;color:#999;">Loading...</td>
             </tr>
           </tbody>
         </table>
@@ -76,16 +78,20 @@
         </div>
       </div>
     </div>
-  </MainLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue"
-import MainLayout from "@/layout/MainLayout.vue"
-import axios from "axios"
+import { ref, reactive, onMounted } from "vue"
 import { useRouter } from "vue-router"
+import { fetchQuotations } from "@/api"
 
 const router = useRouter()
+const loading = ref(false)
+const filter = reactive({
+  quotationNo: '',
+  customerName: '',
+  status: ''
+})
 
 interface R {
   id: string
@@ -99,26 +105,37 @@ interface R {
 
 const rows = ref<R[]>([])
 
-async function fetchQuotations() {
+async function loadQuotations() {
+  loading.value = true
   try {
-    const res = await axios.get("/api/v1/sales/quotations")
-    if (res.data.success) {
-      rows.value = res.data.data.items.map((q: any) => ({
-        id: q.quotation_id,
-        no: q.quotation_id,
-        refInq: q.inquiry_id,
-        cust: q.customer_id,
-        validTo: q.valid_to || 'N/A',
-        val: q.net_value ? `¥${q.net_value.toLocaleString()}` : '¥0.00',
-        st: q.status
-      }))
-    }
+    const data = await fetchQuotations({
+      pageSize: 100,
+      quotationId: filter.quotationNo || undefined,
+      customerName: filter.customerName || undefined,
+      status: filter.status || undefined
+    })
+    rows.value = (data.items || []).map((q: any) => ({
+      id: q.quotationId,
+      no: q.quotationId,
+      refInq: q.inquiryId,
+      cust: q.customerId,
+      validTo: q.validTo || 'N/A',
+      val: q.netValue ? `¥${q.netValue.toLocaleString()}` : '¥0.00',
+      st: q.status
+    }))
   } catch (err) {
     console.error("Fetch quotations failed:", err)
+  } finally {
+    loading.value = false
   }
 }
 
-onMounted(fetchQuotations)
+function resetFilter() {
+  Object.assign(filter, { quotationNo: '', customerName: '', status: '' })
+  loadQuotations()
+}
+
+onMounted(loadQuotations)
 
 function sc(s: string) {
   const m: Record<string, string> = {
@@ -134,7 +151,7 @@ function viewDetail(id: string) {
 }
 
 function convertToOrder(id: string) {
-  router.push({ path: '/sales/orders', query: { ref: id } })
+  router.push({ path: '/sales/orders/new', query: { ref: id } })
 }
 </script>
 
@@ -146,7 +163,10 @@ function convertToOrder(id: string) {
 .hc-title { font-size: 18px; font-weight: 800; color: #12372A; margin: 0; }
 .hc-sub { font-size: 12px; color: rgba(18,55,42,0.45); margin: 2px 0 0; }
 .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
-.form-input, .form-select { height: 38px; border: 1px solid rgba(173,188,159,0.4); border-radius: 8px; padding: 0 12px; font-size: 13px; color: #12372A; background: rgba(251,250,218,0.35); font-family: inherit; outline: none; min-width: 140px; transition: all 0.2s; }
+.search-qt { width: 160px; }
+.search-cust { width: 220px; }
+.search-st { width: 140px; }
+.form-input, .form-select { height: 38px; border: 1px solid rgba(173,188,159,0.4); border-radius: 8px; padding: 0 12px; font-size: 13px; color: #12372A; background: rgba(251,250,218,0.35); font-family: inherit; outline: none; transition: all 0.2s; }
 .data-card { background: linear-gradient(145deg, #fdfce8, #f7f5d1); border-radius: 14px; border: 1px solid rgba(173,188,159,0.15); box-shadow: 0 2px 6px rgba(173,188,159,0.1); overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .data-table th { text-align: left; padding: 12px 14px; font-size: 10px; font-weight: 700; color: rgba(18,55,42,0.45); text-transform: uppercase; letter-spacing: 0.8px; background: rgba(173,188,159,0.08); border-bottom: 1px solid rgba(173,188,159,0.2); }
@@ -156,14 +176,14 @@ function convertToOrder(id: string) {
 .data-row:hover { background: rgba(67,104,80,0.025); }
 .mono { font-family: "SF Mono", Consolas, monospace; font-size: 12px; }
 .stag { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; }
-.s-open { background: rgba(67,104,80,0.1); color: #436850; }
-.s-done { background: rgba(67,104,80,0.12); color: #2d4a38; }
-.s-cancel { background: rgba(217,83,79,0.08); color: #c94a45; }
+.s-open { background: rgba(67, 104, 80, 0.1); color: #436850; }
+.s-done { background: rgba(67, 104, 80, 0.12); color: #2d4a38; }
+.s-cancel { background: rgba(217, 83, 79, 0.08); color: #c94a45; }
 .link { color: #436850; cursor: pointer; font-weight: 600; font-size: 12px; }
 .link:hover { text-decoration: underline; }
 .divider { margin: 0 8px; color: rgba(18, 55, 42, 0.15); font-size: 12px; }
 .table-footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid rgba(173,188,159,0.15); }
-.tf-total { font-size: 12px; color: rgba(18,55,42,0.4); }
+.tf-total { font-size: 12px; color: rgba(18, 55, 42, 0.4); }
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .btn-primary { background: linear-gradient(135deg, #436850, #365440); color: #FBFADA; border: none; }
 .btn-outline { background: none; color: rgba(18,55,42,0.5); border: 1px solid rgba(173,188,159,0.35); }

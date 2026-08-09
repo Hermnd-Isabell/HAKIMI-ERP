@@ -1,7 +1,6 @@
-﻿<template>
-  <MainLayout>
-    <div class="page">
-      <div class="header-card">
+<template>
+  <div class="page">
+    <div class="header-card">
         <div class="hc-left">
           <div class="hc-icon"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="3" fill="none" stroke="#436850" stroke-width="1.8"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" fill="none" stroke="#436850" stroke-width="1.8"/></svg></div>
           <div class="hc-text"><h2 class="hc-title">System Settings</h2><p class="hc-sub">Configure global system parameters and preferences.</p></div>
@@ -144,12 +143,10 @@
         <span class="action-status" v-if="saved">✓ Settings saved successfully!</span>
       </div>
     </div>
-  </MainLayout>
 </template>
 
 <script setup lang="ts">
 import { reactive, ref } from "vue"
-import MainLayout from "@/layout/MainLayout.vue"
 
 const saved = ref(false)
 

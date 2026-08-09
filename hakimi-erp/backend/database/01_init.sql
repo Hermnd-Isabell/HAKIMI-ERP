@@ -144,8 +144,40 @@ CREATE TABLE IF NOT EXISTS `material` (
     `weight` DECIMAL(15,3) COMMENT '重量',
     `volume` DECIMAL(15,3) COMMENT '体积',
     `search_term` VARCHAR(50),
+    `category` VARCHAR(50) DEFAULT NULL,
+    `stock_quantity` DECIMAL(15,3) DEFAULT 0.000,
+    `item_group` VARCHAR(20) DEFAULT NULL,
+    `status` VARCHAR(10) DEFAULT 'ACTIVE',
     PRIMARY KEY (`material_id`)
 ) ENGINE=InnoDB COMMENT='物料主记录';
+
+-- 4.2 sales_organization
+CREATE TABLE IF NOT EXISTS `sales_organization` (
+  `sales_org_id` varchar(10) NOT NULL COMMENT '销售组织代码',
+  `description` varchar(100) NOT NULL COMMENT '描述',
+  `distribution_channel` varchar(10) NOT NULL COMMENT '分销渠道',
+  `division` varchar(10) NOT NULL COMMENT '产品组/事业部',
+  `currency` varchar(3) DEFAULT 'CNY' COMMENT '本位币',
+  `country` varchar(3) DEFAULT 'CN' COMMENT '所属国家',
+  `status` varchar(10) DEFAULT 'ACTIVE' COMMENT '状态',
+  PRIMARY KEY (`sales_org_id`,`distribution_channel`,`division`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 4.3 pricing_condition
+CREATE TABLE IF NOT EXISTS `pricing_condition` (
+  `condition_id` varchar(20) NOT NULL,
+  `condition_type` varchar(10) NOT NULL,
+  `condition_name` varchar(50) NOT NULL,
+  `material_id` varchar(20) DEFAULT NULL,
+  `bp_id` varchar(20) DEFAULT NULL,
+  `amount` decimal(15,2) DEFAULT NULL,
+  `rate` decimal(5,2) DEFAULT NULL,
+  `currency` varchar(3) DEFAULT 'CNY',
+  `valid_from` date DEFAULT NULL,
+  `valid_to` date DEFAULT NULL,
+  `status` varchar(10) DEFAULT 'ACTIVE',
+  PRIMARY KEY (`condition_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------
 -- D3: BUSINESS DOCUMENTS

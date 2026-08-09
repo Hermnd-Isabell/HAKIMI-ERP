@@ -18,7 +18,7 @@ router = APIRouter()
 def read_deliveries(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=1000),
     delivery_no: Optional[str] = Query(None),
     sales_order_no: Optional[str] = Query(None),
     customer_name: Optional[str] = Query(None),
@@ -56,6 +56,8 @@ def create_from_so(sales_order_id: str, db: Session = Depends(get_db)):
     try:
         return ResponseModel(data=logistics_service.create_from_sales_order(db, sales_order_id))
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
 # --- Batch Picking ---
@@ -64,6 +66,8 @@ def start_picking(delivery_id: str, db: Session = Depends(get_db)):
     try:
         return ResponseModel(data=logistics_service.start_picking(db, delivery_id))
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/deliveries/{delivery_id}/pick-batch", response_model=ResponseModel[Delivery])
@@ -76,6 +80,8 @@ def pick_batch(delivery_id: str, body: PickBatchRequest, db: Session = Depends(g
             picked_by=body.picked_by,
         ))
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/deliveries/{delivery_id}/confirm-picking", response_model=ResponseModel[Delivery])
@@ -83,6 +89,8 @@ def confirm_picking(delivery_id: str, db: Session = Depends(get_db)):
     try:
         return ResponseModel(data=logistics_service.confirm_picking(db, delivery_id))
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/deliveries/{delivery_id}/pick-records", response_model=ResponseModel[List[PickRecord]])
@@ -99,6 +107,8 @@ def ship_delivery(delivery_id: str, db: Session = Depends(get_db)):
     try:
         return ResponseModel(data=logistics_service.ship_delivery(db, delivery_id))
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
 # --- Post Goods Issue (PGI) ---
@@ -110,6 +120,8 @@ def post_goods_issue(delivery_id: str, body: PartialPgiRequest = None, db: Sessi
             partial_map = {it.delivery_item_id: it.quantity for it in body.items}
         return ResponseModel(data=logistics_service.post_goods_issue(db, delivery_id, partial_map))
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
 # --- Goods Issue Records ---
