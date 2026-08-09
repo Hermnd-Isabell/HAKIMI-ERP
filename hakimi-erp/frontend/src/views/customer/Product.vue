@@ -1,7 +1,6 @@
 <template>
-  <MainLayout>
-    <div class="page">
-      <div class="header-card">
+  <div class="page">
+    <div class="header-card">
         <div class="hc-left">
           <div class="hc-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2l7 4.5v9L12 20l-7-4.5v-9L12 2z" fill="none" stroke="#436850" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 7v8M5 9l7 4 7-4" fill="none" stroke="#436850" stroke-width="1.3" stroke-linecap="round"/></svg></div>
           <div class="hc-text"><h2 class="hc-title">Product Catalog</h2><p class="hc-sub">Browse and manage product listings with pricing and availability.</p></div>
@@ -12,28 +11,27 @@
       <div v-else class="data-card"><table class="dt">
         <thead><tr><th>Product ID</th><th>Name</th><th>Category</th><th class="num">Unit Price</th><th>UoM</th><th class="num">Stock</th><th>Status</th></tr></thead>
         <tbody>
-          <tr v-for="p in products" :key="p.material_id" class="dr">
-            <td class="mono">{{ p.material_id }}</td><td>{{ p.material_name }}</td><td>{{ p.category || '-' }}</td><td class="num mono">{{ p.standard_price }}</td><td>{{ p.base_unit }}</td><td class="num mono">{{ p.stock_quantity }}</td>
+          <tr v-for="p in products" :key="p.materialId" class="dr">
+            <td class="mono">{{ p.materialId }}</td><td>{{ p.materialName }}</td><td>{{ p.category || '-' }}</td><td class="num mono">{{ p.standardPrice }}</td><td>{{ p.baseUnit }}</td><td class="num mono">{{ p.stockQuantity }}</td>
             <td><span class="stag" :class="p.status==='ACTIVE'?'s-done':'s-warn'">{{ p.status === 'ACTIVE' ? 'Available' : 'Inactive' }}</span></td>
           </tr>
         </tbody>
-      </table></div>
-    </div>
-  </MainLayout>
+      </table>    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import MainLayout from '@/layout/MainLayout.vue'
-import axios from 'axios'
-interface Product { material_id:string; material_name:string; category?:string; standard_price:number; base_unit:string; stock_quantity:number; status:string }
-const products = ref<Product[]>([])
+import { fetchMaterials } from '@/api'
+
+const products = ref<any[]>([])
 const loading = ref(true)
 const error = ref('')
+
 onMounted(async () => {
   try {
-    const res = await axios.get('/api/v1/master/materials/', { params: { page_size: 50 } })
-    products.value = res.data.data.items || []
+    const data = await fetchMaterials({ pageSize: 50 })
+    products.value = data.items || []
   } catch (e: any) { error.value = e.message || 'Failed to load products' }
   finally { loading.value = false }
 })

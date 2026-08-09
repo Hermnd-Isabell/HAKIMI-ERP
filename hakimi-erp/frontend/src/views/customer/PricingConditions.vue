@@ -1,39 +1,65 @@
 <template>
-  <MainLayout>
-    <div class="page">
-      <div class="header-card">
-        <div class="hc-left">
-          <div class="hc-icon"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="10" fill="none" stroke="#436850" stroke-width="1.8"/><path d="M12 7v5l3 2M7 12h10" fill="none" stroke="#436850" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div class="hc-text"><h2 class="hc-title">Pricing Conditions</h2><p class="hc-sub">Define and maintain pricing condition records for materials and customers.</p></div>
+  <div class="page">
+    <div class="header-card">
+      <div class="hc-left">
+        <div class="hc-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="#436850" stroke-width="1.8"/>
+            <path d="M12 7v5l3 2M7 12h10" fill="none" stroke="#436850" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="hc-text">
+          <h2 class="hc-title">Pricing Conditions</h2>
+          <p class="hc-sub">Define and maintain pricing condition records for materials and customers.</p>
         </div>
       </div>
-      <div v-if="loading" class="loading-msg">Loading pricing conditions...</div>
-      <div v-else-if="error" class="error-msg">{{ error }}</div>
-      <div v-else class="data-card"><table class="dt">
-        <thead><tr><th>Cond. Type</th><th>Name</th><th>Material</th><th>Customer</th><th class="num">Amount</th><th>Crcy</th><th>Valid From</th><th>Valid To</th><th>Status</th></tr></thead>
+    </div>
+    <div v-if="loading" class="loading-msg">Loading pricing conditions...</div>
+    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <div v-else class="data-card">
+      <table class="dt">
+        <thead>
+          <tr>
+            <th>Cond. Type</th>
+            <th>Name</th>
+            <th>Material</th>
+            <th>Customer</th>
+            <th class="num">Amount</th>
+            <th>Crcy</th>
+            <th>Valid From</th>
+            <th>Valid To</th>
+            <th>Status</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr v-for="r in rows" :key="r.condition_id" class="dr">
-            <td class="mono">{{ r.condition_type }}</td><td>{{ r.condition_name }}</td><td class="mono">{{ r.material_id || '*' }}</td><td>{{ r.bp_id || '*' }}</td>
-            <td class="num mono">{{ r.amount || (r.rate ? r.rate + '%' : '-') }}</td><td>{{ r.currency }}</td><td>{{ r.valid_from }}</td><td>{{ r.valid_to }}</td>
+          <tr v-for="r in rows" :key="r.conditionId" class="dr">
+            <td class="mono">{{ r.conditionType }}</td>
+            <td>{{ r.conditionName }}</td>
+            <td class="mono">{{ r.materialId || '*' }}</td>
+            <td>{{ r.bpId || '*' }}</td>
+            <td class="num mono">{{ r.amount || (r.rate ? r.rate + '%' : '-') }}</td>
+            <td>{{ r.currency }}</td>
+            <td>{{ r.validFrom }}</td>
+            <td>{{ r.validTo }}</td>
             <td><span class="stag" :class="r.status==='ACTIVE'?'s-done':'s-cancel'">{{ r.status }}</span></td>
           </tr>
         </tbody>
-      </table></div>
+      </table>
     </div>
-  </MainLayout>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import MainLayout from '@/layout/MainLayout.vue'
-import axios from 'axios'
+import { fetchPricingConditions } from '@/api'
+
 const rows = ref<any[]>([])
 const loading = ref(true)
 const error = ref('')
 onMounted(async () => {
   try {
-    const res = await axios.get('/api/v1/master/materials/pricing-conditions', { params: { page_size: 100 } })
-    rows.value = res.data.data.items || []
+    const data = await fetchPricingConditions({ pageSize: 100 })
+    rows.value = data.items || []
   } catch (e: any) { error.value = e.message || 'Failed to load pricing conditions' }
   finally { loading.value = false }
 })

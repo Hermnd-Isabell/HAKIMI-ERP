@@ -2,7 +2,7 @@
   <div class="page-container">
     <!-- Header -->
     <div class="page-header">
-        <h2 class="page-title">{{ isEdit ? 'Edit' : 'Create' }} Quotation</h2>
+        <h2 class="page-title">{{ isEdit ? 'Edit' : 'Create' }} Sales Order</h2>
         <button class="exit-btn" @click="handleExit">
           <svg viewBox="0 0 20 20" width="16" height="16">
             <path d="M6 6l8 8M14 6l-8 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -13,28 +13,28 @@
 
       <!-- Main Form Area -->
       <div class="form-card">
-        <div class="hdr-info-row" v-if="inquiryId">
-          <span class="info-tag">Ref Inquiry: {{ inquiryId }}</span>
+        <div class="hdr-info-row" v-if="quotationId">
+          <span class="info-tag">Ref Quotation: {{ quotationId }}</span>
         </div>
         <div class="form-row form-row-3">
           <div class="form-group">
-            <label class="form-label">Quotation No.</label>
-            <input type="text" class="form-input" v-model="form.quotationId" placeholder="Auto-generated if empty" :disabled="isEdit" />
+            <label class="form-label">Sales Order No.</label>
+            <input type="text" class="form-input" v-model="form.salesOrderId" placeholder="Auto-generated if empty" :disabled="isEdit" />
           </div>
           <div class="form-group">
-            <label class="form-label required">Quotation Type</label>
-            <select class="form-select" v-model="form.quotationType">
-              <option value="QT">Quotation (QT)</option>
+            <label class="form-label required">Order Type</label>
+            <select class="form-select" v-model="form.orderType">
+              <option value="OR">Standard Order (OR)</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label required">Customer (BP)</label>
             <div class="input-with-f4">
-              <select class="form-select" v-model="form.customerId" :disabled="isFromInquiry">
+              <select class="form-select" v-model="form.customerId" :disabled="!!quotationId">
                 <option value="">-- Select Customer --</option>
                 <option v-for="p in partners" :key="p.bpId" :value="p.bpId">{{ p.bpId }} - {{ p.bpName }}</option>
               </select>
-              <button class="f4-trigger" @click="openF4('customer')" :disabled="isFromInquiry"><svg viewBox="0 0 20 20" width="14" height="14"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+              <button class="f4-trigger" @click="openF4('customer')" :disabled="!!quotationId"><svg viewBox="0 0 20 20" width="14" height="14"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
             </div>
           </div>
         </div>
@@ -66,12 +66,12 @@
               <input type="text" class="form-input" v-model="form.division" />
             </div>
             <div class="form-group">
-              <label class="form-label">Valid From</label>
-              <input type="date" class="form-input" v-model="form.validFrom" />
+              <label class="form-label">Customer Ref</label>
+              <input type="text" class="form-input" v-model="form.customerReference" />
             </div>
             <div class="form-group">
-              <label class="form-label">Valid To</label>
-              <input type="date" class="form-input" v-model="form.validTo" />
+              <label class="form-label">Pricing Date</label>
+              <input type="date" class="form-input" v-model="form.pricingDate" />
             </div>
             <div class="form-group">
               <label class="form-label">Currency</label>
@@ -105,17 +105,48 @@
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">Net Price</label>
-              <div class="input-with-unit">
-                <input type="number" class="form-input" v-model="itemForm.netPrice" />
-                <span class="input-unit">CNY</span>
-              </div>
+              <label class="form-label">Item Category</label>
+              <input type="text" class="form-input" v-model="itemForm.itemCategory" />
             </div>
           </div>
           
+          <div class="atp-box" v-if="atpStatus">
+            <span class="atp-tag" :class="atpStatus.toLowerCase()">{{ atpStatus }}</span>
+            <span class="atp-msg">{{ atpMessage }}</span>
+          </div>
+
           <div class="price-analysis">
-            <button class="btn btn-outline btn-sm" @click="checkAvailability">Check Availability</button>
-            <button class="btn btn-outline btn-sm" @click="showAnalysis">Pricing Analysis</button>
+            <button class="btn btn-outline btn-sm" @click="simulateATP">Simulate ATP</button>
+          </div>
+        </div>
+
+        <!-- Shipping Tab -->
+        <div class="tab-content" v-show="activeTab === 'shipping'">
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Plant</label>
+              <input type="text" class="form-input" v-model="itemForm.plant" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Shipping Point</label>
+              <input type="text" class="form-input" v-model="itemForm.shippingPoint" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Storage Loc</label>
+              <input type="text" class="form-input" v-model="itemForm.storageLocation" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Req. Deliv. Date</label>
+              <input type="date" class="form-input" v-model="form.requestedDeliveryDate" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ship. Condition</label>
+              <input type="text" class="form-input" v-model="form.shippingCondition" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Deliv. Priority</label>
+              <input type="text" class="form-input" v-model="form.deliveryPriority" />
+            </div>
           </div>
         </div>
 
@@ -131,13 +162,17 @@
               <input type="text" class="form-input" v-model="form.incoterms" />
             </div>
             <div class="form-group">
-              <label class="form-label">Delivering Plant</label>
-              <input type="text" class="form-input" v-model="form.deliveringPlant" />
+              <label class="form-label">Billing Block</label>
+              <input type="text" class="form-input" v-model="form.billingBlock" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Delivery Block</label>
+              <input type="text" class="form-input" v-model="form.deliveryBlock" />
             </div>
           </div>
         </div>
 
-        <div class="tab-content tab-placeholder" v-show="!['sales','item','billing'].includes(activeTab)">
+        <div class="tab-content tab-placeholder" v-show="!['sales','item','shipping','billing'].includes(activeTab)">
           <p>{{ activeTabLabel }} &mdash; content to be developed</p>
         </div>
       </div>
@@ -152,45 +187,46 @@
             </svg>
             {{ saving ? 'Saving...' : 'Save' }}
           </button>
-          <button class="btn btn-secondary" @click="handleSaveContinue" :disabled="saving" v-if="!isEdit">
-            Save &amp; Continue
-          </button>
-          <button class="btn btn-outline" @click="convertToOrder" v-if="isEdit && form.status === 'OPEN'">
-            Convert to Order
-          </button>
-        </div>
+               <button class="btn btn-secondary" @click="handleSaveContinue" :disabled="saving" v-if="!isEdit">
+                 Save &amp; Continue
+               </button>
+               <button class="btn btn-outline" @click="convertToDelivery" v-if="isEdit && (form.status === 'OPEN' || form.status === 'IN_PROCESS')">
+                 Convert to Delivery
+               </button>
+             </div>
         <button class="btn btn-border" @click="handleExit" :disabled="saving">Cancel</button>
       </div>
 
-      <!-- Recent Quotations -->
+      <!-- Recent Orders -->
       <div class="form-card" style="margin-top: 30px;">
-        <h3 class="block-title">Recent Quotations</h3>
+        <h3 class="block-title">Recent Orders</h3>
         <table class="data-table">
           <thead>
             <tr>
               <th>ID</th>
               <th>Customer</th>
-              <th>Valid Until</th>
+              <th>Date</th>
               <th>Net Value</th>
               <th>Status</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="q in recentQuotations" :key="q.quotationId">
-              <td class="mono">{{ q.quotationId }}</td>
-              <td>{{ q.customerId }}</td>
-              <td>{{ q.validTo || 'N/A' }}</td>
-              <td class="num">¥{{ q.netValue?.toLocaleString() }}</td>
-              <td><span class="status-tag">{{ q.status }}</span></td>
-              <td><a class="link-btn" @click="loadQuotation(q.quotationId)">Edit</a></td>
+            <tr v-for="so in recentOrders" :key="so.salesOrderId">
+              <td class="mono">{{ so.salesOrderId }}</td>
+              <td>{{ so.customerId }}</td>
+              <td>{{ so.createdTime?.split('T')[0] }}</td>
+              <td class="num">¥{{ so.netValue?.toLocaleString() }}</td>
+              <td><span class="status-tag">{{ so.status }}</span></td>
+              <td><a class="link-btn" @click="loadOrder(so.salesOrderId)">Edit</a></td>
             </tr>
           </tbody>
         </table>
       </div>
-    <F4SearchModal v-model:visible="showF4" :type="f4Type" @select="onF4Select" />
-    <SuccessModal v-model:visible="successVisible" :message="successMsg" @confirm="onSuccessConfirm" />
-  </div>
+
+      <F4SearchModal v-model:visible="showF4" :type="f4Type" @select="onF4Select" />
+      <SuccessModal v-model:visible="successVisible" :message="successMsg" @confirm="onSuccessConfirm" />
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -199,13 +235,14 @@ import { useRouter, useRoute } from 'vue-router'
 import F4SearchModal from '@/components/F4SearchModal.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
 import {
-  fetchQuotations,
+  fetchOrders,
+  fetchOrderById,
+  createOrder,
+  updateOrder,
   fetchQuotationById,
-  createQuotation,
-  updateQuotation,
-  fetchInquiryById,
   fetchPartners,
-  fetchMaterials
+  fetchMaterials,
+  createDeliveryFromSalesOrder
 } from '@/api'
 
 const router = useRouter()
@@ -214,8 +251,7 @@ const route = useRoute()
 const loading = ref(false)
 const saving = ref(false)
 const isEdit = computed(() => !!route.params.id && route.params.id !== 'new')
-const isFromInquiry = computed(() => !!route.query.ref)
-const inquiryId = ref(route.query.ref as string || '')
+const quotationId = ref(route.query.ref as string || '')
 const activeTab = ref('sales')
 const showF4 = ref(false)
 const f4Type = ref('partner')
@@ -224,24 +260,27 @@ const f4Field = ref('')
 const successVisible = ref(false)
 const successMsg = ref('')
 
+const atpStatus = ref('')
+const atpMessage = ref('')
+
 const partners = ref<any[]>([])
 const materials = ref<any[]>([])
-const recentQuotations = ref<any[]>([])
+const recentOrders = ref<any[]>([])
 
 const tabs = [
   { key: 'sales', label: 'Sales Data' },
   { key: 'item', label: 'Item Overview' },
+  { key: 'shipping', label: 'Shipping' },
   { key: 'billing', label: 'Billing' },
-  { key: 'conditions', label: 'Conditions' },
   { key: 'partners', label: 'Partners' },
 ]
 
 const activeTabLabel = computed(() => tabs.find(t => t.key === activeTab.value)?.label || '')
 
 const form = reactive({
+  salesOrderId: '',
+  orderType: 'OR',
   quotationId: '',
-  quotationType: 'QT',
-  inquiryId: '',
   customerId: '',
   salesOrg: '1000',
   distributionChannel: '10',
@@ -249,11 +288,15 @@ const form = reactive({
   salesOffice: '100',
   salesGroup: '10',
   currency: 'CNY',
-  validFrom: new Date().toISOString().split('T')[0],
-  validTo: '',
-  deliveringPlant: '1000',
-  incoterms: 'EXW',
+  customerReference: '',
+  pricingDate: new Date().toISOString().split('T')[0],
+  requestedDeliveryDate: '',
+  shippingCondition: '01',
+  deliveryPriority: '02',
   paymentTerms: 'Z001',
+  incoterms: 'EXW',
+  billingBlock: '',
+  deliveryBlock: '',
   status: 'OPEN',
   netValue: 0
 })
@@ -262,49 +305,54 @@ const itemForm = reactive({
   materialId: '',
   itemDescription: '',
   orderQuantity: 1,
+  itemCategory: 'TAN',
+  plant: '1000',
+  shippingPoint: '1000',
+  storageLocation: '0001',
   unitPrice: 0,
   netPrice: 0
 })
 
 async function loadMasters() {
-  const [bpRes, matRes, qRes] = await Promise.all([
+  const [bpRes, matRes, soRes] = await Promise.all([
     fetchPartners({ limit: 1000 }),
     fetchMaterials({ limit: 1000 }),
-    fetchQuotations({ limit: 5 })
+    fetchOrders({ limit: 5 })
   ])
   partners.value = bpRes.items || []
   materials.value = matRes.items || []
-  recentQuotations.value = qRes.items || []
+  recentOrders.value = soRes.items || []
 }
 
-async function loadQuotation(id: string) {
+async function loadOrder(id: string) {
   loading.value = true
   try {
-    const data = await fetchQuotationById(id)
+    const data = await fetchOrderById(id)
     Object.assign(form, data)
     if (data.items && data.items.length > 0) {
       Object.assign(itemForm, data.items[0])
     }
   } catch (err: any) {
-    alert('Failed to load quotation: ' + err.message)
+    alert('Failed to load order: ' + err.message)
   } finally {
     loading.value = false
   }
 }
 
-async function loadFromInquiry(id: string) {
+async function loadFromQuotation(id: string) {
   loading.value = true
   try {
-    const data = await fetchInquiryById(id)
+    const data = await fetchQuotationById(id)
     form.customerId = data.customerId
-    form.inquiryId = data.inquiryId
+    form.quotationId = data.quotationId
     form.salesOrg = data.salesOrg || '1000'
     form.distributionChannel = data.distributionChannel || '10'
     form.division = data.division || '00'
     form.currency = data.currency || 'CNY'
     form.paymentTerms = data.paymentTerms || 'Z001'
     form.incoterms = data.incoterms || 'EXW'
-    
+    form.netValue = data.netValue || 0
+
     if (data.items && data.items.length > 0) {
       const item = data.items[0]
       itemForm.materialId = item.materialId
@@ -314,7 +362,7 @@ async function loadFromInquiry(id: string) {
       itemForm.netPrice = item.netPrice || item.unitPrice || 0
     }
   } catch (err: any) {
-    alert('Failed to load inquiry reference: ' + err.message)
+    alert('Failed to load quotation reference: ' + err.message)
   } finally {
     loading.value = false
   }
@@ -323,9 +371,9 @@ async function loadFromInquiry(id: string) {
 onMounted(async () => {
   await loadMasters()
   if (isEdit.value) {
-    await loadQuotation(route.params.id as string)
-  } else if (inquiryId.value) {
-    await loadFromInquiry(inquiryId.value)
+    await loadOrder(route.params.id as string)
+  } else if (quotationId.value) {
+    await loadFromQuotation(quotationId.value)
   }
 })
 
@@ -341,11 +389,11 @@ async function handleSave() {
     )
     const payload = {
       ...cleanForm,
-      quotationId: form.quotationId || `QUO${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
-      inquiryId: inquiryId.value || form.inquiryId || null,
+      salesOrderId: form.salesOrderId || `SO${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
+      quotationId: quotationId.value || form.quotationId || null,
       items: [
         {
-          quotationItemId: `QI${Math.floor(Math.random() * 1000000)}`,
+          soItemId: `SOI${Math.floor(Math.random() * 1000000)}`,
           itemNo: 10,
           ...itemForm,
           salesUnit: 'PC'
@@ -355,11 +403,11 @@ async function handleSave() {
     }
     
     if (isEdit.value) {
-      await updateQuotation(form.quotationId, payload)
-      successMsg.value = `Quotation ${form.quotationId} updated successfully!`
+      await updateOrder(form.salesOrderId, payload)
+      successMsg.value = `Sales Order ${form.salesOrderId} updated successfully!`
     } else {
-      await createQuotation(payload)
-      successMsg.value = `Quotation ${payload.quotationId} created successfully!`
+      await createOrder(payload)
+      successMsg.value = `Sales Order ${payload.salesOrderId} created successfully!`
     }
     successVisible.value = true
   } catch (err: any) {
@@ -376,16 +424,12 @@ function handleSaveContinue() {
 function onSuccessConfirm() {
   successVisible.value = false
   if (!isEdit.value) {
-    router.push('/sales/quotation')
+    router.push('/sales/orders')
   }
 }
 
 function handleExit() {
-  router.push('/sales/quotation')
-}
-
-function convertToOrder() {
-  router.push({ path: '/sales/orders/new', query: { ref: form.quotationId } })
+  router.push('/sales/orders')
 }
 
 function openF4(field: string) {
@@ -403,12 +447,21 @@ function onF4Select(item: any) {
   showF4.value = false
 }
 
-function checkAvailability() {
-  alert(`ATP Check: Material ${itemForm.materialId} is AVAILABLE.`)
+function simulateATP() {
+  atpStatus.value = 'CONFIRMED'
+  atpMessage.value = `Full quantity ${itemForm.orderQuantity} PC confirmed for delivery on ${new Date().toLocaleDateString()}`
 }
 
-function showAnalysis() {
-  alert("Pricing Analysis: PR00 Base Price, K007 Discount, MWST Tax.")
+async function convertToDelivery() {
+  if (confirm(`Create delivery for order ${form.salesOrderId}?`)) {
+    try {
+      const res = await createDeliveryFromSalesOrder(form.salesOrderId)
+      alert(`Delivery ${res.deliveryId} created successfully!`)
+      router.push("/delivery/list")
+    } catch (err: any) {
+      alert("Failed to create delivery: " + err.message)
+    }
+  }
 }
 </script>
 
@@ -450,6 +503,11 @@ function showAnalysis() {
 
 .tab-content { padding-top: 22px; }
 .tab-placeholder { display: flex; align-items: center; justify-content: center; min-height: 120px; color: rgba(18,55,42,0.2); font-size: 14px; }
+
+.atp-box { margin: 10px 0; display: flex; align-items: center; gap: 10px; padding: 12px; background: rgba(67,104,80,0.05); border-radius: 8px; border: 1px solid rgba(67,104,80,0.1); }
+.atp-tag { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.atp-tag.confirmed { background: #436850; color: #fff; }
+.atp-msg { font-size: 12px; color: #436850; font-weight: 500; }
 
 .price-analysis { margin-top: 10px; display: flex; gap: 10px; }
 

@@ -67,3 +67,11 @@ export function updateMaterial(id: string, data: Partial<Material>) {
 export function deleteMaterial(id: string) {
   return del<void>(`${MASTER_API.materials}${id}`)
 }
+
+export function fetchPricingConditions(params?: Record<string, any>) {
+  return get<any>(`${MASTER_API.materials}pricing-conditions`, { params })
+}
+
+export function fetchSalesOrganizations(params?: Record<string, any>) {
+  return get<any>(`${MASTER_API.materials}sales-organizations`, { params })
+}

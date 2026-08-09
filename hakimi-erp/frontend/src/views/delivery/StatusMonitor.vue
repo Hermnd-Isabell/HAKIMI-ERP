@@ -1,7 +1,6 @@
-﻿<template>
-  <MainLayout>
-    <div class="page">
-      <div class="header-card">
+<template>
+  <div class="page">
+    <div class="header-card">
         <div class="hc-left">
           <div class="hc-icon"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="2" y="5" width="20" height="13" rx="2" fill="none" stroke="#436850" stroke-width="1.8"/><path d="M6 5V3M18 5V3M2 11h20M7 16h3" fill="none" stroke="#436850" stroke-width="1.5" stroke-linecap="round"/></svg></div>
           <div class="hc-text"><h2 class="hc-title">Delivery Status Monitoring</h2><p class="hc-sub">Monitor delivery progress in real time. The status of each order is clear at a glance.</p></div>
@@ -27,7 +26,7 @@
         <div class="table-scroll"><table class="data-table">
           <thead><tr>
             <th class="sticky-left">Del. No.</th><th>Sales Order</th><th>Customer</th><th>Planned GI</th><th>Status</th>
-            <th class="prog-hdr">Progress</th><th class="num">Qty (Pick/Total)</th><th class="sticky-right">Action</th>
+            <th class="prog-hdr">Progress</th><th class="num qty-hdr">Qty (Pick/Total)</th><th>Action</th>
           </tr></thead>
           <tbody>
             <tr v-if="loading && displayedRows.length === 0"><td colspan="9" class="empty-cell">Loading deliveries...</td></tr>
@@ -35,14 +34,14 @@
               <td class="sticky-left mono">{{ row.dn }}</td><td class="mono">{{ row.sn }}</td><td>{{ row.cn }}</td><td>{{ row.gi }}</td>
               <td><span class="stag" :class="sc(row.st)">{{ row.st }}</span></td>
               <td class="prog-hdr"><div class="ms-bar">
-                <div v-for="(m,i) in milestones" :key="i" class="ms-step" :style="{minWidth: i===0?'48px':'46px'}">
+                <div v-for="(m,i) in milestones" :key="i" class="ms-step">
                   <div class="ms-dot" :class="{done:row.si>=i,cur:row.si===i}"></div>
                   <div v-if="i < milestones.length - 1" class="ms-line" :class="{done:row.si>i}"></div>
                   <span class="ms-lbl">{{ m }}</span>
                 </div>
               </div></td>
               <td class="num mono qty-cell">{{ row.dt }}</td>
-              <td class="sticky-right">
+              <td>
                 <div class="row-actions">
                   <a class="link" @click="$router.push('/delivery/detail/'+row.id)">View Details</a>
                   <a v-if="row.actionLabel" class="link pgi-link" :class="{disabled: postingId === row.id}" @click="processDelivery(row)">
@@ -56,19 +55,16 @@
         </table></div>
         <div class="table-footer">
           <div class="tf-left"><span class="tf-total">Total {{ pagination.total }} items</span><select class="form-select form-select-sm" style="width:80px"><option>10 / page</option><option>20</option><option>50</option></select></div>
-          <div class="pager"><button v-for="p in Math.min(pagination.total_pages, 5)" :key="p" class="pg-btn" :class="{active: p === currentPage}" @click="goPage(p)">{{ p }}</button></div>
+          <div class="pager"><button v-for="p in Math.min(pagination.totalPages, 5)" :key="p" class="pg-btn" :class="{active: p === currentPage}" @click="goPage(p)">{{ p }}</button></div>
           <div class="tf-right"><span class="tf-label">Go to</span><input type="text" class="pg-input" placeholder="page" /></div>
         </div>
       </div>
     </div>
-  </MainLayout>
 </template>
-
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import MainLayout from '@/layout/MainLayout.vue'
 import { confirmPicking, fetchDeliveries, postGoodsIssue, shipDelivery, startPicking } from '@/api/modules/logistics'
 import type { DeliveryListItem } from '@/api/modules/logistics'
 import { fetchPartners } from '@/api/modules/master'
@@ -84,7 +80,7 @@ const partnerMap = ref<Record<string, string>>({})
 const loading = ref(false)
 const error = ref('')
 const postingId = ref('')
-const pagination = ref({ page: 1, page_size: 20, total: 0, total_pages: 1 })
+const pagination = ref({ page: 1, pageSize: 20, total: 0, totalPages: 1 })
 const currentPage = ref(1)
 
 let refreshTimer: ReturnType<typeof setInterval> | null = null
@@ -110,29 +106,29 @@ const STATUS_INDEX: Record<string, number> = {
 }
 
 function mapRow(item: DeliveryListItem) {
-  const st = STATUS_LABEL[item.delivery_status] || item.delivery_status
-  const si = STATUS_INDEX[item.delivery_status] ?? 0
+  const st = STATUS_LABEL[item.deliveryStatus] || item.deliveryStatus
+  const si = STATUS_INDEX[item.deliveryStatus] ?? 0
   const actionMap: Record<string, string> = {
     OPEN: 'Start Picking',
     PICKING: 'Pick Items',
     SHIPPED: 'Ship',
     IN_TRANSIT: 'Post GI',
   }
-  const total = item.total_quantity ?? 0
-  const delivered = item.delivered_quantity ?? 0
+  const total = item.totalQuantity ?? 0
+  const delivered = item.deliveredQuantity ?? 0
 
   return {
-    id: item.delivery_id,
-    dn: item.delivery_id,
-    sn: item.sales_order_id || 'N/A',
-    cn: item.ship_to_party_name || item.ship_to_party || 'N/A',
-    dd: item.planned_delivery_date || 'N/A',
-    gi: item.planned_gi_date || 'N/A',
+    id: item.deliveryId,
+    dn: item.deliveryId,
+    sn: item.salesOrderId || 'N/A',
+    cn: item.shipToPartyName || item.shipToParty || 'N/A',
+    dd: item.plannedDeliveryDate || 'N/A',
+    gi: item.plannedGiDate || 'N/A',
     st,
     si,
     dt: `${Number(delivered).toFixed(0)} / ${Number(total).toFixed(0)}`,
-    rawStatus: item.delivery_status,
-    actionLabel: actionMap[item.delivery_status] || '',
+    rawStatus: item.deliveryStatus,
+    actionLabel: actionMap[item.deliveryStatus] || '',
   }
 }
 
@@ -144,6 +140,7 @@ function sc(s: string) {
     Picked: 's-ship',
     Picking: 's-pick',
     Creating: 's-creating',
+    'In Transit': 's-pick',
     Cancelled: 's-cancel',
   }
   return m[s] || ''
@@ -154,7 +151,7 @@ async function loadPartners() {
     const res = await fetchPartners({ limit: 999 })
     const items: Partner[] = res.items || []
     partnerMap.value = items.reduce((acc: Record<string, string>, p: Partner) => {
-      if (p.bp_id) acc[p.bp_id] = p.bp_name
+      if (p.bpId) acc[p.bpId] = p.bpName
       return acc
     }, {})
   } catch (e) { /* partner names already served by backend; fallback only */ }
@@ -166,14 +163,14 @@ async function loadDeliveries() {
   try {
     const res = await fetchDeliveries({
       page: currentPage.value,
-      page_size: 20,
-      delivery_no: f.dn || undefined,
-      sales_order_no: f.sn || undefined,
-      customer_name: f.cn || undefined,
+      pageSize: 20,
+      deliveryNo: f.dn || undefined,
+      salesOrderNo: f.sn || undefined,
+      customerName: f.cn || undefined,
       status: f.st || undefined,
     })
     rawItems.value = res.items || []
-    pagination.value = res.pagination || { page: 1, page_size: 20, total: 0, total_pages: 1 }
+    pagination.value = res.pagination || { page: 1, pageSize: 20, total: 0, totalPages: 1 }
   } catch (err: any) {
     error.value = err?.message || 'Failed to load deliveries'
     console.error('Fetch status failed:', err)
@@ -210,7 +207,6 @@ async function processDelivery(row: any) {
   postingId.value = row.id
   try {
     if (row.rawStatus === 'OPEN') await startPicking(row.id)
-    
     else if (row.rawStatus === 'SHIPPED') await shipDelivery(row.id)
     else if (row.rawStatus === 'IN_TRANSIT') await postGoodsIssue(row.id)
     alert(`${row.actionLabel} completed`)
@@ -223,7 +219,7 @@ async function processDelivery(row: any) {
 }
 
 function goPage(p: number) {
-  if (p < 1 || p > pagination.value.total_pages) return
+  if (p < 1 || p > pagination.value.totalPages) return
   currentPage.value = p
   loadDeliveries()
 }
@@ -238,7 +234,6 @@ onUnmounted(() => {
 
 watch([ar, ri], startRefreshTimer)
 </script>
-
 
 <style scoped>
 .page{padding:28px 36px;max-width:1340px;margin:0 auto;}
@@ -266,38 +261,41 @@ watch([ar, ri], startRefreshTimer)
 
 .data-card{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:14px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 2px 6px rgba(173,188,159,0.1);overflow:hidden;}
 .table-scroll{overflow-x:auto;}
-.data-table{width:100%;border-collapse:collapse;font-size:13px;min-width:1220px;}
+.data-table{width:100%;border-collapse:collapse;font-size:13px;min-width:1250px;}
 .data-table th{text-align:left;padding:12px 14px;font-size:10px;font-weight:700;color:rgba(18,55,42,0.45);text-transform:uppercase;letter-spacing:0.8px;background:rgba(173,188,159,0.08);border-bottom:1px solid rgba(173,188,159,0.2);white-space:nowrap;}
 .data-table th.num{text-align:right;}
 .data-table td{padding:11px 14px;border-bottom:1px solid rgba(173,188,159,0.08);color:#12372A;white-space:nowrap;}
 .data-table td.num{text-align:right;}
-.qty-cell{min-width:110px;}
+.qty-cell{min-width:140px; padding-left: 20px !important; padding-right: 20px !important; color: #436850; font-weight: 700; text-align: right; border-left: 1px solid rgba(173,188,159,0.15);}
 .data-row:hover{background:rgba(67,104,80,0.025);}
 .empty-cell{text-align:center;padding:40px;color:rgba(18,55,42,0.4);}
 .mono{font-family:'SF Mono',Consolas,monospace;font-size:12px;}
-.sticky-left{position:sticky;left:0;background:inherit;z-index:1;box-shadow:2px 0 4px rgba(18,55,42,0.03);}
-.sticky-right{position:sticky;right:0;background:inherit;z-index:1;box-shadow:-2px 0 4px rgba(18,55,42,0.03);min-width:180px;}
+.sticky-left{position:sticky;left:0;background:#fdfce8;z-index:10;box-shadow:2px 0 4px rgba(18,55,42,0.02);}
+.data-row:hover .sticky-left{background:#f7f5d1;}
+.data-table th.sticky-left{background:rgba(173,188,159,0.1) !important; z-index:11;}
 
-.stag{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;}
+.stag{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;display:inline-block;white-space:nowrap;}
 .s-done{background:rgba(67,104,80,0.1);color:#436850;}
 .s-ship{background:rgba(67,104,80,0.08);color:#2d4a38;}
 .s-pick{background:rgba(173,188,159,0.2);color:#436850;}
 .s-creating{background:rgba(240,173,78,0.12);color:#c98a20;}
 .s-cancel{background:rgba(217,83,79,0.1);color:#D9534F;}
 
-.prog-hdr{min-width:200px;}
-.ms-bar{display:flex;align-items:center;gap:0;padding-top:2px;}
-.ms-step{display:flex;flex-direction:column;align-items:center;position:relative;min-width:58px;}
-.ms-dot{width:10px;height:10px;border-radius:50%;border:2px solid rgba(173,188,159,0.35);background:#FBFADA;}
+.prog-hdr{min-width:320px;padding-left:24px !important;padding-right:24px !important;}
+.qty-hdr{min-width:140px; text-align: right !important; border-left: 1px solid rgba(173,188,159,0.15);}
+.ms-bar{display:flex;align-items:center;gap:0;padding:4px 0 24px;width:100%;}
+.ms-step{display:flex;flex-direction:column;align-items:center;position:relative;flex:1;min-width:50px;}
+.ms-dot{width:8px;height:8px;border-radius:50%;border:2px solid rgba(173,188,159,0.35);background:#FBFADA;z-index:2;}
 .ms-dot.done{background:#436850;border-color:#436850;}
 .ms-dot.cur{background:#436850;border-color:#436850;box-shadow:0 0 0 3px rgba(67,104,80,0.15);}
-.ms-line{position:absolute;top:5px;left:50%;width:100%;height:2px;background:rgba(173,188,159,0.25);}
+.ms-line{position:absolute;top:3.5px;left:50%;width:100%;height:2px;background:rgba(173,188,159,0.25);z-index:1;}
 .ms-line.done{background:#436850;}
-.ms-lbl{font-size:9px;color:rgba(18,55,42,0.3);margin-top:3px;white-space:nowrap;}
-.row-actions{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:170px;}
+.ms-lbl{font-size:8px;color:rgba(18,55,42,0.4);margin-top:2px;white-space:nowrap;position:absolute;top:100%;transform: translateY(4px);}
+.row-actions{display:flex;align-items:center;justify-content:flex-start;gap:12px;min-width:180px;padding-left:10px;border-left: 1px solid rgba(173,188,159,0.15);}
 .link{color:#436850;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;}
 .link:hover{text-decoration:underline;}
 .link.disabled{color:rgba(18,55,42,0.3);cursor:not-allowed;text-decoration:none;}
+
 
 .table-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid rgba(173,188,159,0.15);}
 .tf-left{display:flex;align-items:center;gap:10px;}
@@ -317,4 +315,3 @@ watch([ar, ri], startRefreshTimer)
 .btn-outline:hover{border-color:rgba(18,55,42,0.3);color:#12372A;}
 .btn-outline:disabled{opacity:0.6;cursor:not-allowed;}
 </style>
-

@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, String, DateTime, Date, ForeignKey, Integer, DECIMAL, UniqueConstraint
+from sqlalchemy import Column, String, DateTime, Date, ForeignKey, Integer, DECIMAL, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.models.base import Base
@@ -20,6 +20,7 @@ class Delivery(Base):
     driver_name = Column(String(50))
     route = Column(String(100))
     tracking_no = Column(String(50))
+    created_time = Column(DateTime, default=datetime.utcnow)
 
     items = relationship("DeliveryItem", back_populates="delivery", cascade="all, delete-orphan")
     ship_to = relationship("BusinessPartner", foreign_keys=[ship_to_party], lazy="joined")
