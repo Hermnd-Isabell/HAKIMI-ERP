@@ -51,7 +51,7 @@
               <td class="mono strong">{{ r.no }}</td><td>{{ r.cust }}</td><td>{{ r.due }}</td><td class="num">{{ r.amt }}</td>
               <td class="num" :class="{ 'text-danger': r.st === 'OPEN' }">{{ r.out }}</td>
               <td><span class="stag" :class="sc(r.st)">{{ r.stLabel }}</span></td>
-              <td><button class="view-btn" @click="viewDetail(r.id)">View Details</button></td>
+              <td><button class="view-btn" @click="viewDetail(r.no)">View Details</button></td>
             </tr>
             <tr v-if="!loading && rows.length === 0">
               <td colspan="7" class="empty-cell">No receivable records found.</td>
@@ -86,12 +86,16 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import ReceivableDetailContent from './ReceivableDetail.vue'
-import { fetchOpenAR, fetchClosedAR } from '@/api/modules/finance'
+import { fetchOpenAR, fetchClosedAR, fetchInvoices } from '@/api/modules/finance'
+import { fetchPartners } from '@/api/modules/master'
+import type { Partner } from '@/api/modules/master'
 
 const rows = ref<any[]>([])
 const loading = ref(false)
 const detailVisible = ref(false)
 const currentId = ref('')
+const partnerMap = ref<Record<string, Partner>>({})
+const invoicePayerMap = ref<Record<string, string>>({})
 const f = reactive({ invoiceNo: '', customer: '', status: '' })
 
 const kpis = computed(() => {
@@ -107,21 +111,33 @@ function format(n: number) { return Math.round(n).toLocaleString() }
 async function fetchData() {
   loading.value = true
   try {
-    const [openRes, closedRes] = await Promise.all([
+    const [openRes, closedRes, partnerRes, invRes] = await Promise.all([
       fetchOpenAR({ pageSize: 100, invoiceId: f.invoiceNo || undefined, customerName: f.customer || undefined }),
-      fetchClosedAR({ pageSize: 100, invoiceId: f.invoiceNo || undefined, customerName: f.customer || undefined })
+      fetchClosedAR({ pageSize: 100, invoiceId: f.invoiceNo || undefined, customerName: f.customer || undefined }),
+      fetchPartners({ limit: 1000 }),
+      fetchInvoices({ pageSize: 1000 })
     ])
-    const openItems = (openRes.items || []).map((i: any) => ({
-      id: i.openArId, no: i.invoiceId, cust: i.payer || 'Unknown',
-      due: i.dueDate || 'N/A', amt: `¥${Number(i.receivableAmount || 0).toLocaleString()}`,
-      out: `¥${(Number(i.receivableAmount || 0) - Number(i.receivedAmount || 0)).toLocaleString()}`,
-      st: 'OPEN', stLabel: 'Open'
-    }))
-    const closedItems = (closedRes.items || []).map((i: any) => ({
-      id: i.closedArId, no: i.invoiceId, cust: i.payer || 'Unknown',
-      due: i.closedTime?.split('T')[0] || 'N/A', amt: `¥${Number(i.receivableAmount || 0).toLocaleString()}`,
-      out: '¥0.00', st: 'CLEARED', stLabel: 'Closed'
-    }))
+    partnerMap.value = {}
+    ;(partnerRes.items || []).forEach((p: Partner) => { if (p.bpId) partnerMap.value[p.bpId] = p })
+    invoicePayerMap.value = {}
+    ;(invRes.items || []).forEach((inv: any) => { if (inv.invoiceId) invoicePayerMap.value[inv.invoiceId] = inv.payer || inv.soldToParty || '' })
+    const openItems = (openRes.items || []).map((i: any) => {
+      const payer = invoicePayerMap.value[i.invoiceId] || ''
+      return {
+        id: i.openArId, no: i.invoiceId, cust: partnerMap.value[payer]?.bpName || payer || 'Unknown',
+        due: i.dueDate || 'N/A', amt: `¥${Number(i.receivableAmount || 0).toLocaleString()}`,
+        out: `¥${(Number(i.receivableAmount || 0) - Number(i.receivedAmount || 0)).toLocaleString()}`,
+        st: 'OPEN', stLabel: 'Open'
+      }
+    })
+    const closedItems = (closedRes.items || []).map((i: any) => {
+      const payer = invoicePayerMap.value[i.invoiceId] || ''
+      return {
+        id: i.closedArId, no: i.invoiceId, cust: partnerMap.value[payer]?.bpName || payer || 'Unknown',
+        due: i.closedTime?.split('T')[0] || 'N/A', amt: `¥${Number(i.receivableAmount || 0).toLocaleString()}`,
+        out: '¥0.00', st: 'CLEARED', stLabel: 'Closed'
+      }
+    })
     let all = [...openItems, ...closedItems]
     if (f.status) {
       all = all.filter(i => i.st === f.status)

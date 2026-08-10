@@ -82,28 +82,40 @@
 import { ref, reactive, onMounted } from 'vue'
 import ReceivableDetailContent from './ReceivableDetail.vue'
 import { fetchInvoices } from '@/api/modules/finance'
+import { fetchPartners } from '@/api/modules/master'
+import type { Partner } from '@/api/modules/master'
 
 const rows = ref<any[]>([])
 const loading = ref(false)
 const detailVisible = ref(false)
 const currentId = ref('')
 const f = reactive({ invoiceNo: '', customer: '', status: '' })
+const partnerMap = ref<Record<string, Partner>>({})
 
 const STATUS_LABELS: any = { OPEN: 'Open', PARTIAL: 'Partial', CLEARED: 'Cleared', VOID: 'Void' }
 
 async function fetchData() {
   loading.value = true
   try {
-    const res = await fetchInvoices({
-      invoiceNo: f.invoiceNo || undefined,
-      customer: f.customer || undefined,
-      status: f.status || undefined,
-      pageSize: 100
-    })
-    rows.value = (res.items || []).map((i: any) => ({
+    const [partnerRes, invoiceRes] = await Promise.all([
+      fetchPartners({ limit: 1000 }),
+      fetchInvoices({
+        invoiceNo: f.invoiceNo || undefined,
+        customer: f.customer || undefined,
+        status: f.status || undefined,
+        pageSize: 100
+      })
+    ])
+    partnerMap.value = {}
+    if (partnerRes.items) {
+      partnerRes.items.forEach((p: Partner) => {
+        if (p.bpId) partnerMap.value[p.bpId] = p
+      })
+    }
+    rows.value = (invoiceRes.items || []).map((i: any) => ({
       id: i.invoiceId,
       no: i.invoiceId,
-      cust: i.payer || 'Unknown',
+      cust: partnerMap.value[i.payer || i.soldToParty || '']?.bpName || i.payer || 'Unknown',
       date: i.invoiceDate,
       amt: `¥${Number(i.totalAmount || 0).toLocaleString()}`,
       st: i.status,

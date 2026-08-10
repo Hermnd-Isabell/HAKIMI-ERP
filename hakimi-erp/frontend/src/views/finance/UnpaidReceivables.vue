@@ -72,10 +72,13 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import SuccessModal from '@/components/SuccessModal.vue'
 import { fetchOpenAR, fetchInvoices, createReceipt } from '@/api/modules/finance'
+import { fetchPartners } from '@/api/modules/master'
+import type { Partner } from '@/api/modules/master'
 
 const router = useRouter()
 const rawOpenAR = ref<any[]>([])
 const invoiceMap = ref<any>({})
+const partnerMap = ref<Record<string, Partner>>({})
 const loading = ref(false)
 const successVisible = ref(false)
 const successMsg = ref('')
@@ -89,7 +92,7 @@ const allRows = computed(() => {
     const amt = parseFloat(i.receivableAmount) || 0
     const rcv = parseFloat(i.receivedAmount) || 0
     return {
-      id: i.openArId, inv: i.invoiceId, cust: inv?.payer || 'Unknown',
+      id: i.openArId, inv: i.invoiceId, cust: partnerMap.value[inv?.payer || inv?.soldToParty || '']?.bpName || inv?.payer || 'Unknown',
       due: i.dueDate || 'N/A', amt, rcv, unp: Math.max(0, amt - rcv),
       st: (amt-rcv) <= 0 ? 'Paid' : (rcv > 0 ? 'Partial' : 'Unpaid'),
     }
@@ -111,9 +114,10 @@ function sc(s: string) { return s === 'Unpaid' ? 's-unpaid' : (s === 'Partial' ?
 async function fetchData() {
   loading.value = true
   try {
-    const [arRes, invRes] = await Promise.all([
+    const [arRes, invRes, partnerRes] = await Promise.all([
       fetchOpenAR({ pageSize: 1000, invoiceId: f.inv || undefined, customerName: f.cust || undefined }), 
-      fetchInvoices({ pageSize: 1000 })
+      fetchInvoices({ pageSize: 1000 }),
+      fetchPartners({ limit: 1000 })
     ])
     let items = arRes.items || []
     if (f.st) {
@@ -126,6 +130,8 @@ async function fetchData() {
     }
     rawOpenAR.value = items
     invoiceMap.value = (invRes.items || []).reduce((acc: any, inv: any) => { if (inv.invoiceId) acc[inv.invoiceId] = inv; return acc; }, {})
+    partnerMap.value = {}
+    ;(partnerRes.items || []).forEach((p: Partner) => { if (p.bpId) partnerMap.value[p.bpId] = p })
   } finally { loading.value = false }
 }
 

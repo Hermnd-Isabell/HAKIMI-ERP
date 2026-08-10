@@ -10,6 +10,10 @@ export function fetchFinancialSummary() {
   return get<any>(`${BASE}/financial-summary`)
 }
 
+export function fetchFinancialDetail() {
+  return get<any>(`${BASE}/financial-detail`)
+}
+
 export function fetchDeliveryStats() {
   return get<any>(`${BASE}/delivery-stats`)
 }

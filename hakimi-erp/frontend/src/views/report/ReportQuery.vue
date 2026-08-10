@@ -1,136 +1,414 @@
 <template>
   <div class="page">
     <div class="header-card">
-        <div class="hc-left">
-          <div class="hc-icon"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="3" y="3" width="7" height="7" rx="1" fill="none" stroke="#436850" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1" fill="none" stroke="#436850" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1" fill="none" stroke="#436850" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1" fill="none" stroke="#436850" stroke-width="1.8"/></svg></div>
-          <div class="hc-text"><h2 class="hc-title">Report Query</h2><p class="hc-sub">Generate and export business intelligence reports.</p></div>
-        </div>
+      <div class="hc-left">
+        <div class="hc-icon"><svg viewBox="0 0 24 24" width="22" height="22"><rect x="3" y="3" width="7" height="7" rx="1" fill="none" stroke="#436850" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1" fill="none" stroke="#436850" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1" fill="none" stroke="#436850" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1" fill="none" stroke="#436850" stroke-width="1.8"/></svg></div>
+        <div class="hc-text"><h2 class="hc-title">Report Query</h2><p class="hc-sub">Generate and export business intelligence reports.</p></div>
       </div>
+    </div>
 
-      <div class="report-grid" v-if="!activeReport">
-        <div class="report-card" v-for="r in reports" :key="r.id">
-          <div class="rc-icon" v-html="r.icon"></div>
-          <div class="rc-body">
-            <h3 class="rc-title">{{ r.title }}</h3>
-            <p class="rc-desc">{{ r.desc }}</p>
-            <div class="rc-meta">
-              <span class="rc-tag">{{ r.category }}</span>
-              <span class="rc-date">Updated: {{ r.updated }}</span>
-            </div>
-            <button class="btn btn-primary rc-btn" @click="runReport(r)">Run Report</button>
+    <div class="report-grid" v-if="!activeReport">
+      <div class="report-card" v-for="r in reports" :key="r.id">
+        <div class="rc-icon" v-html="r.icon"></div>
+        <div class="rc-body">
+          <h3 class="rc-title">{{ r.title }}</h3>
+          <p class="rc-desc">{{ r.desc }}</p>
+          <div class="rc-meta">
+            <span class="rc-tag">{{ r.category }}</span>
+            <span class="rc-date">Updated: {{ r.updated }}</span>
           </div>
-        </div>
-      </div>
-
-      <!-- Result View -->
-      <div v-else class="result-container">
-        <div class="result-header">
-          <button class="back-link" @click="activeReport = null">
-            <svg viewBox="0 0 20 20" width="16" height="16"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Back to Reports
-          </button>
-          <div class="rh-main">
-            <h3>{{ activeReport.title }}</h3>
-            <div class="rh-actions">
-              <button class="btn btn-outline btn-sm" @click="exportData">Export CSV</button>
-              <button class="btn btn-primary btn-sm" @click="refreshReport">Refresh</button>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="loading" class="loading-state">
-          <div class="spinner"></div>
-          <p>Processing data...</p>
-        </div>
-
-        <div v-else-if="reportData" class="report-content">
-          <!-- Sales Performance View -->
-          <div v-if="activeReport.id === 1" class="data-view">
-            <div class="kpi-row">
-              <div class="kpi-card">
-                <label>Total Orders</label>
-                <div class="value">{{ salesSummary.totalOrders }}</div>
-              </div>
-              <div class="kpi-card">
-                <label>Total Revenue</label>
-                <div class="value">¥{{ salesSummary.totalRevenue.toLocaleString() }}</div>
-              </div>
-              <div class="kpi-card">
-                <label>Avg Order Value</label>
-                <div class="value">¥{{ salesSummary.avgValue.toLocaleString() }}</div>
-              </div>
-            </div>
-            <div class="table-wrap">
-              <table class="report-table">
-                <thead><tr><th>Date</th><th>Orders</th><th class="num">Revenue</th></tr></thead>
-                <tbody>
-                  <tr v-for="(label, idx) in reportData.labels" :key="label">
-                    <td>{{ label }}</td>
-                    <td>{{ reportData.counts[idx] }}</td>
-                    <td class="num mono">¥{{ reportData.values[idx].toLocaleString() }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Delivery Analysis View -->
-          <div v-else-if="activeReport.id === 2" class="data-view">
-            <div class="fin-grid">
-              <div class="fin-card">
-                <div class="fc-header"><span class="label">Total Deliveries</span></div>
-                <div class="fc-val">{{ reportData.total }}</div>
-              </div>
-              <div class="fin-card success">
-                <div class="fc-header"><span class="label">Completed</span></div>
-                <div class="fc-val">{{ reportData.completed }}</div>
-              </div>
-              <div class="fin-card warn">
-                <div class="fc-header"><span class="label">Pending</span></div>
-                <div class="fc-val">{{ reportData.pending }}</div>
-              </div>
-              <div class="fin-card info">
-                <div class="fc-header"><span class="label">Completion Rate</span></div>
-                <div class="fc-val">{{ reportData.completionRate.toFixed(1) }}%</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Financial Summary View -->
-          <div v-else-if="activeReport.id === 3" class="data-view">
-            <div class="fin-grid">
-              <div class="fin-card">
-                <div class="fc-header"><span class="label">Total Invoiced</span></div>
-                <div class="fc-val">¥{{ reportData.totalInvoiced.toLocaleString() }}</div>
-              </div>
-              <div class="fin-card warn">
-                <div class="fc-header"><span class="label">Open Receivables</span></div>
-                <div class="fc-val">¥{{ reportData.openReceivables.toLocaleString() }}</div>
-              </div>
-              <div class="fin-card success">
-                <div class="fc-header"><span class="label">Collected Amount</span></div>
-                <div class="fc-val">¥{{ reportData.collectedAmount.toLocaleString() }}</div>
-              </div>
-              <div class="fin-card info">
-                <div class="fc-header"><span class="label">Collection Rate</span></div>
-                <div class="fc-val">{{ reportData.collectionRate.toFixed(1) }}%</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Generic View for others -->
-          <div v-else class="empty-result">
-            <svg viewBox="0 0 24 24" width="64" height="64" opacity="0.1"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" fill="currentColor"/><path d="M13 2v7h7" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-            <p>Report generation completed. Detailed visualization for this report type is coming soon.</p>
-          </div>
+          <button class="btn btn-primary rc-btn" @click="runReport(r)">Run Report</button>
         </div>
       </div>
     </div>
+
+    <!-- Result View -->
+    <div v-else class="result-container">
+      <div class="result-header">
+        <button class="back-link" @click="activeReport = null">
+          <svg viewBox="0 0 20 20" width="16" height="16"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Back to Reports
+        </button>
+        <div class="rh-main">
+          <h3>{{ activeReport.title }}</h3>
+          <div class="rh-actions">
+            <button class="btn btn-outline btn-sm" @click="exportData">Export CSV</button>
+            <button class="btn btn-primary btn-sm" @click="refreshReport">Refresh</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mode selector for Financial Summary -->
+      <div v-if="activeReport.id === 3" class="mode-selector">
+        <button
+          class="mode-btn"
+          :class="{ active: finMode === 'overview' }"
+          @click="finMode = 'overview'"
+        >
+          <svg viewBox="0 0 20 20" width="16" height="16"><path d="M3 20h2V10H3v10zm6 0h2V4H9v16zm6 0h2v-7h-2v7zm6 0h2V7h-2v13z" fill="currentColor"/></svg>
+          Overview Dashboard
+        </button>
+        <button
+          class="mode-btn"
+          :class="{ active: finMode === 'statement' }"
+          @click="finMode = 'statement'"
+        >
+          <svg viewBox="0 0 20 20" width="16" height="16"><rect x="2" y="3" width="16" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 7h10M5 10h10M5 13h7" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+          Professional Statement
+        </button>
+      </div>
+
+      <div v-if="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Processing data...</p>
+      </div>
+
+      <div v-else-if="reportData" class="report-content">
+        <!-- Sales Performance View -->
+        <div v-if="activeReport.id === 1" class="data-view">
+          <div class="kpi-row">
+            <div class="kpi-card">
+              <label>Total Orders</label>
+              <div class="value">{{ salesSummary.totalOrders }}</div>
+            </div>
+            <div class="kpi-card">
+              <label>Total Revenue</label>
+              <div class="value">¥{{ salesSummary.totalRevenue.toLocaleString() }}</div>
+            </div>
+            <div class="kpi-card">
+              <label>Avg Order Value</label>
+              <div class="value">¥{{ salesSummary.avgValue.toLocaleString() }}</div>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="report-table">
+              <thead><tr><th>Date</th><th>Orders</th><th class="num">Revenue</th></tr></thead>
+              <tbody>
+                <tr v-for="(label, idx) in reportData.labels" :key="label">
+                  <td>{{ label }}</td>
+                  <td>{{ reportData.counts[idx] }}</td>
+                  <td class="num mono">¥{{ reportData.values[idx].toLocaleString() }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Delivery Analysis View -->
+        <div v-else-if="activeReport.id === 2" class="data-view">
+          <div class="fin-grid">
+            <div class="fin-card">
+              <div class="fc-header"><span class="label">Total Deliveries</span></div>
+              <div class="fc-val">{{ reportData.total }}</div>
+            </div>
+            <div class="fin-card success">
+              <div class="fc-header"><span class="label">Completed</span></div>
+              <div class="fc-val">{{ reportData.completed }}</div>
+            </div>
+            <div class="fin-card warn">
+              <div class="fc-header"><span class="label">Pending</span></div>
+              <div class="fc-val">{{ reportData.pending }}</div>
+            </div>
+            <div class="fin-card info">
+              <div class="fc-header"><span class="label">Completion Rate</span></div>
+              <div class="fc-val">{{ reportData.completionRate.toFixed(1) }}%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Financial Summary — Overview Mode -->
+        <div v-else-if="activeReport.id === 3 && finMode === 'overview'" class="data-view">
+          <!-- KPI Row -->
+          <div class="kpi-row-6">
+            <div class="kpi-card primary">
+              <label>Total Invoiced</label>
+              <div class="value">¥{{ fmt(reportData.totalInvoiced) }}</div>
+              <span class="kpi-sub">{{ reportData.invoiceCount }} invoices</span>
+            </div>
+            <div class="kpi-card danger">
+              <label>Outstanding AR</label>
+              <div class="value">¥{{ fmt(reportData.openReceivables) }}</div>
+              <span class="kpi-sub">Uncollected</span>
+            </div>
+            <div class="kpi-card success">
+              <label>Collected</label>
+              <div class="value">¥{{ fmt(reportData.collectedAmount) }}</div>
+              <span class="kpi-sub">All-time receipts</span>
+            </div>
+            <div class="kpi-card info">
+              <label>Collection Rate</label>
+              <div class="value">{{ reportData.collectionRate.toFixed(1) }}%</div>
+              <span class="kpi-sub">Recovery ratio</span>
+            </div>
+            <div class="kpi-card warn">
+              <label>Overdue Amount</label>
+              <div class="value">¥{{ fmt(reportData.overdueAmount) }}</div>
+              <span class="kpi-sub">Past due date</span>
+            </div>
+            <div class="kpi-card">
+              <label>Avg Days to Collect</label>
+              <div class="value">{{ reportData.avgDaysToCollect.toFixed(0) }}</div>
+              <span class="kpi-sub">Days (DSO)</span>
+            </div>
+          </div>
+
+          <div class="overview-grid">
+            <!-- Invoice Status Distribution -->
+            <div class="panel">
+              <h4 class="panel-title">
+                <svg viewBox="0 0 20 20" width="16" height="16"><path d="M10 1a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 2v7l5 5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                Invoice Status Distribution
+              </h4>
+              <div class="status-bars">
+                <div v-for="s in reportData.statusDistribution" :key="s.status" class="status-bar-item">
+                  <div class="sb-header">
+                    <span class="sb-label">{{ s.label }}</span>
+                    <span class="sb-amount">¥{{ fmt(s.amount) }}</span>
+                  </div>
+                  <div class="sb-track">
+                    <div class="sb-fill" :class="statusClass(s.status)" :style="{ width: s.percentage + '%' }"></div>
+                  </div>
+                  <span class="sb-meta">{{ s.count }} invoices · {{ s.percentage.toFixed(1) }}%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- AR Aging -->
+            <div class="panel">
+              <h4 class="panel-title">
+                <svg viewBox="0 0 20 20" width="16" height="16"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 5v5l3 2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                AR Aging Analysis
+              </h4>
+              <div class="aging-list">
+                <div v-for="a in reportData.agingSummary" :key="a.bucket" class="aging-item">
+                  <div class="aging-info">
+                    <span class="aging-bucket">{{ a.bucket }}</span>
+                    <span class="aging-amount">¥{{ fmt(a.amount) }}</span>
+                  </div>
+                  <div class="aging-bar-track">
+                    <div class="aging-bar-fill" :class="a.color" :style="{ width: agingPct(a.amount) + '%' }"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Top 5 Outstanding Customers -->
+            <div class="panel">
+              <h4 class="panel-title">
+                <svg viewBox="0 0 20 20" width="16" height="16"><circle cx="10" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 18c0-3.8 3.1-7 7-7s7 3.2 7 7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                Top 5 Outstanding Customers
+              </h4>
+              <div v-if="reportData.topCustomers && reportData.topCustomers.length > 0" class="top-customer-list">
+                <div v-for="(c, idx) in reportData.topCustomers" :key="c.bpId" class="tc-item">
+                  <div class="tc-rank" :class="'rank-' + (idx + 1)">{{ idx + 1 }}</div>
+                  <div class="tc-info">
+                    <span class="tc-name">{{ c.bpName }}</span>
+                    <span class="tc-id">{{ c.bpId }}</span>
+                  </div>
+                  <div class="tc-amount danger-text">¥{{ fmt(c.outstanding) }}</div>
+                </div>
+              </div>
+              <div v-else class="empty-mini">No outstanding receivables</div>
+            </div>
+
+            <!-- Monthly Collection Trend -->
+            <div class="panel">
+              <h4 class="panel-title">
+                <svg viewBox="0 0 20 20" width="16" height="16"><path d="M3 17l4-6 3 4 4-7 3 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Collection Trend (6 Months)
+              </h4>
+              <div v-if="reportData.collectionTrend && reportData.collectionTrend.length > 0" class="trend-chart">
+                <div class="trend-bars">
+                  <div v-for="t in reportData.collectionTrend" :key="t.month" class="trend-col">
+                    <div class="trend-bar" :style="{ height: trendBarHeight(t.amount) + 'px' }">
+                      <span class="trend-val" v-if="t.amount > 0">¥{{ fmt(t.amount) }}</span>
+                    </div>
+                    <span class="trend-month">{{ formatMonth(t.month) }}</span>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty-mini">No collection records in the past 6 months</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Financial Summary — Statement Mode -->
+        <div v-else-if="activeReport.id === 3 && finMode === 'statement'" class="data-view statement-view">
+          <!-- Report header -->
+          <div class="stmt-header">
+            <div class="stmt-title-block">
+              <h2 class="stmt-title">Accounts Receivable Report</h2>
+              <p class="stmt-period">As of {{ todayStr }}</p>
+            </div>
+            <div class="stmt-stamp">HAKIMI ERP · Finance Department</div>
+          </div>
+
+          <!-- Section 1: AR by Customer -->
+          <div class="stmt-section">
+            <h3 class="stmt-section-title">I. Accounts Receivable Summary by Customer</h3>
+            <table class="stmt-table">
+              <thead>
+                <tr>
+                  <th class="left">Customer</th>
+                  <th class="left">BP ID</th>
+                  <th class="num">Beginning Balance</th>
+                  <th class="num">This Period Invoiced</th>
+                  <th class="num">This Period Collected</th>
+                  <th class="num">Ending Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in reportData.arByCustomer" :key="row.bpId">
+                  <td class="left">{{ row.bpName }}</td>
+                  <td class="left mono-sm">{{ row.bpId }}</td>
+                  <td class="num mono">¥{{ fmt(row.beginningBalance) }}</td>
+                  <td class="num mono">¥{{ fmt(row.invoicedThisPeriod) }}</td>
+                  <td class="num mono">¥{{ fmt(row.collectedThisPeriod) }}</td>
+                  <td class="num mono bold" :class="{ 'danger-text': row.endingBalance > 0 }">¥{{ fmt(row.endingBalance) }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2" class="left bold">Total</td>
+                  <td class="num mono bold">¥{{ fmt(sumByKey(reportData.arByCustomer, 'beginningBalance')) }}</td>
+                  <td class="num mono bold">¥{{ fmt(sumByKey(reportData.arByCustomer, 'invoicedThisPeriod')) }}</td>
+                  <td class="num mono bold">¥{{ fmt(sumByKey(reportData.arByCustomer, 'collectedThisPeriod')) }}</td>
+                  <td class="num mono bold" :class="{ 'danger-text': sumByKey(reportData.arByCustomer, 'endingBalance') > 0 }">¥{{ fmt(sumByKey(reportData.arByCustomer, 'endingBalance')) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Section 2: Receipt Ledger -->
+          <div class="stmt-section">
+            <h3 class="stmt-section-title">II. Receipt Ledger</h3>
+            <table class="stmt-table">
+              <thead>
+                <tr>
+                  <th class="left">Receipt No.</th>
+                  <th class="left">Invoice No.</th>
+                  <th class="left">Customer</th>
+                  <th class="left">Date</th>
+                  <th class="left">Payment Method</th>
+                  <th class="left">Reference</th>
+                  <th class="num">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="reportData.receiptLedger && reportData.receiptLedger.length === 0">
+                  <td colspan="7" class="center muted">No receipt records found</td>
+                </tr>
+                <tr v-for="r in reportData.receiptLedger" :key="r.receiptId">
+                  <td class="left mono-sm">{{ r.receiptId }}</td>
+                  <td class="left mono-sm">{{ r.invoiceId }}</td>
+                  <td class="left">{{ r.bpName }}</td>
+                  <td class="left mono-sm">{{ r.receiptDate }}</td>
+                  <td class="left">{{ paymentMethodLabel(r.paymentMethod) }}</td>
+                  <td class="left mono-sm">{{ r.referenceNo || '—' }}</td>
+                  <td class="num mono">¥{{ fmt(r.amount) }}</td>
+                </tr>
+              </tbody>
+              <tfoot v-if="reportData.receiptLedger && reportData.receiptLedger.length > 0">
+                <tr>
+                  <td colspan="6" class="left bold">Total Receipts</td>
+                  <td class="num mono bold">¥{{ fmt(reportData.receiptLedger.reduce((s, r) => s + r.amount, 0)) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Section 3: Invoice Summary by Status -->
+          <div class="stmt-section">
+            <h3 class="stmt-section-title">III. Invoice Summary by Status</h3>
+            <table class="stmt-table">
+              <thead>
+                <tr>
+                  <th class="left">Status</th>
+                  <th class="num">Count</th>
+                  <th class="num">Amount</th>
+                  <th class="num">Percentage</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="s in reportData.invoiceSummary" :key="s.status">
+                  <td class="left">
+                    <span class="status-tag" :class="statusClass(s.status)">{{ s.label }}</span>
+                  </td>
+                  <td class="num">{{ s.count }}</td>
+                  <td class="num mono">¥{{ fmt(s.amount) }}</td>
+                  <td class="num">{{ s.percentage.toFixed(1) }}%</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td class="left bold">Total</td>
+                  <td class="num bold">{{ reportData.invoiceSummary.reduce((s, r) => s + r.count, 0) }}</td>
+                  <td class="num mono bold">¥{{ fmt(reportData.invoiceSummary.reduce((s, r) => s + r.amount, 0)) }}</td>
+                  <td class="num bold">100.0%</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Section 4: Overdue Analysis -->
+          <div class="stmt-section">
+            <h3 class="stmt-section-title">IV. Overdue Receivables Analysis</h3>
+            <table class="stmt-table">
+              <thead>
+                <tr>
+                  <th class="left">Invoice No.</th>
+                  <th class="left">Customer</th>
+                  <th class="left">Invoice Date</th>
+                  <th class="left">Due Date</th>
+                  <th class="num">Days Overdue</th>
+                  <th class="num">Outstanding</th>
+                  <th class="center">Risk Level</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="reportData.overdueInvoices && reportData.overdueInvoices.length === 0">
+                  <td colspan="7" class="center muted">No overdue receivables</td>
+                </tr>
+                <tr v-for="o in reportData.overdueInvoices" :key="o.invoiceId" class="risk-row">
+                  <td class="left mono-sm">{{ o.invoiceId }}</td>
+                  <td class="left">{{ o.bpName }}</td>
+                  <td class="left mono-sm">{{ o.invoiceDate }}</td>
+                  <td class="left mono-sm">{{ o.dueDate }}</td>
+                  <td class="num" :class="{ 'danger-text': o.daysOverdue > 90 }">{{ o.daysOverdue }}</td>
+                  <td class="num mono">¥{{ fmt(o.outstanding) }}</td>
+                  <td class="center"><span class="risk-tag" :class="riskClass(o.riskLevel)">{{ o.riskLevel }}</span></td>
+                </tr>
+              </tbody>
+              <tfoot v-if="reportData.overdueInvoices && reportData.overdueInvoices.length > 0">
+                <tr>
+                  <td colspan="5" class="left bold">Total Overdue</td>
+                  <td class="num mono bold danger-text">¥{{ fmt(reportData.overdueInvoices.reduce((s, r) => s + r.outstanding, 0)) }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Statement footer -->
+          <div class="stmt-footer">
+            <p>This report is generated by HAKIMI ERP System on {{ todayStr }}.</p>
+            <p>All amounts are expressed in CNY unless otherwise stated.</p>
+          </div>
+        </div>
+
+        <!-- Generic View for others -->
+        <div v-else class="empty-result">
+          <svg viewBox="0 0 24 24" width="64" height="64" opacity="0.1"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" fill="currentColor"/><path d="M13 2v7h7" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+          <p>Report generation completed. Detailed visualization for this report type is coming soon.</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { fetchSalesPerformance, fetchFinancialSummary, fetchDeliveryStats } from '@/api/modules/report'
+import { fetchSalesPerformance, fetchFinancialSummary, fetchFinancialDetail, fetchDeliveryStats } from '@/api/modules/report'
 
 interface R{id:number;title:string;desc:string;category:string;updated:string;icon:string}
 const reports:R[]=[
@@ -147,9 +425,11 @@ const reports:R[]=[
 const activeReport = ref<R | null>(null)
 const reportData = ref<any>(null)
 const loading = ref(false)
+const finMode = ref<'overview' | 'statement'>('overview')
 
 async function runReport(r: R) {
   activeReport.value = r
+  finMode.value = 'overview'
   await refreshReport()
 }
 
@@ -161,11 +441,10 @@ async function refreshReport() {
     if (activeReport.value.id === 1) {
       reportData.value = await fetchSalesPerformance({ days: 30 })
     } else if (activeReport.value.id === 3) {
-      reportData.value = await fetchFinancialSummary()
+      reportData.value = await fetchFinancialDetail()
     } else if (activeReport.value.id === 2) {
       reportData.value = await fetchDeliveryStats()
     } else {
-      // Mock for others
       await new Promise(resolve => setTimeout(resolve, 800))
       reportData.value = { mock: true }
     }
@@ -185,6 +464,56 @@ const salesSummary = computed(() => {
     totalRevenue,
     avgValue: totalOrders > 0 ? totalRevenue / totalOrders : 0
   }
+})
+
+// --- Helpers ---
+function fmt(n: number): string {
+  return (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function statusClass(status: string): string {
+  const map: Record<string, string> = { CLEARED: 'st-cleared', PARTIAL: 'st-partial', OPEN: 'st-open', VOID: 'st-void' }
+  return map[status] || 'st-open'
+}
+
+function riskClass(level: string): string {
+  const map: Record<string, string> = { High: 'rk-high', Medium: 'rk-medium', Low: 'rk-low' }
+  return map[level] || 'rk-low'
+}
+
+function paymentMethodLabel(method: string): string {
+  const map: Record<string, string> = {
+    BANK_TRANSFER: 'Bank Transfer', CASH: 'Cash', CHECK: 'Check',
+    CREDIT_CARD: 'Credit Card', WIRE: 'Wire Transfer', ELECTRONIC: 'Electronic Transfer'
+  }
+  return map[method] || method || '—'
+}
+
+function agingPct(amount: number): number {
+  if (!reportData.value || !reportData.value.overdueAmount) return 0
+  const totalOverdue = reportData.value.agingSummary.reduce((s: number, a: any) => s + a.amount, 0)
+  return totalOverdue > 0 ? (amount / totalOverdue) * 100 : 0
+}
+
+function trendBarHeight(amount: number): number {
+  if (!reportData.value?.collectionTrend) return 0
+  const max = Math.max(...reportData.value.collectionTrend.map((t: any) => t.amount), 1)
+  return Math.max((amount / max) * 140, 4)
+}
+
+function formatMonth(ym: string): string {
+  const [y, m] = ym.split('-')
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  return months[parseInt(m) - 1] || m
+}
+
+function sumByKey(arr: any[], key: string): number {
+  return arr.reduce((s, r) => s + (r[key] || 0), 0)
+}
+
+const todayStr = computed(() => {
+  const d = new Date()
+  return d.toISOString().split('T')[0]
 })
 
 function exportData() {
@@ -212,42 +541,161 @@ function exportData() {
 .rc-date{font-size:11px;color:rgba(18,55,42,0.3);}
 .rc-btn{align-self:flex-start;padding:8px 18px;font-size:12px;}
 
-.result-container { background: linear-gradient(145deg,#fdfce8,#f7f5d1); border-radius: 16px; padding: 24px; border: 1px solid rgba(173,188,159,0.18); }
-.result-header { margin-bottom: 24px; }
-.back-link { background: none; border: none; color: #436850; cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 13px; margin-bottom: 12px; }
-.rh-main { display: flex; justify-content: space-between; align-items: center; }
-.rh-main h3 { font-size: 20px; font-weight: 800; color: #12372A; margin: 0; }
-.rh-actions { display: flex; gap: 10px; }
+.result-container{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:16px;padding:24px;border:1px solid rgba(173,188,159,0.18);}
+.result-header{margin-bottom:16px;}
+.back-link{background:none;border:none;color:#436850;cursor:pointer;display:flex;align-items:center;gap:4px;font-weight:600;font-size:13px;margin-bottom:12px;}
+.rh-main{display:flex;justify-content:space-between;align-items:center;}
+.rh-main h3{font-size:20px;font-weight:800;color:#12372A;margin:0;}
+.rh-actions{display:flex;gap:10px;}
 
-.loading-state { padding: 60px; text-align: center; color: rgba(18,55,42,0.4); }
-.spinner { width: 32px; height: 32px; border: 3px solid rgba(67, 104, 80, 0.1); border-top-color: #436850; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* Mode selector */
+.mode-selector{display:flex;gap:8px;margin-bottom:20px;background:rgba(173,188,159,0.12);padding:5px;border-radius:10px;width:fit-content;}
+.mode-btn{display:flex;align-items:center;gap:6px;padding:8px 18px;font-size:13px;font-weight:600;border:none;border-radius:8px;cursor:pointer;transition:all 0.2s;background:transparent;color:rgba(18,55,42,0.5);font-family:inherit;}
+.mode-btn.active{background:#fff;color:#436850;box-shadow:0 2px 6px rgba(67,104,80,0.08);}
+.mode-btn:hover:not(.active){color:rgba(18,55,42,0.7);}
 
-.kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
-.kpi-card { background: rgba(255,255,255,0.4); border-radius: 12px; padding: 16px; border: 1px solid rgba(173,188,159,0.2); }
-.kpi-card label { font-size: 11px; font-weight: 700; color: rgba(18,55,42,0.4); text-transform: uppercase; display: block; margin-bottom: 4px; }
-.kpi-card .value { font-size: 20px; font-weight: 800; color: #12372A; }
+.loading-state{padding:60px;text-align:center;color:rgba(18,55,42,0.4);}
+.spinner{width:32px;height:32px;border:3px solid rgba(67,104,80,0.1);border-top-color:#436850;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
-.table-wrap { overflow-x: auto; }
-.report-table { width: 100%; border-collapse: collapse; }
-.report-table th { text-align: left; padding: 12px; font-size: 11px; font-weight: 700; color: rgba(18,55,42,0.4); text-transform: uppercase; border-bottom: 2px solid rgba(173,188,159,0.2); }
-.report-table td { padding: 12px; border-bottom: 1px solid rgba(173,188,159,0.1); font-size: 14px; }
-.num { text-align: right; }
-.mono { font-family: 'SF Mono', monospace; }
+/* Sales KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+.kpi-card{background:rgba(255,255,255,0.4);border-radius:12px;padding:16px;border:1px solid rgba(173,188,159,0.2);}
+.kpi-card label{font-size:11px;font-weight:700;color:rgba(18,55,42,0.4);text-transform:uppercase;display:block;margin-bottom:4px;}
+.kpi-card .value{font-size:20px;font-weight:800;color:#12372A;}
+.kpi-sub{font-size:11px;color:rgba(18,55,42,0.3);margin-top:2px;display:block;}
 
-.fin-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-.fin-card { background: #fff; padding: 24px; border-radius: 16px; border-left: 6px solid #436850; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
-.fin-card.warn { border-left-color: #F0AD4E; }
-.fin-card.success { border-left-color: #5CB85C; }
-.fin-card.info { border-left-color: #5BC0DE; }
-.fc-header { margin-bottom: 8px; }
-.fc-header .label { font-size: 12px; font-weight: 700; color: rgba(0,0,0,0.4); text-transform: uppercase; }
-.fc-val { font-size: 28px; font-weight: 800; color: #12372A; }
+/* Overview Mode — 6 KPI cards */
+.kpi-row-6{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
+.kpi-card.primary{border-left:4px solid #436850;}
+.kpi-card.danger{border-left:4px solid #D9534F;}
+.kpi-card.success{border-left:4px solid #5CB85C;}
+.kpi-card.info{border-left:4px solid #5BC0DE;}
+.kpi-card.warn{border-left:4px solid #F0AD4E;}
+.kpi-row-6 .kpi-card{background:#fff;border-radius:12px;padding:16px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 2px 8px rgba(0,0,0,0.02);}
+.kpi-row-6 .kpi-card .value{font-size:22px;font-weight:800;color:#12372A;}
 
-.empty-result { padding: 60px; text-align: center; color: rgba(18,55,42,0.3); display: flex; flex-direction: column; align-items: center; gap: 16px; }
+/* Overview grid */
+.overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.panel{background:#fff;border-radius:14px;padding:20px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 2px 8px rgba(0,0,0,0.02);}
+.panel-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#12372A;margin:0 0 16px;}
+.panel-title svg{color:rgba(67,104,80,0.5);}
 
+/* Status distribution bars */
+.status-bars{display:flex;flex-direction:column;gap:14px;}
+.status-bar-item{}
+.sb-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.sb-label{font-size:13px;font-weight:600;color:#12372A;}
+.sb-amount{font-size:13px;font-weight:600;color:#12372A;font-family:'SF Mono',Consolas,monospace;}
+.sb-track{height:8px;background:rgba(173,188,159,0.15);border-radius:4px;overflow:hidden;}
+.sb-fill{height:100%;border-radius:4px;transition:width 0.4s;}
+.sb-fill.st-cleared{background:#5CB85C;}
+.sb-fill.st-partial{background:#F0AD4E;}
+.sb-fill.st-open{background:#5BC0DE;}
+.sb-fill.st-void{background:#D9534F;}
+.sb-meta{font-size:11px;color:rgba(18,55,42,0.35);margin-top:3px;display:block;}
+
+/* AR Aging */
+.aging-list{display:flex;flex-direction:column;gap:14px;}
+.aging-item{}
+.aging-info{display:flex;justify-content:space-between;margin-bottom:5px;}
+.aging-bucket{font-size:13px;font-weight:600;color:#12372A;}
+.aging-amount{font-size:13px;font-weight:600;color:#12372A;font-family:'SF Mono',Consolas,monospace;}
+.aging-bar-track{height:8px;background:rgba(173,188,159,0.15);border-radius:4px;overflow:hidden;}
+.aging-bar-fill{height:100%;border-radius:4px;}
+.aging-bar-fill.success{background:#5CB85C;}
+.aging-bar-fill.warning{background:#F0AD4E;}
+.aging-bar-fill.danger{background:#D9534F;}
+
+/* Top customers */
+.top-customer-list{display:flex;flex-direction:column;gap:10px;}
+.tc-item{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:rgba(173,188,159,0.06);}
+.tc-rank{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;}
+.tc-rank.rank-1{background:#436850;color:#FBFADA;}
+.tc-rank.rank-2{background:rgba(67,104,80,0.7);color:#FBFADA;}
+.tc-rank.rank-3{background:rgba(67,104,80,0.5);color:#FBFADA;}
+.tc-rank.rank-4,.tc-rank.rank-5{background:rgba(173,188,159,0.3);color:#436850;}
+.tc-info{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0;}
+.tc-name{font-size:13px;font-weight:600;color:#12372A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tc-id{font-size:11px;color:rgba(18,55,42,0.3);font-family:'SF Mono',Consolas,monospace;}
+.tc-amount{font-size:14px;font-weight:700;font-family:'SF Mono',Consolas,monospace;flex-shrink:0;}
+.danger-text{color:#D9534F;}
+
+/* Collection trend */
+.trend-chart{padding:10px 0;}
+.trend-bars{display:flex;align-items:flex-end;gap:14px;height:180px;}
+.trend-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.trend-bar{width:100%;max-width:50px;background:linear-gradient(180deg,#436850,#5a8a68);border-radius:6px 6px 0 0;display:flex;align-items:flex-start;justify-content:center;min-height:4px;transition:height 0.4s;}
+.trend-val{font-size:10px;color:#FBFADA;font-weight:600;padding-top:6px;white-space:nowrap;}
+.trend-month{font-size:11px;color:rgba(18,55,42,0.4);font-weight:600;}
+
+.empty-mini{padding:20px;text-align:center;font-size:13px;color:rgba(18,55,42,0.3);}
+
+/* Table basics */
+.table-wrap{overflow-x:auto;}
+.report-table{width:100%;border-collapse:collapse;}
+.report-table th{text-align:left;padding:12px;font-size:11px;font-weight:700;color:rgba(18,55,42,0.4);text-transform:uppercase;border-bottom:2px solid rgba(173,188,159,0.2);}
+.report-table td{padding:12px;border-bottom:1px solid rgba(173,188,159,0.1);font-size:14px;}
+.num{text-align:right;}
+.mono{font-family:'SF Mono',monospace;}
+.mono-sm{font-family:'SF Mono',Consolas,monospace;font-size:12px;}
+.bold{font-weight:700;}
+
+/* Delivery / Finance cards */
+.fin-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
+.fin-card{background:#fff;padding:24px;border-radius:16px;border-left:6px solid #436850;box-shadow:0 4px 12px rgba(0,0,0,0.03);}
+.fin-card.warn{border-left-color:#F0AD4E;}
+.fin-card.success{border-left-color:#5CB85C;}
+.fin-card.info{border-left-color:#5BC0DE;}
+.fc-header{margin-bottom:8px;}
+.fc-header .label{font-size:12px;font-weight:700;color:rgba(0,0,0,0.4);text-transform:uppercase;}
+.fc-val{font-size:28px;font-weight:800;color:#12372A;}
+
+.empty-result{padding:60px;text-align:center;color:rgba(18,55,42,0.3);display:flex;flex-direction:column;align-items:center;gap:16px;}
+
+/* ========== Statement Mode ========== */
+.statement-view{max-width:960px;margin:0 auto;}
+.stmt-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:16px;border-bottom:2px solid #12372A;}
+.stmt-title{font-size:22px;font-weight:800;color:#12372A;margin:0;}
+.stmt-period{font-size:13px;color:rgba(18,55,42,0.5);margin:4px 0 0;}
+.stmt-stamp{font-size:11px;font-weight:700;color:rgba(67,104,80,0.4);text-transform:uppercase;letter-spacing:1px;border:1.5px solid rgba(67,104,80,0.2);padding:6px 12px;border-radius:6px;}
+
+.stmt-section{margin-bottom:32px;}
+.stmt-section-title{font-size:14px;font-weight:700;color:#436850;margin:0 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(173,188,159,0.25);}
+
+.stmt-table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;}
+.stmt-table th{padding:10px 14px;font-size:11px;font-weight:700;color:rgba(18,55,42,0.5);text-transform:uppercase;border-bottom:2px solid rgba(173,188,159,0.25);background:rgba(173,188,159,0.06);}
+.stmt-table th.left{text-align:left;}
+.stmt-table th.num{text-align:right;}
+.stmt-table th.center{text-align:center;}
+.stmt-table td{padding:10px 14px;border-bottom:1px solid rgba(173,188,159,0.08);font-size:13px;color:#12372A;}
+.stmt-table td.left{text-align:left;}
+.stmt-table td.num{text-align:right;}
+.stmt-table td.center{text-align:center;}
+.stmt-table td.muted{color:rgba(18,55,42,0.3);}
+.stmt-table tfoot td{border-top:2px solid rgba(173,188,159,0.25);border-bottom:none;background:rgba(173,188,159,0.05);}
+.stmt-table tfoot td.bold{font-weight:700;}
+.stmt-table tbody tr:hover{background:rgba(173,188,159,0.04);}
+
+.status-tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 10px;border-radius:4px;text-transform:uppercase;}
+.status-tag.st-cleared{background:rgba(92,184,92,0.12);color:#5CB85C;}
+.status-tag.st-partial{background:rgba(240,173,78,0.12);color:#F0AD4E;}
+.status-tag.st-open{background:rgba(91,192,222,0.12);color:#5BC0DE;}
+.status-tag.st-void{background:rgba(217,83,79,0.12);color:#D9534F;}
+
+.risk-tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 10px;border-radius:4px;text-transform:uppercase;}
+.risk-tag.rk-high{background:rgba(217,83,79,0.12);color:#D9534F;}
+.risk-tag.rk-medium{background:rgba(240,173,78,0.12);color:#F0AD4E;}
+.risk-tag.rk-low{background:rgba(92,184,92,0.12);color:#5CB85C;}
+
+.risk-row{}
+
+.stmt-footer{margin-top:28px;padding-top:16px;border-top:1px solid rgba(173,188,159,0.2);text-align:center;}
+.stmt-footer p{font-size:11px;color:rgba(18,55,42,0.3);margin:2px 0;}
+
+/* Buttons */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all 0.2s;font-family:inherit;border:none;}
-.btn-sm { padding: 6px 14px; font-size: 12px; }
+.btn-sm{padding:6px 14px;font-size:12px;}
 .btn-primary{background:linear-gradient(135deg,#436850,#365440);color:#FBFADA;}
 .btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(67,104,80,0.25);}
 .btn-outline{background:transparent;border:1.5px solid rgba(67,104,80,0.3);color:#436850;}

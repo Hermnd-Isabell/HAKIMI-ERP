@@ -15,6 +15,10 @@ def sales_performance(days: int = 30, db: Session = Depends(get_db)):
 def financial_summary(db: Session = Depends(get_db)):
     return ResponseModel(data=report_service.get_financial_summary(db))
 
+@router.get("/financial-detail", response_model=ResponseModel)
+def financial_detail(db: Session = Depends(get_db)):
+    return ResponseModel(data=report_service.get_financial_detail(db))
+
 @router.get("/delivery-stats", response_model=ResponseModel)
 def delivery_stats(db: Session = Depends(get_db)):
     return ResponseModel(data=report_service.get_delivery_stats(db))

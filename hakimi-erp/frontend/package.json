@@ -10,8 +10,10 @@
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
     "axios": "^1.7.2",
+    "camelcase-keys": "^10.0.2",
     "element-plus": "^2.7.5",
     "pinia": "^2.1.7",
+    "snakecase-keys": "^8.1.0",
     "vue": "^3.4.21",
     "vue-router": "^4.6.4"
   },

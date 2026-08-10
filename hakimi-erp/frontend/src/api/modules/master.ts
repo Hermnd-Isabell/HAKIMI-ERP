@@ -2,22 +2,22 @@ import { get, post, put, del } from '../request'
 import { MASTER_API } from '@/constants/api'
 
 export interface Partner {
-  bp_id: string
-  bp_type: string
-  bp_role: string
-  bp_name: string
+  bpId: string
+  bpType: string
+  bpRole: string
+  bpName: string
   country: string
   city: string
   district?: string
   street: string
-  house_number?: string
-  postal_code: string
+  houseNumber?: string
+  postalCode: string
   telephone: string
-  mobile_phone?: string
+  mobilePhone?: string
   fax?: string
   email: string
   website?: string
-  search_term: string
+  searchTerm: string
   status: string
 }
 
@@ -27,11 +27,11 @@ export interface PartnerList {
 }
 
 export interface Material {
-  material_id: string
-  material_name: string
-  material_type: string
-  base_unit: string
-  net_weight?: number
+  materialId: string
+  materialName: string
+  materialType: string
+  baseUnit: string
+  netWeight?: number
   status: string
 }
 
