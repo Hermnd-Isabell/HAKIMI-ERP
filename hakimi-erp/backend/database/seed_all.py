@@ -10,15 +10,18 @@ from app.core.database import SessionLocal
 from sqlalchemy import text
 from app.models.material import Material, PricingCondition, SalesOrganization
 from app.models.customer import BusinessPartner, CustomerSalesData, CustomerFinanceData, Contact
+from app.models.auth import User
 from app.models.sales import Inquiry, InquiryItem, Quotation, QuotationItem, SalesOrder, SalesOrderItem
 from app.models.logistics import Delivery, DeliveryItem, StorageLocation, GoodsIssue, PickRecord
 from app.models.finance import Invoice, InvoiceItem, OpenAccountReceivable, ClosedAccountReceivable, Receipt
+from app.services.auth_service import auth_service
 
 def clear_data(db):
     print("Clearing existing data...")
     # Using raw SQL to truncate tables while disabling foreign key checks
     db.execute(text("SET FOREIGN_KEY_CHECKS = 0;"))
     tables = [
+        "sys_user_session", "sys_user",
         "receipt", "closed_account_receivable", "open_account_receivable", 
         "invoice_item", "invoice", "pick_record", "goods_issue", 
         "delivery_item", "delivery", "sales_order_item", "sales_order", 
@@ -221,6 +224,15 @@ def seed_data(db):
         created_time=datetime.now()
     )
     db.add(ar1)
+
+    db.add(User(
+        username="admin",
+        email="admin@hakimi-erp.local",
+        password_hash=auth_service.hash_password("admin123"),
+        full_name="System Administrator",
+        role="ADMIN",
+        is_active=True,
+    ))
 
     db.commit()
     print("Seed data inserted successfully.")

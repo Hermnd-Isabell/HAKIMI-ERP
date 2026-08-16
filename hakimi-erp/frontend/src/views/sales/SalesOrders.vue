@@ -82,6 +82,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue"
 import { useRouter } from "vue-router"
+import { alert, confirm } from "@/utils/toast"
 import { fetchOrders, createDeliveryFromSalesOrder } from "@/api"
 
 const router = useRouter()
@@ -135,7 +136,7 @@ function viewDetail(id:string){
   router.push(`/sales/order/${id}`)
 }
 async function convertToDelivery(id:string) {
-  if (confirm(`Create delivery for order ${id}?`)) {
+  if (await confirm(`Create delivery for order ${id}?`)) {
     try {
       const res = await createDeliveryFromSalesOrder(id)
       alert(`Delivery ${res.deliveryId} created successfully!`)

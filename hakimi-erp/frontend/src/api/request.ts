@@ -1,6 +1,7 @@
 import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios'
 import camelcaseKeys from 'camelcase-keys'
 import snakecaseKeys from 'snakecase-keys'
+import { clearAuth, getAuthToken } from '@/utils/auth'
 
 export interface ApiResponse<T = unknown> {
   success: boolean
@@ -19,6 +20,11 @@ const request: AxiosInstance = axios.create({
 
 request.interceptors.request.use(
   (config) => {
+    const token = getAuthToken()
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+
     // 自动转换发送的数据为 snake_case
     if (config.data && !(config.data instanceof FormData)) {
       config.data = snakecaseKeys(config.data, { deep: true })
@@ -41,6 +47,17 @@ request.interceptors.response.use(
     return response
   },
   (error: AxiosError<ApiResponse>) => {
+    const url = error.config?.url || ''
+    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/logout')
+
+    if (error.response?.status === 401 && !isAuthEndpoint) {
+      clearAuth()
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search)
+      if (window.location.pathname !== '/login') {
+        window.location.assign(`/login?redirect=${redirect}`)
+      }
+    }
+
     let message = ''
     const data = error.response?.data
     

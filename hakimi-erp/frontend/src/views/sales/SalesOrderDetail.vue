@@ -234,6 +234,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import F4SearchModal from '@/components/F4SearchModal.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
+import { alert, confirm } from '@/utils/toast'
 import {
   fetchOrders,
   fetchOrderById,
@@ -453,7 +454,7 @@ function simulateATP() {
 }
 
 async function convertToDelivery() {
-  if (confirm(`Create delivery for order ${form.salesOrderId}?`)) {
+  if (await confirm(`Create delivery for order ${form.salesOrderId}?`)) {
     try {
       const res = await createDeliveryFromSalesOrder(form.salesOrderId)
       alert(`Delivery ${res.deliveryId} created successfully!`)

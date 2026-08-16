@@ -147,6 +147,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from "vue"
+import { confirm } from "@/utils/toast"
 
 const saved = ref(false)
 
@@ -173,8 +174,8 @@ function saveSettings(){
   saved.value=true
   setTimeout(()=>saved.value=false,3000)
 }
-function resetSettings(){
-  if(confirm("Reset all settings to defaults?")){
+async function resetSettings(){
+  if(await confirm("Reset all settings to defaults?")){
     settings.companyName="HAKIMI Corporation";settings.shortName="HAKIMI"
     settings.taxId="TAX-2026-001";settings.regNo="REG-HAK-2026"
     settings.currency="CNY";settings.dateFormat="YYYY-MM-DD"

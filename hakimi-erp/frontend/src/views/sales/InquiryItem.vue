@@ -208,6 +208,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import F4SearchModal from '@/components/F4SearchModal.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
+import { alert } from '@/utils/toast'
 import { fetchInquiries, fetchInquiryById, createInquiry, updateInquiry, fetchPartners, fetchMaterials } from '@/api'
 
 const router = useRouter()

@@ -65,6 +65,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { alert, confirm } from '@/utils/toast'
 import { confirmPicking, fetchDeliveries, postGoodsIssue, shipDelivery, startPicking } from '@/api/modules/logistics'
 import type { DeliveryListItem } from '@/api/modules/logistics'
 import { fetchPartners } from '@/api/modules/master'
@@ -203,7 +204,7 @@ async function processDelivery(row: any) {
     return
   }
   if (postingId.value) return
-  if (!confirm(`${row.actionLabel} for delivery ${row.dn}?`)) return
+  if (!(await confirm(`${row.actionLabel} for delivery ${row.dn}?`))) return
   postingId.value = row.id
   try {
     if (row.rawStatus === 'OPEN') await startPicking(row.id)

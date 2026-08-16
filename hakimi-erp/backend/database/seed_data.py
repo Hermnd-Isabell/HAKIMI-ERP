@@ -5,11 +5,13 @@ import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.core.database import SessionLocal
+from app.models.auth import User
 from app.models.customer import BusinessPartner, CustomerSalesData, CustomerFinanceData, Contact
 from app.models.material import Material
 from app.models.sales import Inquiry, InquiryItem, Quotation, QuotationItem, SalesOrder, SalesOrderItem
 from app.models.logistics import Delivery, DeliveryItem, GoodsIssue
 from app.models.finance import Invoice, InvoiceItem, OpenAccountReceivable, Receipt
+from app.services.auth_service import auth_service
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 import random
@@ -17,6 +19,21 @@ import random
 db = SessionLocal()
 
 try:
+    # ──────────────────────────────────────────────
+    # 0. Default System User
+    # ──────────────────────────────────────────────
+    if not db.query(User).filter(User.username == "admin").first():
+        db.add(User(
+            username="admin",
+            email="admin@hakimi-erp.local",
+            password_hash=auth_service.hash_password("admin123"),
+            full_name="System Administrator",
+            role="ADMIN",
+            is_active=True,
+        ))
+        db.flush()
+        print("  [OK] Default system user created (admin / admin123)")
+
     # ──────────────────────────────────────────────
     # 1. Business Partners (客户)
     # ──────────────────────────────────────────────

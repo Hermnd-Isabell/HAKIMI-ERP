@@ -4,6 +4,7 @@ from app.models.logistics import Delivery, DeliveryItem, GoodsIssue, PickRecord
 from app.models.sales import SalesOrder, SalesOrderItem
 from app.models.customer import BusinessPartner
 from app.models.material import Material
+from app.models.finance import Invoice
 from app.schemas.logistics import DeliveryCreate, Delivery as DeliverySchema, DeliveryListItem
 from typing import List, Optional, Dict
 from datetime import datetime
@@ -71,6 +72,9 @@ class LogisticsService:
             )
             delivered_qty = sum((item.picked_quantity or Decimal(0)) for item in d.items)
             bp_name = d.ship_to.bp_name if d.ship_to else d.ship_to_party
+            invoice_id = db.query(Invoice.invoice_id).filter(
+                Invoice.delivery_id == d.delivery_id
+            ).scalar()
             result.append(DeliveryListItem(
                 delivery_id=d.delivery_id,
                 sales_order_id=d.sales_order_id,
@@ -85,6 +89,7 @@ class LogisticsService:
                 shipping_point=d.shipping_point,
                 total_quantity=total_qty,
                 delivered_quantity=delivered_qty,
+                invoice_id=invoice_id,
             ))
 
         return result, total

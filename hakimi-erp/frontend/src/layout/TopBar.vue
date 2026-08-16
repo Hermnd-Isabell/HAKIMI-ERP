@@ -63,26 +63,61 @@
           <circle cx="10" cy="14" r="0.75" fill="currentColor"/>
         </svg>
       </button>
-      <div class="user-area">
-        <div class="user-avatar">SA</div>
+      <div ref="userMenuContainer" class="user-area" title="Account menu" @click.stop="toggleUserMenu">
+        <div class="user-avatar">{{ authStore.initials || 'H' }}</div>
         <div class="user-info">
-          <span class="user-name">Sales Admin</span>
-          <span class="user-role">Administrator</span>
+          <span class="user-name">{{ authStore.displayName }}</span>
+          <span class="user-role">{{ authStore.user?.role || 'User' }}</span>
         </div>
-        <svg viewBox="0 0 20 20" width="14" height="14" class="user-chevron">
-          <path d="M6 8l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg viewBox="0 0 20 20" width="15" height="15" class="user-chevron" :class="{ open: userMenuVisible }">
+          <path d="M7 13l-4-3 4-3M3 10h8M13 15l4-5-4-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
+        <transition name="user-menu">
+          <div v-if="userMenuVisible" class="user-menu" @click.stop>
+            <div class="user-menu-header">
+              <div class="user-menu-avatar">{{ authStore.initials || 'H' }}</div>
+              <div class="user-menu-meta">
+                <span class="user-menu-name">{{ authStore.displayName }}</span>
+                <span class="user-menu-account">@{{ authStore.user?.username || 'account' }}</span>
+              </div>
+            </div>
+            <div class="user-menu-details">
+              <div class="user-menu-detail-row">
+                <span class="detail-label">Email</span>
+                <span class="detail-value">{{ authStore.user?.email || '?' }}</span>
+              </div>
+              <div class="user-menu-detail-row">
+                <span class="detail-label">Role</span>
+                <span class="role-chip">{{ authStore.user?.role || 'User' }}</span>
+              </div>
+              <div class="user-menu-detail-row">
+                <span class="detail-label">Status</span>
+                <span class="status-chip" :class="{ inactive: authStore.user && !authStore.user.isActive }">
+                  {{ authStore.user?.isActive === false ? 'Inactive' : 'Active' }}
+                </span>
+              </div>
+            </div>
+            <button type="button" class="logout-btn" @click="handleLogout">
+              <svg viewBox="0 0 20 20" width="16" height="16">
+                <path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3M13 14l3-4-3-4M11 10h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Sign out
+            </button>
+          </div>
+        </transition>
       </div>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const pageTitle = computed(() => (route.meta.title as string) || 'Dashboard')
 
 // --- Search Index ---
@@ -221,6 +256,8 @@ const searchQuery = ref('')
 const showResults = ref(false)
 const highlightIndex = ref(-1)
 const searchContainer = ref<HTMLElement | null>(null)
+const userMenuContainer = ref<HTMLElement | null>(null)
+const userMenuVisible = ref(false)
 
 const filteredPages = computed(() => {
   const q = searchQuery.value.toLowerCase().trim()
@@ -255,7 +292,23 @@ function navigateTo(path: string) {
   searchQuery.value = ''
   showResults.value = false
   highlightIndex.value = -1
+  closeUserMenu()
   router.push(path)
+}
+
+function toggleUserMenu() {
+  userMenuVisible.value = !userMenuVisible.value
+  if (userMenuVisible.value) closeSearch()
+}
+
+function closeUserMenu() {
+  userMenuVisible.value = false
+}
+
+async function handleLogout() {
+  closeUserMenu()
+  await authStore.logout()
+  await router.replace('/login')
 }
 
 function closeSearch() {
@@ -264,15 +317,24 @@ function closeSearch() {
   highlightIndex.value = -1
 }
 
-// Close dropdown when clicking outside
+// Close dropdowns when clicking outside
 function handleClickOutside(e: MouseEvent) {
-  if (searchContainer.value && !searchContainer.value.contains(e.target as Node)) {
+  const target = e.target as Node
+  if (searchContainer.value && !searchContainer.value.contains(target)) {
     closeSearch()
+  }
+  if (userMenuContainer.value && !userMenuContainer.value.contains(target)) {
+    closeUserMenu()
   }
 }
 
-// Ctrl+K shortcut
+// Ctrl+K shortcut and Escape handling
 function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    closeSearch()
+    closeUserMenu()
+    return
+  }
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
     e.preventDefault()
     const input = searchContainer.value?.querySelector('.search-input') as HTMLInputElement
@@ -282,6 +344,11 @@ function handleKeydown(e: KeyboardEvent) {
     }
   }
 }
+
+watch(() => route.fullPath, () => {
+  closeSearch()
+  closeUserMenu()
+})
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
@@ -466,6 +533,7 @@ onUnmounted(() => {
 }
 
 .user-area {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -492,5 +560,137 @@ onUnmounted(() => {
 .user-info { display: flex; flex-direction: column; line-height: 1.2; }
 .user-name { font-size: 13px; color: #12372A; font-weight: 600; }
 .user-role { font-size: 11px; color: rgba(18, 55, 42, 0.45); }
-.user-chevron { color: rgba(18, 55, 42, 0.3); }
+.user-chevron {
+  color: rgba(18, 55, 42, 0.3);
+  transition: transform 0.2s;
+}
+.user-chevron.open { transform: rotate(180deg); }
+
+/* User profile dropdown */
+.user-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 300px;
+  background: #fffdf4;
+  border: 1px solid rgba(173, 188, 159, 0.35);
+  border-radius: 16px;
+  box-shadow: 0 16px 44px rgba(18, 55, 42, 0.18);
+  z-index: 10000;
+  overflow: hidden;
+}
+.user-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  background: linear-gradient(135deg, #436850, #365440);
+}
+.user-menu-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(251, 250, 218, 0.16);
+  color: #FBFADA;
+  font-size: 16px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 1px;
+  border: 1px solid rgba(251, 250, 218, 0.28);
+  flex-shrink: 0;
+}
+.user-menu-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.user-menu-name {
+  color: #FBFADA;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-menu-account {
+  color: rgba(251, 250, 218, 0.7);
+  font-size: 12px;
+}
+.user-menu-details {
+  padding: 8px 18px;
+}
+.user-menu-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(173, 188, 159, 0.18);
+}
+.user-menu-detail-row:last-child { border-bottom: none; }
+.detail-label {
+  color: rgba(18, 55, 42, 0.45);
+  font-size: 12px;
+  font-weight: 600;
+}
+.detail-value {
+  color: #12372A;
+  font-size: 12px;
+  text-align: right;
+  overflow-wrap: anywhere;
+  max-width: 180px;
+}
+.role-chip,
+.status-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.role-chip {
+  background: rgba(67, 104, 80, 0.14);
+  color: #436850;
+}
+.status-chip {
+  background: rgba(67, 104, 80, 0.14);
+  color: #436850;
+}
+.status-chip.inactive {
+  background: rgba(217, 83, 79, 0.12);
+  color: #D9534F;
+}
+.logout-btn {
+  width: calc(100% - 24px);
+  margin: 4px 12px 12px;
+  height: 40px;
+  border: 1px solid rgba(217, 83, 79, 0.22);
+  border-radius: 9px;
+  background: rgba(217, 83, 79, 0.06);
+  color: #C0392B;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.logout-btn:hover {
+  background: #D9534F;
+  border-color: #D9534F;
+  color: #fff;
+}
+
+/* User dropdown transition */
+.user-menu-enter-active { transition: all 0.2s ease; }
+.user-menu-leave-active { transition: all 0.15s ease; }
+.user-menu-enter-from, .user-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
 </style>

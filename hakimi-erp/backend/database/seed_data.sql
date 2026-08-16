@@ -5,6 +5,22 @@
 USE hakimi_erp;
 SET FOREIGN_KEY_CHECKS = 0;
 
+-- Default system user: admin / admin123
+INSERT INTO sys_user (username, email, password_hash, full_name, role, is_active)
+VALUES (
+  'admin',
+  'admin@hakimi-erp.local',
+  'pbkdf2_sha256$200000$fa84fdcb2b36e4e46f579d106b050e72$40c891b7578da1b2449b31960a3c67d6af3123ad5aa080d4f570b18f4364ac79',
+  'System Administrator',
+  'ADMIN',
+  1
+)
+ON DUPLICATE KEY UPDATE
+  email = VALUES(email),
+  full_name = VALUES(full_name),
+  role = VALUES(role),
+  is_active = VALUES(is_active);
+
 -- 1. Business Partners (10)
 INSERT INTO business_partner (bp_id, bp_type, bp_role, bp_name, country, city, district, street, house_number, postal_code, language, time_zone, transportation_zone, telephone, mobile_phone, fax, email, status, block_reason, data_source, print_format, search_term) VALUES ('BP00001', 'ORG', 'SOLD_TO', 'Shanghai Hualian Group', 'CN', 'Shanghai', 'Pudong', 'Century Ave', '100', NULL, 'ZH', 'UTC+8', NULL, '021-58880001', '13800001001', NULL, 'contact@hualian.com', 'ACTIVE', NULL, 'MANUAL', NULL, 'Hualian');
 INSERT INTO business_partner (bp_id, bp_type, bp_role, bp_name, country, city, district, street, house_number, postal_code, language, time_zone, transportation_zone, telephone, mobile_phone, fax, email, status, block_reason, data_source, print_format, search_term) VALUES ('BP00002', 'ORG', 'SOLD_TO', 'Beijing Shougang Trading', 'CN', 'Beijing', 'Chaoyang', 'Jianguo Rd', '88', NULL, 'ZH', 'UTC+8', NULL, '010-62220001', '13900002001', NULL, 'info@shougang.com', 'ACTIVE', NULL, 'MANUAL', NULL, 'Shougang');

@@ -57,6 +57,7 @@ export interface DeliveryListItem {
   shippingPoint?: string
   totalQuantity?: number
   deliveredQuantity?: number
+  invoiceId?: string
 }
 
 // --- Pagination ---

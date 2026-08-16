@@ -71,6 +71,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import SuccessModal from '@/components/SuccessModal.vue'
+import { alert, prompt } from '@/utils/toast'
 import { fetchOpenAR, fetchInvoices, createReceipt } from '@/api/modules/finance'
 import { fetchPartners } from '@/api/modules/master'
 import type { Partner } from '@/api/modules/master'
@@ -145,7 +146,7 @@ function viewDetail(id: string) {
 }
 
 async function handleClear(row: any) {
-  const amount = prompt(`Payment for ${row.inv}:`, row.unp.toString())
+  const amount = await prompt(`Payment for ${row.inv}:`, row.unp.toString())
   if (!amount) return
   try {
     await createReceipt({ invoiceId: row.inv, receiptAmount: parseFloat(amount), paymentMethod: 'BANK_TRANSFER', currency: 'CNY' })

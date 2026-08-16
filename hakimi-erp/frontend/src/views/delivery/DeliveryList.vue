@@ -64,7 +64,8 @@
                 </template>
                 <template v-if="r.st === 'Completed'">
                   <span class="divider">|</span>
-                  <a class="link" @click="createInvoice(r.id)">Create Invoice</a>
+                  <a v-if="r.invoiceId" class="link muted-link" @click="viewInvoice(r.invoiceId)">Invoice: {{ r.invoiceId }}</a>
+                  <a v-else class="link" @click="createInvoice(r.id)">Create Invoice</a>
                 </template>
               </td>
             </tr>
@@ -81,13 +82,14 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { alert, confirm } from '@/utils/toast'
 import { confirmPicking, fetchDeliveries, postGoodsIssue, shipDelivery, startPicking } from '@/api/modules/logistics'
 import { createInvoiceFromDelivery } from '@/api/modules/finance'
 import type { DeliveryListItem } from '@/api/modules/logistics'
 
 const router = useRouter()
 
-interface Row { id: string; no: string; so: string; cust: string; date: string; st: string; rawStatus: string; canPgi: boolean; actionLabel: string }
+interface Row { id: string; no: string; so: string; cust: string; date: string; st: string; rawStatus: string; canPgi: boolean; actionLabel: string; invoiceId?: string }
 const rows = ref<Row[]>([])
 const loading = ref(false)
 const error = ref('')
@@ -132,6 +134,7 @@ async function fetchData() {
       rawStatus: i.deliveryStatus,
       canPgi: i.deliveryStatus !== 'PGI_DONE' && i.deliveryStatus !== 'CANCELLED',
       actionLabel: ACTION_LABEL[i.deliveryStatus] || '',
+      invoiceId: i.invoiceId,
     }))
   } catch (err: any) {
     error.value = err?.message || 'Failed to load deliveries'
@@ -160,13 +163,17 @@ function viewDetail(id: string) {
   router.push('/delivery/detail/' + id)
 }
 
+function viewInvoice(invoiceId: string) {
+  router.push({ path: '/finance/invoice', query: { invoiceNo: invoiceId } })
+}
+
 async function processDelivery(row: Row) {
   if (row.rawStatus === 'PICKING') {
     router.push('/delivery/detail/' + row.id)
     return
   }
   if (!row.actionLabel) return
-  if (!confirm(`${row.actionLabel} for delivery ${row.id}?`)) return
+  if (!(await confirm(`${row.actionLabel} for delivery ${row.id}?`))) return
   try {
     if (row.rawStatus === 'OPEN') await startPicking(row.id)
     else if (row.rawStatus === 'SHIPPED') await shipDelivery(row.id)
@@ -179,7 +186,7 @@ async function processDelivery(row: Row) {
 }
 
 async function createInvoice(id: string) {
-  if (!confirm(`Create invoice for delivery ${id}?`)) return
+  if (!(await confirm(`Create invoice for delivery ${id}?`))) return
   try {
     const res = await createInvoiceFromDelivery(id)
     alert(`Invoice ${res.invoiceId} created successfully!`)
@@ -216,6 +223,7 @@ onMounted(fetchData)
 .s-cancel{background:rgba(217,83,79,0.08);color:#c94a45;}
 .link{color:#436850;cursor:pointer;font-weight:600;font-size:12px;}
 .link:hover{text-decoration:underline;}
+.muted-link{color:rgba(18,55,42,0.55);font-weight:500;}
 .divider{margin:0 8px;color:rgba(18,55,42,0.15);font-size:12px;}
 .error-msg{color:#D9534F;font-size:13px;padding:10px 14px;background:rgba(217,83,79,0.08);border-radius:8px;margin-bottom:14px;}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all 0.2s;font-family:inherit;}

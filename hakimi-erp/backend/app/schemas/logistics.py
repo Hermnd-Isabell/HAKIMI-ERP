@@ -74,6 +74,7 @@ class DeliveryListItem(BaseModel):
     shipping_point: Optional[str] = None
     total_quantity: Optional[Decimal] = None
     delivered_quantity: Optional[Decimal] = None
+    invoice_id: Optional[str] = None
 
     class Config:
         from_attributes = True

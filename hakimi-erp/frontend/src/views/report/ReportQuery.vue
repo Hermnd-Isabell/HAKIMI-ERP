@@ -408,6 +408,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { alert } from '@/utils/toast'
 import { fetchSalesPerformance, fetchFinancialSummary, fetchFinancialDetail, fetchDeliveryStats } from '@/api/modules/report'
 
 interface R{id:number;title:string;desc:string;category:string;updated:string;icon:string}

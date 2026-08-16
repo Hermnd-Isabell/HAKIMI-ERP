@@ -3,6 +3,13 @@
 
 export const API_BASE = '/api'
 
+export const AUTH_API = {
+  register: `${API_BASE}/v1/auth/register`,
+  login: `${API_BASE}/v1/auth/login`,
+  me: `${API_BASE}/v1/auth/me`,
+  logout: `${API_BASE}/v1/auth/logout`,
+} as const
+
 export const MASTER_API = {
   partners: `${API_BASE}/v1/master/partners/`,
   materials: `${API_BASE}/v1/master/materials/`,

@@ -1,12 +1,26 @@
 ﻿import { createRouter, createWebHistory } from "vue-router"
 import MainLayout from "@/layout/MainLayout.vue"
+import { getAuthToken } from "@/utils/auth"
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: "/login",
+      name: "Login",
+      component: () => import("@/views/auth/LoginView.vue"),
+      meta: { title: "Sign In", public: true },
+    },
+    {
+      path: "/register",
+      name: "Register",
+      component: () => import("@/views/auth/RegisterView.vue"),
+      meta: { title: "Create Account", public: true },
+    },
+    {
       path: "/",
       component: MainLayout,
+      meta: { requiresAuth: true },
       children: [
         { path: "", name: "Home", component: () => import("@/views/Home.vue"), meta: { title: "Home" } },
         { path: "customer/bp", name: "BusinessPartner", component: () => import("@/views/customer/BusinessPartner.vue"), meta: { title: "Create Business Partner" } },
@@ -35,6 +49,23 @@ const router = createRouter({
       ]
     }
   ]
+})
+
+router.beforeEach((to) => {
+  const authenticated = Boolean(getAuthToken())
+
+  if (to.meta.requiresAuth && !authenticated) {
+    return {
+      path: "/login",
+      query: { redirect: to.fullPath },
+    }
+  }
+
+  if (to.meta.public && authenticated) {
+    return "/"
+  }
+
+  return true
 })
 
 export default router

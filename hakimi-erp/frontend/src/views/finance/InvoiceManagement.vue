@@ -80,11 +80,13 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import ReceivableDetailContent from './ReceivableDetail.vue'
 import { fetchInvoices } from '@/api/modules/finance'
 import { fetchPartners } from '@/api/modules/master'
 import type { Partner } from '@/api/modules/master'
 
+const route = useRoute()
 const rows = ref<any[]>([])
 const loading = ref(false)
 const detailVisible = ref(false)
@@ -140,7 +142,13 @@ function reset() {
 
 function sc(s:string){const m:any={'OPEN':'s-open','PARTIAL':'s-partial','CLEARED':'s-done','VOID':'s-cancel'};return m[s]||''}
 
-onMounted(fetchData)
+onMounted(() => {
+  const invoiceNo = route.query.invoiceNo
+  if (typeof invoiceNo === 'string' && invoiceNo) {
+    f.invoiceNo = invoiceNo
+  }
+  fetchData()
+})
 </script>
 
 <style scoped>

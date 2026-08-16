@@ -72,6 +72,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue"
 import F4SearchModal from "@/components/F4SearchModal.vue"
+import { alert } from "@/utils/toast"
 import { fetchMaterials, createMaterial } from "@/api"
 
 const active=ref("Basic Data")

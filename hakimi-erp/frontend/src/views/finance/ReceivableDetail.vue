@@ -147,6 +147,7 @@
 import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SuccessModal from '@/components/SuccessModal.vue'
+import { alert } from '@/utils/toast'
 import { fetchInvoiceById, fetchOpenAR, fetchClosedAR, fetchReceipts, createReceipt, fetchPartners } from '@/api'
 import type { Invoice, OpenAccountReceivable, ClosedAccountReceivable, Receipt } from '@/api/modules/finance'
 import type { Partner } from '@/api/modules/master'
@@ -457,7 +458,8 @@ onMounted(() => load())
 .collect-card{width:480px;background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:18px;box-shadow:0 20px 60px rgba(18,55,42,0.22);border:1px solid rgba(173,188,159,0.2);overflow:hidden;}
 .cc-header{display:flex;align-items:center;justify-content:space-between;padding:22px 28px 16px;border-bottom:1px solid rgba(173,188,159,0.12);}
 .cc-title{font-size:18px;font-weight:800;color:#436850;margin:0;}
-.cc-close{background:none;border:none;font-size:18px;color:rgba(18,55,42,0.35);cursor:pointer;padding:4px;}
+.cc-close{background:none;border:none;font-size:18px;color:rgba(18,55,42,0.35);cursor:pointer;padding:4px;border-radius:6px;transition:all 0.2s;}
+.cc-close:hover{background:rgba(217,83,79,0.08);color:#D9534F;}
 .cc-body{padding:20px 28px;display:flex;flex-direction:column;gap:14px;}
 .cc-row{display:flex;justify-content:space-between;align-items:center;}
 .cc-label{font-size:12px;color:rgba(18,55,42,0.4);font-weight:600;}
