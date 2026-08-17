@@ -21,12 +21,14 @@
     <nav class="sidebar-nav">
       <!-- Home -->
       <ul class="nav-list">
-        <li class="nav-item" :class="{ active: currentPath === '/' }" @click="navigateTo('/')">
-          <svg class="nav-icon" viewBox="0 0 20 20" width="18" height="18">
-            <path d="M3 10l7-7 7 7M5 8v7a1 1 0 0 0 1 1h3v-4h2v4h3a1 1 0 0 0 1-1V8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span v-show="!isCollapsed" class="nav-text">Home</span>
-        </li>
+        <RouterLink to="/" custom v-slot="{ navigate, isActive }">
+          <li class="nav-item" :class="{ active: isActive }" @click="navigate">
+            <svg class="nav-icon" viewBox="0 0 20 20" width="18" height="18" style="pointer-events: none;">
+              <path d="M3 10l7-7 7 7M5 8v7a1 1 0 0 0 1 1h3v-4h2v4h3a1 1 0 0 0 1-1V8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span v-show="!isCollapsed" class="nav-text" style="pointer-events: none;">Home</span>
+          </li>
+        </RouterLink>
       </ul>
 
       <div class="nav-divider" v-show="!isCollapsed"></div>
@@ -38,23 +40,29 @@
           @click="toggleSection(section.label)"
           :class="{ expanded: expandedSections.has(section.label) }"
         >
-          <svg class="section-icon" viewBox="0 0 20 20" width="18" height="18" v-html="section.icon"></svg>
-          <div class="section-label-wrap" v-show="!isCollapsed">
+          <svg class="section-icon" viewBox="0 0 20 20" width="18" height="18" v-html="section.icon" style="pointer-events: none;"></svg>
+          <div class="section-label-wrap" v-show="!isCollapsed" style="pointer-events: none;">
             <span class="section-label">{{ section.label }}</span>
           </div>
-          <svg v-show="!isCollapsed" class="section-chevron" viewBox="0 0 16 16" width="12" height="12">
+          <svg v-show="!isCollapsed" class="section-chevron" viewBox="0 0 16 16" width="12" height="12" style="pointer-events: none;">
             <path d="M5 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
         <transition name="expand">
           <ul v-show="expandedSections.has(section.label) && !isCollapsed" class="nav-list sub-list">
-            <li v-for="item in section.children" :key="item.path"
-                class="nav-item nav-sub-item"
-                :class="{ active: currentPath === item.path }"
-                @click="navigateTo(item.path)">
-              <svg class="nav-icon nav-sub-icon" viewBox="0 0 20 20" width="16" height="16" v-html="item.icon"></svg>
-              <span class="nav-text nav-sub-text">{{ item.label }}</span>
-            </li>
+            <RouterLink v-for="item in section.children" :key="item.path"
+                :to="item.path"
+                custom
+                v-slot="{ navigate, isActive }">
+              <li class="nav-item nav-sub-item"
+                  :class="{ active: isActive }"
+                  @click="navigate">
+                <div class="nav-item-inner">
+                  <svg class="nav-icon nav-sub-icon" viewBox="0 0 20 20" width="16" height="16" v-html="item.icon"></svg>
+                  <span class="nav-text nav-sub-text">{{ item.label }}</span>
+                </div>
+              </li>
+            </RouterLink>
           </ul>
         </transition>
       </div>
@@ -82,7 +90,7 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
@@ -123,7 +131,7 @@ const menuItems: MenuSection[] = [
     ]
   },
   {
-    label: 'Financial\nManagement',
+    label: 'Financial Management',
     icon: '<rect x="2" y="4" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h16M6 12h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
     children: [
       { path: '/finance/invoice', label: 'Invoice', icon: '<rect x="2" y="4" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h16M6 12h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' },
@@ -162,13 +170,12 @@ function autoExpandCurrent() {
 watch(currentPath, () => autoExpandCurrent(), { immediate: true })
 
 function toggleCollapse() { isCollapsed.value = !isCollapsed.value }
-function navigateTo(path: string) { router.push(path) }
 </script>
 
 <style scoped>
 .sidebar {
   width: 230px;
-  background-color: rgba(18, 55, 42, 0.92);
+  background-color: rgba(18, 55, 42, 0.98);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   color: #FBFADA;
@@ -178,6 +185,8 @@ function navigateTo(path: string) { router.push(path) }
   overflow: hidden;
   flex-shrink: 0;
   border-right: 1px solid rgba(67, 104, 80, 0.25);
+  position: relative;
+  z-index: 1000;
 }
 .sidebar.collapsed { width: 60px; }
 
@@ -218,6 +227,8 @@ function navigateTo(path: string) { router.push(path) }
   border-radius: 0 24px 24px 0;
   margin: 1px 10px 1px 0;
   color: rgba(251, 250, 218, 0.6);
+  position: relative;
+  z-index: 10;
 }
 .nav-item:hover { background-color: rgba(67, 104, 80, 0.3); color: rgba(251, 250, 218, 0.9); }
 .nav-item.active { background-color: rgba(67, 104, 80, 0.7); color: #FBFADA; font-weight: 500; }
@@ -280,6 +291,12 @@ function navigateTo(path: string) { router.push(path) }
 
 /* Sub-items */
 .sub-list { padding: 2px 0 6px; overflow: hidden; }
+.nav-item-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
 .nav-sub-item { padding: 7px 18px 7px 44px; font-size: 12px; color: rgba(251, 250, 218, 0.45); }
 .nav-sub-item:hover { color: rgba(251, 250, 218, 0.85); background: rgba(67, 104, 80, 0.2); }
 .nav-sub-item.active { color: #FBFADA; background: rgba(67, 104, 80, 0.6); font-weight: 500; }

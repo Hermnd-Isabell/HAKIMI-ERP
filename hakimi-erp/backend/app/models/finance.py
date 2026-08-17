@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Date, ForeignKey, Integer, DECIMAL, UniqueConstraint
+from sqlalchemy import Column, String, DateTime, Date, ForeignKey, Integer, DECIMAL, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.models.base import Base
@@ -12,11 +12,18 @@ class Invoice(Base):
     billing_type = Column(String(20), nullable=False)
     invoice_date = Column(Date, nullable=False)
     billing_date = Column(Date, nullable=False)
+    sales_org = Column(String(4), comment="销售组织代码")
+    distribution_channel = Column(String(2), comment="分销渠道代码")
+    division = Column(String(2), comment="产品组/事业部代码")
+    shipping_point = Column(String(20), comment="装运点/发货点")
     sold_to_party = Column(String(20))
     payer = Column(String(20), ForeignKey("business_partner.bp_id"))
+    destination_country = Column(String(3), comment="货物目的国家")
     currency = Column(String(3), default="CNY")
     total_amount = Column(DECIMAL(15,2))
     status = Column(String(20), nullable=False, default="OPEN", comment="OPEN/PARTIAL/CLEARED/VOID")
+    remark = Column(Text, comment="其他补充说明")
+    search_term = Column(String(50), comment="辅助检索用关键词")
 
     items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
     receipts = relationship("Receipt", back_populates="invoice")
@@ -31,9 +38,13 @@ class InvoiceItem(Base):
     item_no = Column(Integer, nullable=False)
     material_id = Column(String(20), ForeignKey("material.material_id"), nullable=False)
     quantity = Column(DECIMAL(15,3))
+    sales_unit = Column(String(10), comment="销售计量单位")
     unit_price = Column(DECIMAL(15,2))
+    discount = Column(DECIMAL(5,2), comment="折扣百分比或金额")
     tax_amount = Column(DECIMAL(15,2))
     net_price = Column(DECIMAL(15,2))
+    item_description = Column(String(500), comment="行项目补充说明")
+    remark = Column(Text, comment="其他补充说明")
 
     __table_args__ = (UniqueConstraint('invoice_id', 'item_no', name='uk_invoice_item'),)
 
@@ -48,6 +59,8 @@ class OpenAccountReceivable(Base):
     received_amount = Column(DECIMAL(15,2), default=0.00)
     due_date = Column(Date)
     status = Column(String(20), default="UNPAID", comment="UNPAID/PARTIAL/OVERDUE")
+    remark = Column(Text, comment="其他补充说明")
+    search_term = Column(String(50), comment="辅助检索用关键词")
     created_time = Column(DateTime, default=datetime.utcnow)
 
     invoice = relationship("Invoice", back_populates="open_ar")
@@ -61,6 +74,8 @@ class ClosedAccountReceivable(Base):
     received_amount = Column(DECIMAL(15,2), nullable=False)
     created_time = Column(DateTime)
     closed_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    remark = Column(Text, comment="其他补充说明")
+    search_term = Column(String(50), comment="辅助检索用关键词")
 
     invoice = relationship("Invoice", back_populates="closed_ar")
 
@@ -75,5 +90,7 @@ class Receipt(Base):
     payment_method = Column(String(20))
     currency = Column(String(3), default="CNY")
     reference_no = Column(String(50))
+    remark = Column(Text, comment="其他补充说明")
+    search_term = Column(String(50), comment="辅助检索用关键词")
 
     invoice = relationship("Invoice", back_populates="receipts")

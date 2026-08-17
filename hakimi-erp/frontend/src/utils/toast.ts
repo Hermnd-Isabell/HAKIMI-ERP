@@ -1,5 +1,4 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { MessageBoxData } from 'element-plus'
 
 export interface ToastOptions {
   message: string
@@ -7,7 +6,7 @@ export interface ToastOptions {
   showClose?: boolean
 }
 
-const TOAST_CLASS = 'hakimi-toast-bottom'
+const TOAST_CLASS = 'hakimi-toast-center'
 
 function showToast({
   message,
@@ -42,18 +41,41 @@ export const toast = {
   },
 }
 
-export function confirm(message: string, title = '确认操作'): Promise<MessageBoxData> {
-  return ElMessageBox.confirm(message, title, {
-    confirmButtonText: '确认',
-    cancelButtonText: '取消',
-    type: 'warning',
-    customClass: 'hakimi-confirm-dialog',
-  })
+export async function confirm(message: string, title = '确认操作'): Promise<boolean> {
+  try {
+    await ElMessageBox.confirm(message, title, {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      type: 'warning',
+      customClass: 'hakimi-confirm-dialog',
+    })
+    return true
+  } catch {
+    return false
+  }
 }
 
-export function alert(message: string, title = '提示'): Promise<MessageBoxData> {
-  return ElMessageBox.alert(message, title, {
-    confirmButtonText: '知道了',
-    customClass: 'hakimi-alert-dialog',
-  })
+export async function alert(message: string, title = '提示'): Promise<void> {
+  try {
+    await ElMessageBox.alert(message, title, {
+      confirmButtonText: '知道了',
+      customClass: 'hakimi-alert-dialog',
+    })
+  } catch {
+    // Dismissing an informational dialog should not raise an unhandled rejection.
+  }
+}
+
+export async function prompt(message: string, defaultValue = ''): Promise<string | null> {
+  try {
+    const { value } = await ElMessageBox.prompt(message, '输入', {
+      inputValue: defaultValue,
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      customClass: 'hakimi-prompt-dialog',
+    })
+    return value || null
+  } catch {
+    return null
+  }
 }

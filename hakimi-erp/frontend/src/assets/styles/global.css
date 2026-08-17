@@ -1,0 +1,184 @@
+/* Global Styles for HAKIMI ERP */
+
+/* Layout */
+.page {
+  padding: 32px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: calc(100vh - 64px);
+}
+
+/* Common Header Card */
+.header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(145deg, #fdfce8, #f7f5d1);
+  border-radius: 16px;
+  padding: 24px 32px;
+  border: 1px solid rgba(173, 188, 159, 0.3);
+  box-shadow: 0 8px 24px rgba(18, 55, 42, 0.05);
+  margin-bottom: 24px;
+}
+
+.hc-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.hc-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(67, 104, 80, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #12372A;
+  margin: 0;
+}
+
+.hc-sub {
+  font-size: 13px;
+  color: rgba(18, 55, 42, 0.5);
+  margin: 2px 0 0;
+}
+
+/* Common Data Card / Form Card */
+.form-card, .data-card {
+  background: linear-gradient(145deg, #fdfce8, #f7f5d1);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(173, 188, 159, 0.18);
+  box-shadow: 0 2px 6px rgba(173, 188, 159, 0.12);
+}
+
+.form-row { display: grid; gap: 18px; margin-bottom: 16px; }
+.form-row-2 { grid-template-columns: 1fr 1fr; }
+.form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-row-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-label, .fl { font-size: 12px; font-weight: 600; color: rgba(18, 55, 42, 0.7); letter-spacing: 0.3px; }
+.form-label.required::after, .fl.required::after { content: ' *'; color: #D9534F; font-weight: 700; }
+.form-input, .form-select, .fi, .fs { height: 38px; border: 1px solid rgba(173,188,159,0.4); border-radius: 8px; padding: 0 12px; font-size: 13px; color: #12372A; background: rgba(251, 250, 218, 0.4); font-family: inherit; transition: all 0.2s; outline: none; width: 100%; }
+.form-input:focus, .form-select:focus, .fi:focus, .fs:focus { border-color: #436850; box-shadow: 0 0 0 3px rgba(67, 104, 80, 0.08); background: #fff; }
+
+/* Compact Form Utils */
+.ir { height:36px; display:flex; align-items:center; padding:0 12px; font-size:13px; color:rgba(18,55,42,0.35); background:rgba(173,188,159,0.12); border-radius:8px; border:1px dashed rgba(173,188,159,0.3); }
+.iu { display:flex; } .iu .fi { border-radius:8px 0 0 8px; flex:1; } 
+.uu { display:flex; align-items:center; padding:0 10px; height:38px; font-size:11px; font-weight:600; color:rgba(18,55,42,0.45); background:rgba(173,188,159,0.12); border:1px solid rgba(173,188,159,0.4); border-left:none; border-radius:0 8px 8px 0; }
+.fb { border:none; padding:0; margin:0 0 20px; border-bottom:1px solid rgba(173,188,159,0.12); padding-bottom:16px; }
+.bt { font-size:12px; font-weight:700; color:#436850; display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+.bt::before { content:""; width:3px; height:12px; background:#436850; border-radius:2px; }
+.tab-placeholder { display:flex; align-items:center; justify-content:center; min-height:120px; color:rgba(18,55,42,0.2); font-size:14px; }
+.input-with-f4-inline { display:flex; align-items:center; gap:3px; }
+.input-with-f4-inline .fs { flex:1; }
+.f4-trigger-sm { width:26px; height:26px; border:1px solid rgba(173,188,159,0.35); border-radius:5px; background:rgba(251,250,218,0.3); cursor:pointer; display:flex; align-items:center; justify-content:center; color:rgba(18,55,42,0.4); transition:all 0.2s; flex-shrink:0; }
+.f4-trigger-sm:hover { border-color:#436850; color:#436850; background:rgba(67,104,80,0.06); }
+
+.action-bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; background: linear-gradient(145deg, #fdfce8, #f7f5d1); border-radius: 14px; border: 1px solid rgba(173, 188, 159, 0.18); box-shadow: 0 2px 6px rgba(173, 188, 159, 0.12); }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  border: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #436850, #365440);
+  color: #FBFADA;
+  box-shadow: 0 4px 12px rgba(67, 104, 80, 0.2);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(67, 104, 80, 0.3);
+}
+
+.btn-secondary { background: none; color: #436850; border: 1.5px solid #436850; }
+
+.btn-outline {
+  background: transparent;
+  color: #436850;
+  border: 1.5px solid rgba(173, 188, 159, 0.5);
+}
+
+.btn-outline:hover {
+  background: rgba(67, 104, 80, 0.05);
+  border-color: #436850;
+}
+
+/* Tables */
+.data-table, .dt {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th, .dt th {
+  text-align: left;
+  padding: 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(18, 55, 42, 0.4);
+  text-transform: uppercase;
+  background: rgba(67, 104, 80, 0.03);
+  border-bottom: 1px solid rgba(173, 188, 159, 0.2);
+  letter-spacing: 1px;
+}
+
+.data-table td, .dt td {
+  padding: 16px;
+  border-bottom: 1px solid rgba(173, 188, 159, 0.1);
+  color: #12372A;
+  font-size: 14px;
+}
+
+.data-row:hover, .dr:hover {
+  background: rgba(67, 104, 80, 0.02);
+}
+
+/* Utils */
+.mono { font-family: 'SF Mono', Consolas, monospace; }
+.strong { font-weight: 800; }
+.text-danger { color: #D9534F; }
+.text-success { color: #436850; }
+.num { text-align: right; }
+
+.stag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.s-open { background: rgba(217,83,79,0.1); color: #D9534F; }
+.s-done { background: rgba(67,104,80,0.1); color: #436850; }
+.s-proc { background: rgba(240,173,78,0.12); color: #c98a20; }
+.s-cancel { background: rgba(217,83,79,0.08); color: #c94a45; }
+
+.link { color: #436850; cursor: pointer; font-weight: 600; font-size: 12px; }
+.link:hover { text-decoration: underline; }
+.divider { margin: 0 8px; color: rgba(18,55,42,0.15); font-size: 12px; }
+
+/* Tabs */
+.tab-bar { display: flex; gap: 0; border-bottom: 1px solid rgba(173,188,159,0.3); margin: 0 -24px 20px; padding: 0 24px; background: rgba(251, 250, 218, 0.3); border-radius: 14px 14px 0 0; }
+.tab-btn { padding: 12px 18px; font-size: 12px; font-weight: 500; color: rgba(18, 55, 42, 0.5); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-family: inherit; white-space: nowrap; }
+.tab-btn.active { color: #436850; font-weight: 600; border-bottom-color: #436850; background: linear-gradient(to bottom, transparent, rgba(67, 104, 80, 0.04)); }

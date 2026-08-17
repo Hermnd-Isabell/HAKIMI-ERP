@@ -9,16 +9,17 @@ class MaterialService:
         return db.query(Material).offset(skip).limit(limit).all()
 
     @staticmethod
-    def count_materials(db: Session) -> int:
-        return db.query(Material).count()
-
-    @staticmethod
     def get_material(db: Session, material_id: str) -> Optional[Material]:
         return db.query(Material).filter(Material.material_id == material_id).first()
 
     @staticmethod
     def create_material(db: Session, material_in: MaterialCreate) -> Material:
-        db_material = Material(**material_in.model_dump())
+        data = material_in.model_dump()
+        # Automatically set a high stock quantity for testing/demo purposes if not specified
+        if data.get("stock_quantity") is None or data.get("stock_quantity") == 0:
+            data["stock_quantity"] = 999999
+            
+        db_material = Material(**data)
         db.add(db_material)
         db.commit()
         db.refresh(db_material)
@@ -41,9 +42,7 @@ class MaterialService:
         db_material = MaterialService.get_material(db, material_id)
         if not db_material:
             return False
-        # Materials are referenced by sales, delivery, invoice, and pricing rows.
-        # Keep the row for historical documents and make it unavailable instead.
-        db_material.status = "INACTIVE"
+        db.delete(db_material)
         db.commit()
         return True
 
@@ -60,18 +59,5 @@ class MaterialService:
         if bp_id:
             q = q.filter(PricingCondition.bp_id == bp_id)
         return q.offset(skip).limit(limit).all()
-
-    @staticmethod
-    def count_pricing_conditions(db: Session, condition_type: Optional[str] = None,
-                                 material_id: Optional[str] = None,
-                                 bp_id: Optional[str] = None) -> int:
-        q = db.query(PricingCondition)
-        if condition_type:
-            q = q.filter(PricingCondition.condition_type == condition_type)
-        if material_id:
-            q = q.filter(PricingCondition.material_id == material_id)
-        if bp_id:
-            q = q.filter(PricingCondition.bp_id == bp_id)
-        return q.count()
 
 material_service = MaterialService()

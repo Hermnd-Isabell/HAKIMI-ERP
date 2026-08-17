@@ -1,13 +1,14 @@
-﻿<template>
+<template>
   <div class="main-layout">
     <Sidebar />
     <div class="main-content">
       <TopBar />
       <div class="page-content">
-        <slot />
+        <router-view />
       </div>
       <FooterBar />
     </div>
+    <ChatWidget />
   </div>
 </template>
 
@@ -15,6 +16,7 @@
 import Sidebar from './Sidebar.vue'
 import TopBar from './TopBar.vue'
 import FooterBar from './FooterBar.vue'
+import ChatWidget from '@/components/ChatWidget.vue'
 </script>
 
 <style scoped>

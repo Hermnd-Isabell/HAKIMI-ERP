@@ -104,27 +104,27 @@ const typeConfig = computed(() => {
     case 'partner':
       return {
         columns: [
-          { key: 'bp_id', label: 'BP No.', mono: true },
-          { key: 'bp_name', label: 'Name' },
-          { key: 'bp_role', label: 'Role' },
+          { key: 'bpId', label: 'BP No.', mono: true },
+          { key: 'bpName', label: 'Name' },
+          { key: 'bpRole', label: 'Role' },
           { key: 'city', label: 'City' }
         ] as F4Column[],
         fetch: async () => {
-          const res = await fetchPartners({ page_size: 100 })
-          return res.items || []
+          const data = await fetchPartners({ limit: 1000 })
+          return data.items || []
         }
       }
     case 'material':
       return {
         columns: [
-          { key: 'material_id', label: 'Material', mono: true },
-          { key: 'material_name', label: 'Description' },
-          { key: 'material_type', label: 'Type' },
-          { key: 'base_unit', label: 'UoM' }
+          { key: 'materialId', label: 'Material', mono: true },
+          { key: 'materialName', label: 'Description' },
+          { key: 'materialType', label: 'Type' },
+          { key: 'baseUnit', label: 'UoM' }
         ] as F4Column[],
         fetch: async () => {
-          const res = await fetchMaterials({ page_size: 100 })
-          return res.items || []
+          const data = await fetchMaterials({ limit: 1000 })
+          return data.items || []
         }
       }
     case 'relationship':
@@ -149,7 +149,7 @@ async function load() {
   try {
     rows.value = await typeConfig.value.fetch()
   } catch (err: any) {
-    error.value = err?.response?.data?.detail || err.message || 'Failed to load search results'
+    error.value = err.message || 'Failed to load search results'
     console.error('F4 search failed:', err)
   } finally {
     loading.value = false

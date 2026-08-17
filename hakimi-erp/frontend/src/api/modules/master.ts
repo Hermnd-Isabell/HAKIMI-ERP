@@ -1,50 +1,43 @@
-import { get, post, patch, del } from '../request'
+import { get, post, put, del } from '../request'
 import { MASTER_API } from '@/constants/api'
 
 export interface Partner {
-  bp_id: string
-  bp_type: string
-  bp_role: string
-  bp_name: string
+  bpId: string
+  bpType: string
+  bpRole: string
+  bpName: string
   country: string
   city: string
   district?: string
   street: string
-  house_number?: string
-  postal_code: string
+  houseNumber?: string
+  postalCode: string
   telephone: string
-  mobile_phone?: string
+  mobilePhone?: string
   fax?: string
   email: string
   website?: string
-  search_term: string
+  searchTerm: string
   status: string
 }
 
 export interface PartnerList {
   items: Partner[]
-  pagination: Pagination
-}
-
-interface Pagination {
-  page: number
-  page_size: number
   total: number
-  total_pages: number
 }
 
 export interface Material {
-  material_id: string
-  material_name: string
-  material_type: string
-  base_unit: string
-  net_weight?: number
+  materialId: string
+  materialName: string
+  materialType: string
+  baseUnit: string
+  netWeight?: number
   status: string
 }
 
 export interface MaterialList {
   items: Material[]
-  pagination: Pagination
+  total: number
 }
 
 export function fetchPartners(params?: Record<string, any>) {
@@ -56,7 +49,7 @@ export function createPartner(data: Partial<Partner>) {
 }
 
 export function updatePartner(id: string, data: Partial<Partner>) {
-  return patch<Partner>(`${MASTER_API.partners}${id}`, data)
+  return put<Partner>(`${MASTER_API.partners}${id}`, data)
 }
 
 export function fetchMaterials(params?: Record<string, any>) {
@@ -68,9 +61,17 @@ export function createMaterial(data: Partial<Material>) {
 }
 
 export function updateMaterial(id: string, data: Partial<Material>) {
-  return patch<Material>(`${MASTER_API.materials}${id}`, data)
+  return put<Material>(`${MASTER_API.materials}${id}`, data)
 }
 
 export function deleteMaterial(id: string) {
   return del<void>(`${MASTER_API.materials}${id}`)
+}
+
+export function fetchPricingConditions(params?: Record<string, any>) {
+  return get<any>(`${MASTER_API.materials}pricing-conditions`, { params })
+}
+
+export function fetchSalesOrganizations(params?: Record<string, any>) {
+  return get<any>(`${MASTER_API.materials}sales-organizations`, { params })
 }

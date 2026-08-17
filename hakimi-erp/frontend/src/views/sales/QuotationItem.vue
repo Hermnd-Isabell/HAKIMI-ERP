@@ -1,532 +1,477 @@
 <template>
-  <MainLayout>
-    <div class="page">
-      <!-- Loading / Error -->
-      <div v-if="loading" class="section-card" style="padding:40px;text-align:center;color:rgba(18,55,42,0.4)">
-        Loading quotation data...
+  <div class="page-container">
+    <!-- Header -->
+    <div class="page-header">
+        <h2 class="page-title">{{ isEdit ? 'Edit' : 'Create' }} Quotation</h2>
+        <button class="exit-btn" @click="handleExit">
+          <svg viewBox="0 0 20 20" width="16" height="16">
+            <path d="M6 6l8 8M14 6l-8 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          Exit
+        </button>
       </div>
-      <div v-else-if="error" class="error-msg">{{ error }}</div>
 
-      <template v-if="!loading">
-        <!-- Top Bar -->
-        <div class="top-bar">
-          <div class="tb-left">
-            <button class="tb-btn-icon" @click="$router.push('/')"><svg viewBox="0 0 20 20" width="16" height="16"><path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-            <button class="tb-btn-icon" @click="$router.push('/')"><svg viewBox="0 0 20 20" width="16" height="16"><path d="M3 10l7-7 7 7M5 8v7a1 1 0 0 0 1 1h3v-4h2v4h3a1 1 0 0 0 1-1V8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-            <span class="tb-title">Create Quotation: Item Data</span>
+      <!-- Main Form Area -->
+      <div class="form-card">
+        <div class="hdr-info-row" v-if="inquiryId">
+          <span class="info-tag">Ref Inquiry: {{ inquiryId }}</span>
+        </div>
+        <div class="form-row form-row-3">
+          <div class="form-group">
+            <label class="form-label">Quotation No.</label>
+            <input type="text" class="form-input" v-model="form.quotationId" placeholder="Auto-generated if empty" :disabled="isEdit" />
           </div>
-          <button class="tb-btn-icon"><svg viewBox="0 0 20 20" width="15" height="15"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
-        </div>
-
-        <!-- Toolbar -->
-        <div class="toolbar">
-          <button class="tb-text" @click="deleteItem">Delete Item</button>
-          <button class="tb-text" @click="showItemOutput">Item Output View</button>
-          <button class="tb-text" @click="checkAvailability">Item Availability</button>
-          <button class="tb-text">More &#9660;</button>
-          <button class="tb-text" style="margin-left:auto" @click="$router.push('/sales/orders')">Exit</button>
-        </div>
-
-        <!-- Nav Arrows -->
-        <div class="nav-row">
-          <div class="nav-arrows">
-            <button class="na-btn" @click="prevItem">&#171;</button><button class="na-btn" @click="prevItem">&#8249;</button>
-            <span class="na-info">Item {{ currentItem }} / {{ totalItems }}</span>
-            <button class="na-btn" @click="nextItem">&#8250;</button><button class="na-btn" @click="nextItem">&#187;</button>
+          <div class="form-group">
+            <label class="form-label required">Quotation Type</label>
+            <select class="form-select" v-model="form.quotationType">
+              <option value="QT">Quotation (QT)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Customer (BP)</label>
+            <div class="input-with-f4">
+              <select class="form-select" v-model="form.customerId" :disabled="isFromInquiry">
+                <option value="">-- Select Customer --</option>
+                <option v-for="p in partners" :key="p.bpId" :value="p.bpId">{{ p.bpId }} - {{ p.bpName }}</option>
+              </select>
+              <button class="f4-trigger" @click="openF4('customer')" :disabled="isFromInquiry"><svg viewBox="0 0 20 20" width="14" height="14"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+            </div>
           </div>
         </div>
+      </div>
 
-        <!-- Header Fields with F4 Search -->
-        <div class="form-card">
-          <div class="hdr-info-row" v-if="inquiryId || customerId">
-            <span class="info-tag" v-if="inquiryId">Ref Inquiry: {{ inquiryId }}</span>
-            <span class="info-tag" v-if="customerId">Customer: {{ customerId }}</span>
+      <!-- Tabs -->
+      <div class="form-card form-card-tabs">
+        <div class="tab-bar">
+          <button
+            v-for="tab in tabs" :key="tab.key"
+            class="tab-btn" :class="{ active: activeTab === tab.key }"
+            @click="activeTab = tab.key"
+          >{{ tab.label }}</button>
+        </div>
+
+        <!-- Sales Tab -->
+        <div class="tab-content" v-show="activeTab === 'sales'">
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Sales Org</label>
+              <input type="text" class="form-input" v-model="form.salesOrg" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dist. Channel</label>
+              <input type="text" class="form-input" v-model="form.distributionChannel" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Division</label>
+              <input type="text" class="form-input" v-model="form.division" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Valid From</label>
+              <input type="date" class="form-input" v-model="form.validFrom" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Valid To</label>
+              <input type="date" class="form-input" v-model="form.validTo" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Currency</label>
+              <input type="text" class="form-input" v-model="form.currency" />
+            </div>
           </div>
-          <div class="hdr-field-row">
-            <div class="hdr-field" v-if="!isFromInquiry">
-              <label class="hf-label">Sold-to Party</label>
-              <div class="input-with-f4-inline">
-                <select class="hf-input" style="width:180px" v-model="customerId">
-                  <option value="">-- Select --</option>
-                  <option v-for="p in partners" :key="p.bp_id" :value="p.bp_id">{{ p.bp_id }} - {{ p.bp_name }}</option>
+        </div>
+
+        <!-- Item Tab -->
+        <div class="tab-content" v-show="activeTab === 'item'">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label required">Material</label>
+              <div class="input-with-f4">
+                <select class="form-select" v-model="itemForm.materialId">
+                  <option value="">-- Select Material --</option>
+                  <option v-for="m in materials" :key="m.materialId" :value="m.materialId">{{ m.materialId }} - {{ m.materialName }}</option>
                 </select>
-                <button class="f4-trigger-sm" @click="openF4('soldToParty')" title="F4 Search"><svg viewBox="0 0 20 20" width="12" height="12"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+                <button class="f4-trigger" @click="openF4('material')"><svg viewBox="0 0 20 20" width="14" height="14"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
               </div>
             </div>
-            <div class="hdr-field" v-else>
-              <label class="hf-label">Sold-to Party</label>
-              <div class="hf-input" style="width:180px;background:rgba(173,188,159,0.12);display:flex;align-items:center;padding-left:10px">{{ customerId }}</div>
+            <div class="form-group">
+              <label class="form-label">Item Description</label>
+              <input type="text" class="form-input" v-model="itemForm.itemDescription" />
             </div>
-            <div class="hdr-field"><label class="hf-label">Sales Document Item</label><input type="text" class="hf-input" v-model="itemData.docItem" /></div>
-            <div class="hdr-field">
-              <label class="hf-label">Item category</label>
-              <div class="input-with-f4-inline"><input type="text" class="hf-input" v-model="itemData.itemCat" /><button class="f4-trigger-sm" @click="openF4('itemCat')" title="F4 Search"><svg viewBox="0 0 20 20" width="12" height="12"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
-              <span class="hf-hint">Standard Item</span>
-            </div>
-            <div class="hdr-field" style="flex:2">
-              <label class="hf-label">Material</label>
-              <div class="input-with-f4-inline">
-                <select class="hf-input" style="width:180px" v-model="itemData.material">
-                  <option value="">-- Select --</option>
-                  <option v-for="m in materials" :key="m.material_id" :value="m.material_id">{{ m.material_id }} - {{ m.material_name }}</option>
-                </select>
-                <button class="f4-trigger-sm" @click="openF4('material')" title="F4 Search"><svg viewBox="0 0 20 20" width="12" height="12"><circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+            <div class="form-group">
+              <label class="form-label required">Quantity</label>
+              <div class="input-with-unit">
+                <input type="number" class="form-input" v-model="itemForm.orderQuantity" />
+                <span class="input-unit">PC</span>
               </div>
-              <span class="hf-hint">{{ materialName }}</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Net Price</label>
+              <div class="input-with-unit">
+                <input type="number" class="form-input" v-model="itemForm.netPrice" />
+                <span class="input-unit">CNY</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="price-analysis">
+            <button class="btn btn-outline btn-sm" @click="checkAvailability">Check Availability</button>
+            <button class="btn btn-outline btn-sm" @click="showAnalysis">Pricing Analysis</button>
+          </div>
+        </div>
+
+        <!-- Billing Tab -->
+        <div class="tab-content" v-show="activeTab === 'billing'">
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Payment Terms</label>
+              <input type="text" class="form-input" v-model="form.paymentTerms" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Incoterms</label>
+              <input type="text" class="form-input" v-model="form.incoterms" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Delivering Plant</label>
+              <input type="text" class="form-input" v-model="form.deliveringPlant" />
             </div>
           </div>
         </div>
 
-        <!-- Tabs -->
-        <div class="form-card form-card-tabs">
-          <div class="tab-bar">
-            <button v-for="t in tabs" :key="t" class="tab-btn" :class="{active:activeTab===t}" @click="activeTab=t">{{ t }}</button>
-          </div>
-
-          <div class="tab-content" v-show="activeTab==='Conditions'">
-            <div class="qnt-row">
-              <div class="qnt-field"><label class="qnt-label">Quantity *</label><div class="qnt-input-wrap"><input type="text" class="qnt-input" v-model="qty" /><span class="qnt-unit">PC</span></div></div>
-              <div class="qnt-field"><label class="qnt-label">Net</label><div class="qnt-readonly">{{ netPrice }}</div></div>
-              <div class="qnt-field"><label class="qnt-label">Tax</label><input type="text" class="qnt-input" v-model="tax" /></div>
-            </div>
-            
-            <!-- Pricing Toolbar -->
-            <div class="price-toolbar">
-              <div class="pt-left">
-                <button class="pt-btn" title="Search" @click="openF4('pricing')"><svg viewBox="0 0 20 20" width="13" height="13"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
-                <button class="pt-btn" title="Zoom In"><svg viewBox="0 0 20 20" width="13" height="13"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l4 4M9 5v8M5 9h8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
-                <button class="pt-btn" title="Zoom Out"><svg viewBox="0 0 20 20" width="13" height="13"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l4 4M5 9h8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
-                <button class="pt-text-btn" @click="showConditionRecord">Condition Record</button>
-                <button class="pt-text-btn" @click="showAnalysis">Analysis</button>
-              </div>
-              <div class="pt-right">
-                <button class="pt-text-btn" @click="updatePricing">Update</button>
-                <button class="pt-btn" title="Settings"><svg viewBox="0 0 20 20" width="13" height="13"><circle cx="10" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.9 4.9l1.4 1.4M13.7 13.7l1.4 1.4M4.9 15.1l1.4-1.4M13.7 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
-              </div>
-            </div>
-
-            <!-- Pricing Table -->
-            <div class="pricing-table-wrap">
-              <table class="pricing-table">
-                <thead><tr><th class="chk-col"></th><th>CN</th><th>Ty</th><th>Cond. Name</th><th>Description</th><th class="num">Amount</th><th>Crcy</th><th class="num">Unit</th><th class="num">Rate</th><th>Stat</th></tr></thead>
-                <tbody>
-                  <tr v-for="(r,i) in pricingRows" :key="i" :class="{derived:r.derived,total:r.total}">
-                    <td class="chk-col"><input type="checkbox" :checked="r.active" /></td>
-                    <td>{{ r.cn }}</td><td>{{ r.ty }}</td><td class="mono">{{ r.name }}</td><td>{{ r.desc }}</td>
-                    <td class="num mono">{{ r.amount }}</td><td>{{ r.crcy }}</td><td class="num">{{ r.unit }}</td>
-                    <td v-if="!r.total" class="num mono">{{ r.rate }}</td><td v-else></td>
-                    <td v-if="!r.total"><span class="s-dot" :style="{color:r.statColor}">&#9679;</span></td><td v-else></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="tab-content" v-show="activeTab==='Sales A'">
-            <div class="form-grid-3">
-              <div class="hdr-field"><label class="hf-label">Sales Office</label><input type="text" class="hf-input" v-model="salesData.office" /></div>
-              <div class="hdr-field"><label class="hf-label">Sales Group</label><input type="text" class="hf-input" v-model="salesData.group" /></div>
-              <div class="hdr-field"><label class="hf-label">Order Reason</label><input type="text" class="hf-input" v-model="salesData.reason" /></div>
-              <div class="hdr-field"><label class="hf-label">Usage</label><input type="text" class="hf-input" v-model="salesData.usage" /></div>
-              <div class="hdr-field"><label class="hf-label">Delivery Date</label><input type="date" class="hf-input" v-model="salesData.delivDate" /></div>
-            </div>
-          </div>
-
-          <div class="tab-content" v-show="activeTab==='Shipping'">
-            <div class="form-grid-3">
-              <div class="hdr-field"><label class="hf-label">Plant</label><input type="text" class="hf-input" v-model="shippingData.plant" /></div>
-              <div class="hdr-field"><label class="hf-label">Shipping Point</label><input type="text" class="hf-input" v-model="shippingData.shippingPoint" /></div>
-              <div class="hdr-field"><label class="hf-label">Storage Location</label><input type="text" class="hf-input" v-model="shippingData.storageLoc" /></div>
-              <div class="hdr-field"><label class="hf-label">Delivery Priority</label><input type="text" class="hf-input" v-model="shippingData.priority" /></div>
-              <div class="hdr-field"><label class="hf-label">Shipping Cond.</label><input type="text" class="hf-input" v-model="shippingData.condition" /></div>
-            </div>
-          </div>
-
-          <div class="tab-content" v-show="activeTab==='Billing Document'">
-            <div class="form-grid-3">
-              <div class="hdr-field"><label class="hf-label">Payment Terms</label><input type="text" class="hf-input" v-model="billingData.payTerms" /></div>
-              <div class="hdr-field"><label class="hf-label">Incoterms</label><input type="text" class="hf-input" v-model="billingData.incoterms" /></div>
-              <div class="hdr-field"><label class="hf-label">Billing Block</label><input type="text" class="hf-input" v-model="billingData.block" /></div>
-            </div>
-          </div>
-
-          <div class="tab-placeholder" v-show="!['Conditions','Sales A','Shipping','Billing Document'].includes(activeTab)">
-            <p>{{ activeTab }} &mdash; content to be developed</p>
-          </div>
+        <div class="tab-content tab-placeholder" v-show="!['sales','item','billing'].includes(activeTab)">
+          <p>{{ activeTabLabel }} &mdash; content to be developed</p>
         </div>
+      </div>
 
-        <!-- Bottom Bar -->
-        <div class="bottom-bar">
-          <div class="bb-right">
-            <button class="btn btn-cancel" @click="$router.push('/sales/orders')">Cancel</button>
-            <button class="btn btn-primary" @click="saveQuotation" :disabled="saving">{{ saving ? 'Saving...' : 'Save' }}</button>
-          </div>
+      <!-- Action Bar -->
+      <div class="action-bar">
+        <div class="action-left">
+          <button class="btn btn-primary" @click="handleSave" :disabled="saving">
+            <svg viewBox="0 0 20 20" width="16" height="16">
+              <path d="M4 16V4a1 1 0 0 1 1-1h8l4 4v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M13 3v4h4M7 12h6M7 15h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            {{ saving ? 'Saving...' : 'Save' }}
+          </button>
+          <button class="btn btn-secondary" @click="handleSaveContinue" :disabled="saving" v-if="!isEdit">
+            Save &amp; Continue
+          </button>
+          <button class="btn btn-outline" @click="convertToOrder" v-if="isEdit && form.status === 'OPEN'">
+            Convert to Order
+          </button>
         </div>
-      </template>
-    </div>
+        <button class="btn btn-border" @click="handleExit" :disabled="saving">Cancel</button>
+      </div>
 
-    <!-- F4 Search Modal -->
-    <F4SearchModal
-      :visible="f4Visible"
-      :title="f4Title"
-      :type="f4Type"
-      @update:visible="f4Visible=$event"
-      @select="onF4Select"
-    />
-    <SuccessModal
-      v-model:visible="successVisible"
-      title="Quotation Saved"
-      :message="successMsg"
-      @confirm="onSuccessConfirm"
-    />
-  </MainLayout>
+      <!-- Recent Quotations -->
+      <div class="form-card" style="margin-top: 30px;">
+        <h3 class="block-title">Recent Quotations</h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Customer</th>
+              <th>Valid Until</th>
+              <th>Net Value</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="q in recentQuotations" :key="q.quotationId">
+              <td class="mono">{{ q.quotationId }}</td>
+              <td>{{ q.customerId }}</td>
+              <td>{{ q.validTo || 'N/A' }}</td>
+              <td class="num">¥{{ q.netValue?.toLocaleString() }}</td>
+              <td><span class="status-tag">{{ q.status }}</span></td>
+              <td><a class="link-btn" @click="loadQuotation(q.quotationId)">Edit</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    <F4SearchModal v-model:visible="showF4" :type="f4Type" @select="onF4Select" />
+    <SuccessModal v-model:visible="successVisible" :message="successMsg" @confirm="onSuccessConfirm" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from "vue"
-import MainLayout from "@/layout/MainLayout.vue"
-import F4SearchModal from "@/components/F4SearchModal.vue"
-import SuccessModal from "@/components/SuccessModal.vue"
-import { useRoute, useRouter } from "vue-router"
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import F4SearchModal from '@/components/F4SearchModal.vue'
+import SuccessModal from '@/components/SuccessModal.vue'
+import { alert } from '@/utils/toast'
 import {
-  fetchPartners,
-  fetchMaterials,
-  fetchInquiryById,
+  fetchQuotations,
   fetchQuotationById,
   createQuotation,
-  updateQuotation
-} from "@/api"
-import type { Partner, Material } from "@/api/modules/master"
-import type { Inquiry, Quotation } from "@/api/modules/sales"
+  updateQuotation,
+  fetchInquiryById,
+  fetchPartners,
+  fetchMaterials
+} from '@/api'
 
-const route = useRoute()
 const router = useRouter()
-const activeTab = ref("Conditions")
-const tabs = ["Conditions","Sales A","Sales B","Shipping","Billing Document","Account Assignment","Schedule Lines"]
+const route = useRoute()
 
-const currentItem = ref(1)
-const totalItems = ref(1)
-const qty = ref("1")
-const tax = ref("13.00")
-const quotationId = ref("")
-const inquiryId = ref("")
-const customerId = ref("")
-const partners = ref<Partner[]>([])
-const materials = ref<Material[]>([])
 const loading = ref(false)
 const saving = ref(false)
-const error = ref("")
+const isEdit = computed(() => !!route.params.id && route.params.id !== 'new')
+const isFromInquiry = computed(() => !!route.query.ref)
+const inquiryId = ref(route.query.ref as string || '')
+const activeTab = ref('sales')
+const showF4 = ref(false)
+const f4Type = ref('partner')
+const f4Field = ref('')
+
 const successVisible = ref(false)
-const successMsg = ref("")
-const isFromInquiry = ref(false)
+const successMsg = ref('')
 
-const materialMap = computed(() => {
-  return materials.value.reduce((acc: Record<string, Material>, m: Material) => {
-    if (m.material_id) acc[m.material_id] = m
-    return acc
-  }, {})
-})
-const materialName = computed(() => {
-  return itemData.material ? materialMap.value[itemData.material]?.material_name || '' : ''
-})
+const partners = ref<any[]>([])
+const materials = ref<any[]>([])
+const recentQuotations = ref<any[]>([])
 
-const salesData = reactive({
-  office: "100",
-  group: "10",
-  reason: "",
-  usage: "FREE",
-  delivDate: ""
-})
+const tabs = [
+  { key: 'sales', label: 'Sales Data' },
+  { key: 'item', label: 'Item Overview' },
+  { key: 'billing', label: 'Billing' },
+  { key: 'conditions', label: 'Conditions' },
+  { key: 'partners', label: 'Partners' },
+]
 
-const shippingData = reactive({
-  plant: "1000",
-  shippingPoint: "1000",
-  storageLoc: "0001",
-  priority: "02",
-  condition: "01"
-})
+const activeTabLabel = computed(() => tabs.find(t => t.key === activeTab.value)?.label || '')
 
-const billingData = reactive({
-  payTerms: "Z001",
-  incoterms: "EXW",
-  block: ""
-})
-
-const itemData = reactive({
-  docItem: "10",
-  itemCat: "AGN",
-  material: "",
-  materialName: ""
+const form = reactive({
+  quotationId: '',
+  quotationType: 'QT',
+  inquiryId: '',
+  customerId: '',
+  salesOrg: '1000',
+  distributionChannel: '10',
+  division: '00',
+  salesOffice: '100',
+  salesGroup: '10',
+  currency: 'CNY',
+  validFrom: new Date().toISOString().split('T')[0],
+  validTo: '',
+  deliveringPlant: '1000',
+  incoterms: 'EXW',
+  paymentTerms: 'Z001',
+  status: 'OPEN',
+  netValue: 0
 })
 
-watch(() => itemData.material, (id) => {
-  itemData.materialName = materialMap.value[id]?.material_name || ''
+const itemForm = reactive({
+  materialId: '',
+  itemDescription: '',
+  orderQuantity: 1,
+  unitPrice: 0,
+  netPrice: 0
 })
 
 async function loadMasters() {
-  const [bpRes, matRes] = await Promise.all([
-    fetchPartners({ page_size: 100 }),
-    fetchMaterials({ page_size: 100 })
+  const [bpRes, matRes, qRes] = await Promise.all([
+    fetchPartners({ limit: 1000 }),
+    fetchMaterials({ limit: 1000 }),
+    fetchQuotations({ limit: 5 })
   ])
   partners.value = bpRes.items || []
   materials.value = matRes.items || []
+  recentQuotations.value = qRes.items || []
 }
 
-async function loadFromInquiry(id: string) {
-  const res = await fetchInquiryById(id)
-  const inq: Inquiry = res
-  inquiryId.value = inq.inquiry_id
-  customerId.value = inq.customer_id
-  isFromInquiry.value = true
-  if (inq.items && inq.items.length > 0) {
-    const item = inq.items[0]
-    itemData.material = item.material_id
-    qty.value = String(item.order_quantity || 1)
-    itemData.docItem = String(item.item_no || 10)
-  }
-  if (inq.requested_delivery_date) salesData.delivDate = inq.requested_delivery_date
-}
-
-async function loadFromQuotation(id: string) {
-  const res = await fetchQuotationById(id)
-  const q: Quotation = res
-  quotationId.value = q.quotation_id
-  inquiryId.value = q.inquiry_id || ''
-  customerId.value = q.customer_id
-  if (q.items && q.items.length > 0) {
-    const item = q.items[0]
-    itemData.material = item.material_id
-    qty.value = String(item.order_quantity || 1)
-    itemData.docItem = String(item.item_no || 10)
-  }
-  if (q.valid_to) salesData.delivDate = q.valid_to
-  if (q.payment_terms) billingData.payTerms = q.payment_terms
-  if (q.incoterms) billingData.incoterms = q.incoterms
-}
-
-async function load() {
+async function loadQuotation(id: string) {
   loading.value = true
-  error.value = ""
   try {
-    await loadMasters()
-    const refInq = route.query.ref as string
-    const qId = route.params.id as string
-    if (qId && qId !== 'new') {
-      await loadFromQuotation(qId)
-    } else if (refInq) {
-      await loadFromInquiry(refInq)
+    const data = await fetchQuotationById(id)
+    Object.assign(form, data)
+    if (data.items && data.items.length > 0) {
+      Object.assign(itemForm, data.items[0])
     }
   } catch (err: any) {
-    error.value = err?.response?.data?.detail || err.message || 'Failed to load quotation data'
-    console.error("Load quotation data failed:", err)
+    alert('Failed to load quotation: ' + err.message)
   } finally {
     loading.value = false
   }
 }
 
-onMounted(load)
+async function loadFromInquiry(id: string) {
+  loading.value = true
+  try {
+    const data = await fetchInquiryById(id)
+    form.customerId = data.customerId
+    form.inquiryId = data.inquiryId
+    form.salesOrg = data.salesOrg || '1000'
+    form.distributionChannel = data.distributionChannel || '10'
+    form.division = data.division || '00'
+    form.currency = data.currency || 'CNY'
+    form.paymentTerms = data.paymentTerms || 'Z001'
+    form.incoterms = data.incoterms || 'EXW'
+    
+    if (data.items && data.items.length > 0) {
+      const item = data.items[0]
+      itemForm.materialId = item.materialId
+      itemForm.itemDescription = item.itemDescription
+      itemForm.orderQuantity = item.orderQuantity
+      itemForm.unitPrice = item.unitPrice || 0
+      itemForm.netPrice = item.netPrice || item.unitPrice || 0
+    }
+  } catch (err: any) {
+    alert('Failed to load inquiry reference: ' + err.message)
+  } finally {
+    loading.value = false
+  }
+}
 
-const netPrice = computed(() => {
-  const q = parseFloat(qty.value) || 0
-  return q > 0 ? (q * 3200).toLocaleString("zh-CN", { style: "currency", currency: "CNY" }) : "¥0.00"
+onMounted(async () => {
+  await loadMasters()
+  if (isEdit.value) {
+    await loadQuotation(route.params.id as string)
+  } else if (inquiryId.value) {
+    await loadFromInquiry(inquiryId.value)
+  }
 })
 
-const pricingRows = [
-  {cn:"01",ty:"PR00",name:"Price",desc:"Standard Price",amount:"3,200.00",crcy:"CNY",unit:"1",rate:"3,200.00",active:true,derived:false,total:false,statColor:"#436850"},
-  {cn:"02",ty:"K007",name:"Cust.Disc.",desc:"Customer Discount",amount:"160.00-",crcy:"CNY",unit:"1",rate:"5.000-",active:true,derived:false,total:false,statColor:"#D9534F"},
-  {cn:"03",ty:"K005",name:"Vol.Disc.",desc:"Volume Discount",amount:"64.00-",crcy:"CNY",unit:"1",rate:"2.000-",active:true,derived:false,total:false,statColor:"#D9534F"},
-  {cn:"04",ty:"MWST",name:"Tax",desc:"Output Tax 13%",amount:"386.88",crcy:"CNY",unit:"1",rate:"13.000",active:true,derived:false,total:false,statColor:"#436850"},
-  {cn:"",ty:"",name:"Net",desc:"Net Value",amount:"2,976.00",crcy:"CNY",unit:"",rate:"",active:false,derived:true,total:false,statColor:""},
-  {cn:"",ty:"",name:"Total",desc:"Total Value incl. Tax",amount:"3,362.88",crcy:"CNY",unit:"",rate:"",active:false,derived:false,total:true,statColor:""},
-]
-
-// F4 Search
-const f4Visible = ref(false)
-const f4Title = ref("Search Help")
-const f4Type = ref('relationship')
-const f4Context = ref("")
-
-const f4Titles: Record<string, string> = {
-  soldToParty: "Sold-to Party (1)",
-  material: "Material Master (1)",
-  itemCat: "Item Category (1)",
-  pricing: "Pricing Conditions (1)",
-}
-
-function openF4(context: string) {
-  f4Context.value = context
-  f4Title.value = f4Titles[context] || "Search Help (1)"
-  if (context === 'material') f4Type.value = 'material'
-  else if (context === 'soldToParty') f4Type.value = 'partner'
-  else f4Type.value = 'relationship'
-  f4Visible.value = true
-}
-function onF4Select(item: any) {
-  if (f4Context.value === 'material') {
-    itemData.material = item.material_id
-  } else if (f4Context.value === 'soldToParty') {
-    customerId.value = item.bp_id
-  }
-  f4Visible.value = false
-}
-
-function showItemOutput(){ alert("Generating Output Document (PDF Simulation)...") }
-function checkAvailability(){ 
-  const q = parseFloat(qty.value) || 0
-  alert(`ATP Check: Material ${itemData.material} is AVAILABLE. \nConfirmed Quantity: ${q} PC \nEarliest Delivery: ${new Date().toLocaleDateString()}`) 
-}
-function showConditionRecord(){ alert("Pricing Procedure: RVAA01 (Standard) \nCondition Record found for PR00.") }
-function showAnalysis(){ alert("Pricing Analysis: \n- PR00: Base Price Active \n- K007: Cust. Discount Applied \n- MWST: Tax 13% Calculated") }
-function updatePricing(){ 
-  alert("Pricing updated based on current conditions!") 
-}
-
-function prevItem(){ if(currentItem.value>1)currentItem.value-- }
-function nextItem(){ if(currentItem.value<totalItems.value)currentItem.value++ }
-function deleteItem(){ if(confirm("Delete this item?"))alert("Item deleted") }
-
-async function saveQuotation() {
-  if (!customerId.value || !itemData.material) {
-    alert("Please ensure Customer and Material are selected.")
+async function handleSave() {
+  if (!form.customerId || !itemForm.materialId) {
+    alert('Please fill in required fields: Customer and Material')
     return
   }
-
   saving.value = true
   try {
-    const q = parseFloat(qty.value) || 0
-    const isEdit = !!quotationId.value
+    const cleanForm = Object.fromEntries(
+      Object.entries(form).map(([k, v]) => [k, v === '' ? null : v])
+    )
     const payload = {
-      quotation_id: quotationId.value || `QUO${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
-      inquiry_id: inquiryId.value || null,
-      quotation_type: 'QT',
-      status: 'OPEN',
-      customer_id: customerId.value,
-      sold_to_party: customerId.value,
-      ship_to_party: customerId.value,
-      valid_from: new Date().toISOString().split('T')[0],
-      valid_to: salesData.delivDate || null,
-      payment_terms: billingData.payTerms,
-      incoterms: billingData.incoterms,
+      ...cleanForm,
+      quotationId: form.quotationId || `QUO${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
+      inquiryId: inquiryId.value || form.inquiryId || null,
       items: [
         {
-          quotation_item_id: `QI${Math.floor(Math.random() * 1000000)}`,
-          item_no: parseInt(itemData.docItem) || 10,
-          material_id: itemData.material,
-          order_quantity: q,
-          sales_unit: 'PC',
-          unit_price: 3200,
-          net_price: 2976
+          quotationItemId: `QI${Math.floor(Math.random() * 1000000)}`,
+          itemNo: 10,
+          ...itemForm,
+          salesUnit: 'PC'
         }
       ],
-      net_value: 2976 * q
+      netValue: itemForm.netPrice * itemForm.orderQuantity
     }
-
-    if (isEdit) {
-      await updateQuotation(quotationId.value, payload)
+    
+    if (isEdit.value) {
+      await updateQuotation(form.quotationId, payload)
+      successMsg.value = `Quotation ${form.quotationId} updated successfully!`
     } else {
       await createQuotation(payload)
+      successMsg.value = `Quotation ${payload.quotationId} created successfully!`
     }
-    successMsg.value = `Quotation ${payload.quotation_id} ${isEdit ? 'updated' : 'created'} successfully!`
     successVisible.value = true
   } catch (err: any) {
-    alert("Save failed: " + (err?.response?.data?.detail || err?.response?.data?.message || err.message))
+    alert('Save failed: ' + err.message)
   } finally {
     saving.value = false
   }
 }
 
+function handleSaveContinue() {
+  handleSave()
+}
+
 function onSuccessConfirm() {
-  router.push("/sales/quotation")
+  successVisible.value = false
+  if (!isEdit.value) {
+    router.push('/sales/quotation')
+  }
+}
+
+function handleExit() {
+  router.push('/sales/quotation')
+}
+
+function convertToOrder() {
+  router.push({ path: '/sales/orders/new', query: { ref: form.quotationId } })
+}
+
+function openF4(field: string) {
+  f4Field.value = field
+  f4Type.value = field === 'material' ? 'material' : 'partner'
+  showF4.value = true
+}
+
+function onF4Select(item: any) {
+  if (f4Field.value === 'customer') {
+    form.customerId = item.bpId
+  } else if (f4Field.value === 'material') {
+    itemForm.materialId = item.materialId
+  }
+  showF4.value = false
+}
+
+function checkAvailability() {
+  alert(`ATP Check: Material ${itemForm.materialId} is AVAILABLE.`)
+}
+
+function showAnalysis() {
+  alert("Pricing Analysis: PR00 Base Price, K007 Discount, MWST Tax.")
 }
 </script>
 
 <style scoped>
-.page{padding:28px 36px;max-width:1200px;margin:0 auto;}
-.error-msg {
-  color: #D9534F;
-  font-size: 13px;
-  padding: 10px 14px;
-  background: rgba(217, 83, 79, 0.08);
-  border-radius: 8px;
-  margin-bottom: 14px;
-}
-.top-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(135deg,#2d4a38,#12372A);border-radius:10px;margin-bottom:8px;}
-.tb-left{display:flex;align-items:center;gap:6px;}
-.tb-btn-icon{width:32px;height:32px;border:none;border-radius:6px;background:transparent;color:rgba(251,250,218,0.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
-.tb-btn-icon:hover{background:rgba(251,250,218,0.1);color:#FBFADA;}
-.tb-title{font-size:14px;font-weight:700;color:#FBFADA;margin-left:4px;}
+.page-container { padding: 32px 40px; max-width: 1200px; margin: 0 auto; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.page-title { font-size: 20px; font-weight: 700; color: #12372A; margin: 0; }
+.exit-btn { display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px solid rgba(173,188,159,0.4); border-radius: 8px; padding: 8px 18px; font-size: 13px; color: rgba(18,55,42,0.6); cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.exit-btn:hover { border-color: #D9534F; color: #D9534F; background: rgba(217,83,79,0.04); }
 
-.toolbar{display:flex;align-items:center;gap:2px;padding:6px 12px;background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:8px;border:1px solid rgba(173,188,159,0.15);margin-bottom:8px;}
-.tb-text{padding:6px 12px;font-size:11px;color:rgba(18,55,42,0.55);background:none;border:none;cursor:pointer;font-family:inherit;border-radius:4px;transition:all 0.15s;}
-.tb-text:hover{background:rgba(67,104,80,0.06);color:#436850;}
+.form-card { background: linear-gradient(145deg, #fdfce8, #f7f5d1); border-radius: 14px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(173, 188, 159, 0.18); box-shadow: 0 2px 6px rgba(173, 188, 159, 0.12); }
+.form-card-tabs { padding-top: 0; overflow: hidden; }
 
-.nav-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px;}
-.nav-arrows{display:flex;align-items:center;gap:2px;}
-.na-btn{width:28px;height:28px;border:1px solid rgba(173,188,159,0.3);border-radius:5px;background:rgba(251,250,218,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:rgba(18,55,42,0.5);transition:all 0.2s;}
-.na-btn:hover{border-color:#436850;color:#436850;}
-.na-info{font-size:12px;color:rgba(18,55,42,0.4);margin:0 8px;}
+.hdr-info-row { display: flex; gap: 12px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(173,188,159,0.1); }
+.info-tag { font-size: 11px; font-weight: 700; background: rgba(67,104,80,0.08); color:#436850; padding:4px 10px; border-radius:6px; border:1px solid rgba(67,104,80,0.1); }
 
-.form-card{background:linear-gradient(145deg,#fdfce8,#f7f5d1);border-radius:12px;padding:16px 18px;border:1px solid rgba(173,188,159,0.15);box-shadow:0 1px 4px rgba(173,188,159,0.08);margin-bottom:12px;}
-.hdr-info-row{display:flex;gap:12px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(173,188,159,0.1);}
-.form-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 10px 0; }
-.info-tag{font-size:11px;font-weight:700;background:rgba(67,104,80,0.08);color:#436850;padding:4px 10px;border-radius:6px;border:1px solid rgba(67,104,80,0.1);}
-.form-card-tabs{padding-top:0;overflow:hidden;}
+.form-row { display: grid; gap: 18px; margin-bottom: 16px; }
+.form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding: 20px 0; }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 20px 0; }
 
-.hdr-field-row{display:flex;gap:16px;}
-.hdr-field{flex:1;display:flex;align-items:center;gap:10px;}
-.hf-label{font-size:11px;font-weight:600;color:rgba(18,55,42,0.5);white-space:nowrap;}
-.hf-input{height:32px;border:1px solid rgba(173,188,159,0.4);border-radius:6px;padding:0 10px;font-size:13px;color:#12372A;background:rgba(251,250,218,0.4);font-family:inherit;outline:none;width:100px;}
-.hf-input:focus{border-color:#436850;box-shadow:0 0 0 3px rgba(67,104,80,0.05);}
-.hf-hint{font-size:11px;color:rgba(18,55,42,0.3);}
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-label { font-size: 12px; font-weight: 600; color: rgba(18, 55, 42, 0.7); letter-spacing: 0.3px; }
+.form-label.required::after { content: ' *'; color: #D9534F; font-weight: 700; }
+.form-input, .form-select { height: 38px; border: 1px solid rgba(173,188,159,0.4); border-radius: 8px; padding: 0 12px; font-size: 13px; color: #12372A; background: rgba(251, 250, 218, 0.4); font-family: inherit; transition: all 0.2s; outline: none; width: 100%; }
+.form-input:focus, .form-select:focus { border-color: #436850; box-shadow: 0 0 0 3px rgba(67, 104, 80, 0.08); background: #fff; }
 
-.input-with-f4-inline{display:flex;align-items:center;gap:3px;}
-.f4-trigger-sm{width:26px;height:26px;border:1px solid rgba(173,188,159,0.35);border-radius:5px;background:rgba(251,250,218,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(18,55,42,0.4);transition:all 0.2s;flex-shrink:0;}
-.f4-trigger-sm:hover{border-color:#436850;color:#436850;background:rgba(67,104,80,0.06);}
+.input-with-f4 { position: relative; display: flex; gap: 4px; }
+.f4-trigger { width: 38px; height: 38px; border: 1px solid rgba(173,188,159,0.4); border-radius: 8px; background: rgba(251, 250, 218, 0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; color: rgba(18,55,42,0.5); }
+.f4-trigger:hover { border-color: #436850; color: #436850; background: #fff; }
 
-.tab-bar{display:flex;gap:0;border-bottom:1px solid rgba(173,188,159,0.22);margin:0 -18px 16px;padding:0 18px;overflow-x:auto;background:rgba(251,250,218,0.15);border-radius:12px 12px 0 0;}
-.tab-btn{padding:10px 12px;font-size:11px;font-weight:500;color:rgba(18,55,42,0.4);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all 0.2s;}
-.tab-btn:hover{color:#12372A;}
-.tab-btn.active{color:#436850;font-weight:700;border-bottom-color:#436850;}
+.input-with-unit { position: relative; display: flex; }
+.input-unit { display: flex; align-items: center; padding: 0 12px; background: rgba(173,188,159,0.1); border: 1px solid rgba(173,188,159,0.4); border-left: none; border-radius: 0 8px 8px 0; font-size: 12px; font-weight: 600; color: #436850; }
+.input-with-unit .form-input { border-radius: 8px 0 0 8px; }
 
-.tab-placeholder{display:flex;align-items:center;justify-content:center;min-height:120px;color:rgba(18,55,42,0.2);font-size:14px;padding-top:16px;}
+.tab-bar { display: flex; gap: 0; border-bottom: 1px solid rgba(173,188,159,0.3); margin: 0 -24px; padding: 0 24px; background: rgba(251, 250, 218, 0.3); border-radius: 14px 14px 0 0; }
+.tab-btn { padding: 12px 18px; font-size: 12px; font-weight: 500; color: rgba(18, 55, 42, 0.5); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-family: inherit; white-space: nowrap; }
+.tab-btn.active { color: #436850; font-weight: 600; border-bottom-color: #436850; background: linear-gradient(to bottom, transparent, rgba(67, 104, 80, 0.04)); }
 
-.qnt-row{display:flex;gap:20px;margin-bottom:14px;}
-.qnt-field{display:flex;flex-direction:column;gap:5px;}
-.qnt-label{font-size:11px;font-weight:600;color:rgba(18,55,42,0.5);}
-.qnt-input-wrap{display:flex;}
-.qnt-input{height:34px;width:100px;border:1px solid rgba(173,188,159,0.4);border-radius:6px 0 0 6px;padding:0 10px;font-size:13px;color:#12372A;background:rgba(251,250,218,0.4);font-family:inherit;outline:none;}
-.qnt-input:focus{border-color:#436850;}
-.qnt-unit{display:flex;align-items:center;padding:0 10px;height:34px;font-size:12px;font-weight:600;color:rgba(18,55,42,0.45);background:rgba(173,188,159,0.12);border:1px solid rgba(173,188,159,0.4);border-left:none;border-radius:0 6px 6px 0;}
-.qnt-readonly{display:flex;align-items:center;height:34px;padding:0 10px;font-size:13px;color:rgba(18,55,42,0.4);background:rgba(173,188,159,0.08);border-radius:6px;font-family:"SF Mono",Consolas,monospace;}
+.tab-content { padding-top: 22px; }
+.tab-placeholder { display: flex; align-items: center; justify-content: center; min-height: 120px; color: rgba(18,55,42,0.2); font-size: 14px; }
 
-.price-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.pt-left,.pt-right{display:flex;align-items:center;gap:4px;}
-.pt-btn{width:30px;height:30px;border:1px solid rgba(173,188,159,0.25);border-radius:6px;background:rgba(251,250,218,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(18,55,42,0.4);transition:all 0.2s;}
-.pt-btn:hover{border-color:#436850;color:#436850;}
-.pt-text-btn{padding:6px 12px;font-size:11px;color:rgba(18,55,42,0.5);background:none;border:1px solid rgba(173,188,159,0.2);border-radius:5px;cursor:pointer;font-family:inherit;transition:all 0.2s;}
-.pt-text-btn:hover{color:#436850;border-color:#436850;}
+.price-analysis { margin-top: 10px; display: flex; gap: 10px; }
 
-.pricing-table-wrap{overflow-x:auto;border:1px solid rgba(173,188,159,0.12);border-radius:8px;}
-.pricing-table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px;}
-.pricing-table th{text-align:left;padding:8px 8px;font-size:10px;font-weight:700;color:rgba(18,55,42,0.4);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid rgba(173,188,159,0.15);background:rgba(173,188,159,0.06);white-space:nowrap;}
-.pricing-table th.num{text-align:right;}
-.pricing-table th.chk-col{width:32px;text-align:center;}
-.pricing-table td{padding:7px 8px;border-bottom:1px solid rgba(173,188,159,0.06);color:#12372A;white-space:nowrap;}
-.pricing-table td.num{text-align:right;}
-.pricing-table td.chk-col{text-align:center;}
-.pricing-table td input[type=checkbox]{accent-color:#436850;cursor:pointer;}
-.pricing-table tr:hover{background:rgba(67,104,80,0.02);}
-.pricing-table tr.derived td{color:rgba(18,55,42,0.45);}
-.pricing-table tr.total td{font-weight:700;color:#436850;}
-.mono{font-family:"SF Mono",Consolas,monospace;font-size:11px;}
-.s-dot{font-size:14px;}
+.action-bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; background: linear-gradient(145deg, #fdfce8, #f7f5d1); border-radius: 14px; border: 1px solid rgba(173, 188, 159, 0.18); box-shadow: 0 2px 6px rgba(173, 188, 159, 0.12); }
+.action-left { display: flex; gap: 12px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 24px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.btn-sm { padding: 6px 14px; font-size: 11px; }
+.btn-primary { background: linear-gradient(135deg, #436850, #365440); color: #FBFADA; border: none; }
+.btn-secondary { background: none; color: #436850; border: 1px solid #436850; }
+.btn-border { background: none; color: rgba(18,55,42,0.5); border: 1px solid rgba(173,188,159,0.4); }
+.btn-outline { background: none; color: #436850; border: 1px solid rgba(67, 104, 80, 0.3); }
 
-.bottom-bar{background:linear-gradient(135deg,#2d4a38,#12372A);border-radius:0 0 12px 12px;padding:12px 18px;display:flex;justify-content:flex-end;gap:10px;}
-.bb-right{display:flex;gap:10px;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 22px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all 0.2s;font-family:inherit;}
-.btn-primary{background:#436850;color:#FBFADA;border:none;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
-.btn-primary:hover{background:#365440;}
-.btn-primary:disabled{opacity:0.6;cursor:not-allowed;}
-.btn-cancel{background:transparent;color:rgba(251,250,218,0.7);border:1px solid rgba(251,250,218,0.2);}
-.btn-cancel:hover{background:rgba(251,250,218,0.05);color:#FBFADA;}
+.block-title { font-size: 13px; font-weight: 700; color: #436850; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.block-title::before { content: ''; width: 4px; height: 14px; background: #436850; border-radius: 2px; display: inline-block; }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { text-align: left; padding: 12px; font-size: 11px; color: rgba(18, 55, 42, 0.4); text-transform: uppercase; border-bottom: 1px solid rgba(173,188,159,0.2); }
+.data-table td { padding: 12px; color: #12372A; border-bottom: 1px solid rgba(173,188,159,0.08); }
+.data-table td.num { text-align: right; font-family: monospace; }
+.mono { font-family: monospace; }
+.status-tag { background: rgba(67, 104, 80, 0.1); color: #436850; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.link-btn { color: #436850; cursor: pointer; font-weight: 600; }
+.link-btn:hover { text-decoration: underline; }
 </style>

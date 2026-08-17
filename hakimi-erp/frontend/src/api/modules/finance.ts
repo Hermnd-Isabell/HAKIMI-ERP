@@ -1,103 +1,97 @@
 import { get, post, put } from '../request'
-import { FINANCE_API } from '@/constants/api'
 
 export interface InvoiceItem {
-  invoice_item_id: string
-  item_no: number
-  material_id: string
+  invoiceItemId: string
+  itemNo: number
+  materialId: string
   quantity?: number
-  unit_price?: number
-  tax_amount?: number
-  net_price?: number
+  unitPrice?: number
+  taxAmount?: number
+  netPrice?: number
 }
 
 export interface Invoice {
-  invoice_id: string
-  delivery_id?: string
-  sales_order_id?: string
-  billing_type: string
-  invoice_date: string
-  billing_date: string
-  sold_to_party?: string
+  invoiceId: string
+  deliveryId?: string
+  salesOrderId?: string
+  billingType: string
+  invoiceDate: string
+  billingDate: string
+  soldToParty?: string
   payer?: string
   currency: string
-  total_amount?: number
+  totalAmount?: number
   status: string
   items: InvoiceItem[]
-  created_time?: string
+  createdTime?: string
 }
 
 export interface InvoiceList {
   items: Invoice[]
-  pagination: Pagination
-}
-
-interface Pagination {
-  page: number
-  page_size: number
   total: number
-  total_pages: number
 }
 
 export interface OpenAccountReceivable {
-  open_ar_id: string
-  invoice_id: string
-  receivable_amount: number
-  received_amount: number
-  due_date?: string
+  openArId: string
+  invoiceId: string
+  receivableAmount: number
+  receivedAmount: number
+  dueDate?: string
   status: string
-  created_time?: string
+  createdTime?: string
 }
 
 export interface ClosedAccountReceivable {
-  closed_ar_id: string
-  invoice_id: string
-  receivable_amount: number
-  received_amount: number
-  created_time?: string
-  closed_time?: string
+  closedArId: string
+  invoiceId: string
+  receivableAmount: number
+  receivedAmount: number
+  createdTime?: string
+  closedTime?: string
 }
 
 export interface ReceivableList {
-  items: (OpenAccountReceivable | ClosedAccountReceivable)[]
-  pagination: Pagination
+  items: any[]
+  total: number
 }
 
 export interface Receipt {
-  receipt_id: string
-  invoice_id: string
+  receiptId: string
+  invoiceId: string
   payer: string
-  receipt_amount: number
-  payment_method?: string
+  receiptAmount: number
+  paymentMethod?: string
   currency: string
-  reference_no?: string
-  receipt_date?: string
+  referenceNo?: string
+  receiptDate?: string
 }
 
+const BASE = '/api/v1/finance'
+
 export function fetchInvoices(params?: Record<string, any>) {
-  return get<InvoiceList>(FINANCE_API.invoices, { params })
+  return get<InvoiceList>(`${BASE}/invoices`, { params })
 }
 
 export function fetchInvoiceById(id: string) {
-  return get<Invoice>(FINANCE_API.invoiceById(id))
+  return get<Invoice>(`${BASE}/invoices/${id}`)
 }
 
 export function createInvoiceFromDelivery(deliveryId: string) {
-  return post<Invoice>(FINANCE_API.invoiceFromDelivery(deliveryId))
+  return post<Invoice>(`${BASE}/invoices/from-delivery/${deliveryId}`)
 }
 
 export function fetchOpenAR(params?: Record<string, any>) {
-  return get<ReceivableList>(FINANCE_API.arOpen, { params })
+  return get<ReceivableList>(`${BASE}/ar/open`, { params })
 }
 
 export function fetchClosedAR(params?: Record<string, any>) {
-  return get<ReceivableList>(FINANCE_API.arClosed, { params })
+  return get<ReceivableList>(`${BASE}/ar/closed`, { params })
 }
 
 export function createReceipt(data: Partial<Receipt>) {
-  return post<Receipt>(FINANCE_API.receipts, data)
+  return post<Receipt>(`${BASE}/receipts`, data)
 }
 
-export function updateInvoice(id: string, data: Partial<Invoice>) {
-  return put<Invoice>(FINANCE_API.invoiceById(id), data)
+export function fetchReceipts(params?: Record<string, any>) {
+  return get<ReceivableList>(`${BASE}/receipts`, { params })
 }

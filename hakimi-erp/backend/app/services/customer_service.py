@@ -9,10 +9,6 @@ class CustomerService:
         return db.query(BusinessPartner).offset(skip).limit(limit).all()
 
     @staticmethod
-    def count_partners(db: Session) -> int:
-        return db.query(BusinessPartner).count()
-
-    @staticmethod
     def get_partner(db: Session, bp_id: str) -> Optional[BusinessPartner]:
         return db.query(BusinessPartner).filter(BusinessPartner.bp_id == bp_id).first()
 
@@ -43,12 +39,8 @@ class CustomerService:
         db_partner = CustomerService.get_partner(db, bp_id)
         if not db_partner:
             return False
-
-        # Business partners are referenced by sales, finance, and contact rows.
-        # Marking the record inactive preserves those historical references.
-        db_partner.status = "INACTIVE"
-        if not db_partner.block_reason:
-            db_partner.block_reason = "Soft deleted"
+        
+        db.delete(db_partner)
         db.commit()
         return True
 

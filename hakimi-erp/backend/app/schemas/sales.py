@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import datetime, date
 from decimal import Decimal
 
@@ -7,13 +7,15 @@ from decimal import Decimal
 class InquiryItemBase(BaseModel):
     item_no: int
     material_id: str
+    item_description: Optional[str] = None
     order_quantity: Optional[Decimal] = None
     sales_unit: Optional[str] = None
     expected_order_value: Optional[Decimal] = None
     unit_price: Optional[Decimal] = None
     discount: Optional[Decimal] = None
     net_price: Optional[Decimal] = None
-    item_description: Optional[str] = None
+    remark: Optional[str] = None
+    search_term: Optional[str] = None
 
 class InquiryItemCreate(InquiryItemBase):
     inquiry_item_id: str
@@ -32,10 +34,14 @@ class InquiryBase(BaseModel):
     customer_id: str
     sold_to_party: Optional[str] = None
     ship_to_party: Optional[str] = None
+    sales_area: Optional[str] = None
     customer_reference: Optional[str] = None
+    customer_reference_date: Optional[date] = None
     sales_org: Optional[str] = None
     distribution_channel: Optional[str] = None
     division: Optional[str] = None
+    sales_office: Optional[str] = None
+    sales_group: Optional[str] = None
     requested_delivery_date: Optional[date] = None
     valid_from: Optional[date] = None
     valid_to: Optional[date] = None
@@ -43,11 +49,13 @@ class InquiryBase(BaseModel):
     currency: str = "CNY"
     delivering_plant: Optional[str] = None
     incoterms: Optional[str] = None
+    delivery_location: Optional[str] = None
     payment_terms: Optional[str] = None
+    max_partial_deliveries: int = 9
     net_value: Optional[Decimal] = None
     inquiry_address: Optional[str] = None
-    delivery_location: Optional[str] = None
-    max_partial_deliveries: int = 9
+    remark: Optional[str] = None
+    search_term: Optional[str] = None
     created_by: Optional[str] = None
 
 class InquiryCreate(InquiryBase):
@@ -64,11 +72,15 @@ class Inquiry(InquiryBase):
 class QuotationItemBase(BaseModel):
     item_no: int
     material_id: str
+    item_description: Optional[str] = None
     order_quantity: Optional[Decimal] = None
     sales_unit: Optional[str] = None
+    expected_order_value: Optional[Decimal] = None
     unit_price: Optional[Decimal] = None
     discount: Optional[Decimal] = None
     net_price: Optional[Decimal] = None
+    remark: Optional[str] = None
+    search_term: Optional[str] = None
 
 class QuotationItemCreate(QuotationItemBase):
     quotation_item_id: str
@@ -88,11 +100,28 @@ class QuotationBase(BaseModel):
     customer_id: str
     sold_to_party: Optional[str] = None
     ship_to_party: Optional[str] = None
+    sales_area: Optional[str] = None
+    customer_reference: Optional[str] = None
+    customer_reference_date: Optional[date] = None
+    sales_org: Optional[str] = None
+    distribution_channel: Optional[str] = None
+    division: Optional[str] = None
+    sales_office: Optional[str] = None
+    sales_group: Optional[str] = None
+    requested_delivery_date: Optional[date] = None
     valid_from: Optional[date] = None
     valid_to: Optional[date] = None
+    pricing_date: Optional[date] = None
+    currency: str = "CNY"
     payment_terms: Optional[str] = None
     incoterms: Optional[str] = None
+    delivering_plant: Optional[str] = None
+    max_partial_deliveries: int = 9
     net_value: Optional[Decimal] = None
+    quotation_address: Optional[str] = None
+    remark: Optional[str] = None
+    search_term: Optional[str] = None
+    created_by: Optional[str] = None
 
 class QuotationCreate(QuotationBase):
     items: List[QuotationItemCreate]
@@ -108,6 +137,7 @@ class Quotation(QuotationBase):
 class SalesOrderItemBase(BaseModel):
     item_no: int
     material_id: str
+    item_description: Optional[str] = None
     item_category: Optional[str] = None
     order_quantity: Optional[Decimal] = None
     confirmed_quantity: Optional[Decimal] = None
@@ -119,6 +149,8 @@ class SalesOrderItemBase(BaseModel):
     discount: Optional[Decimal] = None
     net_price: Optional[Decimal] = None
     availability_status: Optional[str] = None
+    remark: Optional[str] = None
+    search_term: Optional[str] = None
 
 class SalesOrderItemCreate(SalesOrderItemBase):
     so_item_id: str
@@ -134,13 +166,22 @@ class SalesOrderBase(BaseModel):
     sales_order_id: str
     quotation_id: Optional[str] = None
     order_type: str
+    reference_type: Optional[str] = None
+    reference_document: Optional[str] = None
     status: str = "OPEN"
     customer_id: str
     sold_to_party: Optional[str] = None
     ship_to_party: Optional[str] = None
     customer_reference: Optional[str] = None
+    customer_reference_date: Optional[date] = None
+    sales_org: Optional[str] = None
+    distribution_channel: Optional[str] = None
+    division: Optional[str] = None
+    sales_office: Optional[str] = None
+    sales_group: Optional[str] = None
     requested_delivery_date: Optional[date] = None
     pricing_date: Optional[date] = None
+    currency: str = "CNY"
     payment_terms: Optional[str] = None
     incoterms: Optional[str] = None
     delivering_plant: Optional[str] = None
@@ -148,7 +189,11 @@ class SalesOrderBase(BaseModel):
     delivery_priority: Optional[str] = None
     billing_block: Optional[str] = None
     delivery_block: Optional[str] = None
+    max_partial_deliveries: int = 9
     net_value: Optional[Decimal] = None
+    remark: Optional[str] = None
+    search_term: Optional[str] = None
+    created_by: Optional[str] = None
 
 class SalesOrderCreate(SalesOrderBase):
     items: List[SalesOrderItemCreate]

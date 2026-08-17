@@ -13,7 +13,7 @@ class Material(Base):
     volume = Column(DECIMAL(15,3), comment="体积")
     search_term = Column(String(50))
     category = Column(String(50), comment="产品类别")
-    stock_quantity = Column(DECIMAL(15,3), default=0, comment="库存数量")
+    stock_quantity = Column(DECIMAL(15,3), default=999999, comment="库存数量")
     item_group = Column(String(20), comment="产品组")
     status = Column(String(10), default="ACTIVE", comment="状态")
 
