@@ -5,6 +5,22 @@
 USE hakimi_erp;
 SET FOREIGN_KEY_CHECKS = 0;
 
+-- Default system user: admin / admin123
+INSERT INTO sys_user (username, email, password_hash, full_name, role, is_active)
+VALUES (
+  'admin',
+  'admin@hakimi-erp.local',
+  'pbkdf2_sha256$200000$fa84fdcb2b36e4e46f579d106b050e72$40c891b7578da1b2449b31960a3c67d6af3123ad5aa080d4f570b18f4364ac79',
+  'System Administrator',
+  'ADMIN',
+  1
+)
+ON DUPLICATE KEY UPDATE
+  email = VALUES(email),
+  full_name = VALUES(full_name),
+  role = VALUES(role),
+  is_active = VALUES(is_active);
+
 -- 1. Business Partners (10)
 INSERT INTO business_partner (bp_id, bp_type, bp_role, bp_name, country, city, district, street, house_number, postal_code, language, time_zone, transportation_zone, telephone, mobile_phone, fax, email, status, block_reason, data_source, print_format, search_term) VALUES ('BP00001', 'ORG', 'SOLD_TO', 'Shanghai Hualian Group', 'CN', 'Shanghai', 'Pudong', 'Century Ave', '100', NULL, 'ZH', 'UTC+8', NULL, '021-58880001', '13800001001', NULL, 'contact@hualian.com', 'ACTIVE', NULL, 'MANUAL', NULL, 'Hualian');
 INSERT INTO business_partner (bp_id, bp_type, bp_role, bp_name, country, city, district, street, house_number, postal_code, language, time_zone, transportation_zone, telephone, mobile_phone, fax, email, status, block_reason, data_source, print_format, search_term) VALUES ('BP00002', 'ORG', 'SOLD_TO', 'Beijing Shougang Trading', 'CN', 'Beijing', 'Chaoyang', 'Jianguo Rd', '88', NULL, 'ZH', 'UTC+8', NULL, '010-62220001', '13900002001', NULL, 'info@shougang.com', 'ACTIVE', NULL, 'MANUAL', NULL, 'Shougang');
@@ -248,54 +264,81 @@ INSERT INTO goods_issue (goods_issue_id, delivery_item_id, actual_quantity, post
 INSERT INTO goods_issue (goods_issue_id, delivery_item_id, actual_quantity, posting_date, goods_issue_time, warehouse) VALUES ('PGI26080501060420', 'DI007002', 50.000, '2026-08-05', '2026-08-04 17:06:05', 'SP03');
 
 -- 17. Invoices (8)
-INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sold_to_party, payer, currency, total_amount, status) VALUES ('INV0001', 'DLV0001', 'SO00001', 'F2', '2026-08-05', '2026-08-03', 'BP00001', 'BP00001', 'CNY', 16561.16, 'CLEARED');
-INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sold_to_party, payer, currency, total_amount, status) VALUES ('INV0002', 'DLV0002', 'SO00002', 'F2', '2026-08-05', '2026-08-04', 'BP00002', 'BP00002', 'CNY', 502537.20, 'CLEARED');
-INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sold_to_party, payer, currency, total_amount, status) VALUES ('INV0003', 'DLV0003', 'SO00003', 'F2', '2026-08-03', '2026-08-01', 'BP00003', 'BP00003', 'CNY', 33425.75, 'CLEARED');
-INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sold_to_party, payer, currency, total_amount, status) VALUES ('INV0004', 'DLV0004', 'SO00004', 'F2', '2026-08-03', '2026-08-03', 'BP00004', 'BP00004', 'CNY', 9514.76, 'CLEARED');
-INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sold_to_party, payer, currency, total_amount, status) VALUES ('INV0005', 'DLV0005', 'SO00005', 'F2', '2026-08-05', '2026-08-04', 'BP00005', 'BP00005', 'CNY', 66885.35, 'CLEARED');
-INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sold_to_party, payer, currency, total_amount, status) VALUES ('INV0006', 'DLV0006', 'SO00006', 'F2', '2026-08-02', '2026-08-04', 'BP00006', 'BP00006', 'CNY', 11058.72, 'CLEARED');
-INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sold_to_party, payer, currency, total_amount, status) VALUES ('INV0007', 'DLV0007', 'SO00007', 'F2', '2026-08-05', '2026-08-04', 'BP00007', 'BP00007', 'CNY', 75430.80, 'OPEN');
-INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sold_to_party, payer, currency, total_amount, status) VALUES ('INV0008', 'DLV0008', 'SO00008', 'F2', '2026-08-03', '2026-08-02', 'BP00008', 'BP00008', 'CNY', 4547.92, 'OPEN');
+-- Note: INV0001-0006 are CLEARED (fully paid); INV0007-0008 are PARTIAL (partially paid)
+INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sales_org, distribution_channel, division, shipping_point, sold_to_party, payer, destination_country, currency, total_amount, status) VALUES ('INV0001', 'DLV0001', 'SO00001', 'F2', '2026-08-05', '2026-08-03', '1000', '10', '01', 'SP03', 'BP00001', 'BP00001', 'CN', 'CNY', 16561.16, 'CLEARED');
+INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sales_org, distribution_channel, division, shipping_point, sold_to_party, payer, destination_country, currency, total_amount, status) VALUES ('INV0002', 'DLV0002', 'SO00002', 'F2', '2026-08-05', '2026-08-04', '1000', '10', '01', 'SP03', 'BP00002', 'BP00002', 'CN', 'CNY', 502537.20, 'CLEARED');
+INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sales_org, distribution_channel, division, shipping_point, sold_to_party, payer, destination_country, currency, total_amount, status) VALUES ('INV0003', 'DLV0003', 'SO00003', 'F2', '2026-08-03', '2026-08-01', '1000', '10', '01', 'SP02', 'BP00003', 'BP00003', 'CN', 'CNY', 33425.75, 'CLEARED');
+INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sales_org, distribution_channel, division, shipping_point, sold_to_party, payer, destination_country, currency, total_amount, status) VALUES ('INV0004', 'DLV0004', 'SO00004', 'F2', '2026-08-03', '2026-08-03', '1000', '10', '01', 'SP03', 'BP00004', 'BP00004', 'CN', 'CNY', 9514.76, 'CLEARED');
+INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sales_org, distribution_channel, division, shipping_point, sold_to_party, payer, destination_country, currency, total_amount, status) VALUES ('INV0005', 'DLV0005', 'SO00005', 'F2', '2026-08-05', '2026-08-04', '1000', '10', '01', 'SP02', 'BP00005', 'BP00005', 'CN', 'CNY', 66885.35, 'CLEARED');
+INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sales_org, distribution_channel, division, shipping_point, sold_to_party, payer, destination_country, currency, total_amount, status) VALUES ('INV0006', 'DLV0006', 'SO00006', 'F2', '2026-08-02', '2026-08-04', '1000', '10', '01', 'SP03', 'BP00006', 'BP00006', 'CN', 'CNY', 11058.72, 'CLEARED');
+INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sales_org, distribution_channel, division, shipping_point, sold_to_party, payer, destination_country, currency, total_amount, status) VALUES ('INV0007', 'DLV0007', 'SO00007', 'F2', '2026-08-05', '2026-08-04', '1000', '10', '01', 'SP03', 'BP00007', 'BP00007', 'CN', 'CNY', 75430.80, 'PARTIAL');
+INSERT INTO invoice (invoice_id, delivery_id, sales_order_id, billing_type, invoice_date, billing_date, sales_org, distribution_channel, division, shipping_point, sold_to_party, payer, destination_country, currency, total_amount, status) VALUES ('INV0008', 'DLV0008', 'SO00008', 'F2', '2026-08-03', '2026-08-02', '1000', '10', '01', 'SP02', 'BP00008', 'BP00008', 'CN', 'CNY', 4547.92, 'PARTIAL');
 
 -- 18. Invoice Items
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI001001', 'INV0001', 10, 'MAT0002', 51.000, 170.20, 1128.43, 8680.20);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI001002', 'INV0001', 20, 'MAT0006', 6.000, 304.00, 237.12, 1824.00);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI001003', 'INV0001', 30, 'MAT0003', 37.000, 12.16, 58.49, 449.92);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI002001', 'INV0002', 10, 'MAT0013', 43.000, 78.20, 437.14, 3362.60);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI002002', 'INV0002', 20, 'MAT0004', 32.000, 1254.40, 5218.30, 40140.80);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI002003', 'INV0002', 30, 'MAT0012', 19.000, 2327.50, 5748.93, 44222.50);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI003001', 'INV0003', 10, 'MAT0012', 35.000, 2327.50, 10590.13, 81462.50);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI003002', 'INV0003', 20, 'MAT0005', 52.000, 42.75, 288.99, 2223.00);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI004001', 'INV0004', 10, 'MAT0013', 91.000, 78.20, 925.11, 7116.20);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI004002', 'INV0004', 20, 'MAT0007', 68.000, 66.64, 589.10, 4531.52);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI004003', 'INV0004', 30, 'MAT0006', 46.000, 294.40, 1760.51, 13542.40);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI005001', 'INV0005', 10, 'MAT0001', 55.000, 27.93, 199.70, 1536.15);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI005002', 'INV0005', 20, 'MAT0008', 33.000, 494.00, 2119.26, 16302.00);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI005003', 'INV0005', 30, 'MAT0013', 68.000, 78.20, 691.29, 5317.60);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI006001', 'INV0006', 10, 'MAT0013', 21.000, 83.30, 227.41, 1749.30);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI006002', 'INV0006', 20, 'MAT0001', 47.000, 26.22, 160.20, 1232.34);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI007001', 'INV0007', 10, 'MAT0011', 87.000, 2.30, 26.01, 200.10);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI007002', 'INV0007', 20, 'MAT0015', 72.000, 625.60, 5855.62, 45043.20);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI008001', 'INV0008', 10, 'MAT0011', 76.000, 2.30, 22.72, 174.80);
-INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, unit_price, tax_amount, net_price) VALUES ('IVI008002', 'INV0008', 20, 'MAT0007', 70.000, 66.64, 606.42, 4664.80);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI001001', 'INV0001', 10, 'MAT0002', 51.000, 'PC', 170.20, 0.00, 1128.43, 8680.20);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI001002', 'INV0001', 20, 'MAT0006', 6.000, 'BARREL', 304.00, 0.00, 237.12, 1824.00);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI001003', 'INV0001', 30, 'MAT0003', 37.000, 'PC', 12.16, 0.00, 58.49, 449.92);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI002001', 'INV0002', 10, 'MAT0013', 43.000, 'BOX', 78.20, 0.00, 437.14, 3362.60);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI002002', 'INV0002', 20, 'MAT0004', 32.000, 'SET', 1254.40, 0.00, 5218.30, 40140.80);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI002003', 'INV0002', 30, 'MAT0012', 19.000, 'SET', 2327.50, 0.00, 5748.93, 44222.50);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI003001', 'INV0003', 10, 'MAT0012', 35.000, 'SET', 2327.50, 0.00, 10590.13, 81462.50);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI003002', 'INV0003', 20, 'MAT0005', 52.000, 'M', 42.75, 0.00, 288.99, 2223.00);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI004001', 'INV0004', 10, 'MAT0013', 91.000, 'BOX', 78.20, 0.00, 925.11, 7116.20);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI004002', 'INV0004', 20, 'MAT0007', 68.000, 'SET', 66.64, 0.00, 589.10, 4531.52);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI004003', 'INV0004', 30, 'MAT0006', 46.000, 'BARREL', 294.40, 0.00, 1760.51, 13542.40);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI005001', 'INV0005', 10, 'MAT0001', 55.000, 'KG', 27.93, 0.00, 199.70, 1536.15);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI005002', 'INV0005', 20, 'MAT0008', 33.000, 'PC', 494.00, 0.00, 2119.26, 16302.00);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI005003', 'INV0005', 30, 'MAT0013', 68.000, 'BOX', 78.20, 0.00, 691.29, 5317.60);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI006001', 'INV0006', 10, 'MAT0013', 21.000, 'BOX', 83.30, 0.00, 227.41, 1749.30);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI006002', 'INV0006', 20, 'MAT0001', 47.000, 'KG', 26.22, 0.00, 160.20, 1232.34);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI007001', 'INV0007', 10, 'MAT0011', 87.000, 'BAG', 2.30, 0.00, 26.01, 200.10);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI007002', 'INV0007', 20, 'MAT0015', 72.000, 'PC', 625.60, 0.00, 5855.62, 45043.20);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI008001', 'INV0008', 10, 'MAT0011', 76.000, 'BAG', 2.30, 0.00, 22.72, 174.80);
+INSERT INTO invoice_item (invoice_item_id, invoice_id, item_no, material_id, quantity, sales_unit, unit_price, discount, tax_amount, net_price) VALUES ('IVI008002', 'INV0008', 20, 'MAT0007', 70.000, 'SET', 66.64, 0.00, 606.42, 4664.80);
 
--- 19. Open Account Receivables (8)
-INSERT INTO open_account_receivable (open_ar_id, invoice_id, receivable_amount, received_amount, due_date, status) VALUES ('OAR0001', 'INV0001', 16561.16, 16561.16, '2026-09-04', 'CLEARED');
-INSERT INTO open_account_receivable (open_ar_id, invoice_id, receivable_amount, received_amount, due_date, status) VALUES ('OAR0002', 'INV0002', 502537.20, 502537.20, '2026-09-04', 'CLEARED');
-INSERT INTO open_account_receivable (open_ar_id, invoice_id, receivable_amount, received_amount, due_date, status) VALUES ('OAR0003', 'INV0003', 33425.75, 33425.75, '2026-09-04', 'CLEARED');
-INSERT INTO open_account_receivable (open_ar_id, invoice_id, receivable_amount, received_amount, due_date, status) VALUES ('OAR0004', 'INV0004', 9514.76, 9514.76, '2026-09-04', 'CLEARED');
-INSERT INTO open_account_receivable (open_ar_id, invoice_id, receivable_amount, received_amount, due_date, status) VALUES ('OAR0005', 'INV0005', 66885.35, 66885.35, '2026-09-04', 'CLEARED');
-INSERT INTO open_account_receivable (open_ar_id, invoice_id, receivable_amount, received_amount, due_date, status) VALUES ('OAR0006', 'INV0006', 11058.72, 11058.72, '2026-09-04', 'CLEARED');
+-- 19. Closed Account Receivables (6) -- INV0001-0006 fully cleared
+INSERT INTO closed_account_receivable (closed_ar_id, invoice_id, receivable_amount, received_amount, created_time, closed_time) VALUES ('CAR0001', 'INV0001', 16561.16, 16561.16, '2026-08-03 00:00:00', '2026-08-05 10:00:00');
+INSERT INTO closed_account_receivable (closed_ar_id, invoice_id, receivable_amount, received_amount, created_time, closed_time) VALUES ('CAR0002', 'INV0002', 502537.20, 502537.20, '2026-08-04 00:00:00', '2026-08-05 10:00:00');
+INSERT INTO closed_account_receivable (closed_ar_id, invoice_id, receivable_amount, received_amount, created_time, closed_time) VALUES ('CAR0003', 'INV0003', 33425.75, 33425.75, '2026-08-01 00:00:00', '2026-08-03 10:00:00');
+INSERT INTO closed_account_receivable (closed_ar_id, invoice_id, receivable_amount, received_amount, created_time, closed_time) VALUES ('CAR0004', 'INV0004', 9514.76, 9514.76, '2026-08-03 00:00:00', '2026-08-05 10:00:00');
+INSERT INTO closed_account_receivable (closed_ar_id, invoice_id, receivable_amount, received_amount, created_time, closed_time) VALUES ('CAR0005', 'INV0005', 66885.35, 66885.35, '2026-08-04 00:00:00', '2026-08-05 10:00:00');
+INSERT INTO closed_account_receivable (closed_ar_id, invoice_id, receivable_amount, received_amount, created_time, closed_time) VALUES ('CAR0006', 'INV0006', 11058.72, 11058.72, '2026-08-04 00:00:00', '2026-08-05 10:00:00');
+
+-- 20. Open Account Receivables (2) -- INV0007-0008 partially paid
 INSERT INTO open_account_receivable (open_ar_id, invoice_id, receivable_amount, received_amount, due_date, status) VALUES ('OAR0007', 'INV0007', 75430.80, 30172.32, '2026-09-04', 'PARTIAL');
 INSERT INTO open_account_receivable (open_ar_id, invoice_id, receivable_amount, received_amount, due_date, status) VALUES ('OAR0008', 'INV0008', 4547.92, 1819.17, '2026-09-04', 'PARTIAL');
 
--- 20. Receipts (6)
-INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0001', 'INV0001', 'BP00001', 16561.16, '2026-07-30 16:45:24', 'BANK_TRANSFER', 'CNY', 'REF155474');
-INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0002', 'INV0002', 'BP00002', 502537.20, '2026-08-02 16:45:24', 'BANK_TRANSFER', 'CNY', 'REF613775');
-INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0003', 'INV0003', 'BP00003', 33425.75, '2026-07-31 16:45:24', 'BANK_TRANSFER', 'CNY', 'REF657007');
-INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0004', 'INV0004', 'BP00004', 9514.76, '2026-08-02 16:45:24', 'BANK_TRANSFER', 'CNY', 'REF355622');
-INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0005', 'INV0005', 'BP00005', 66885.35, '2026-08-01 16:45:24', 'BANK_TRANSFER', 'CNY', 'REF470403');
-INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0006', 'INV0006', 'BP00006', 11058.72, '2026-08-03 16:45:24', 'BANK_TRANSFER', 'CNY', 'REF246289');
+-- 21. Receipts (8)
+INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0001', 'INV0001', 'BP00001', 16561.16, '2026-08-05 10:00:00', 'BANK_TRANSFER', 'CNY', 'REF155474');
+INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0002', 'INV0002', 'BP00002', 502537.20, '2026-08-05 10:00:00', 'BANK_TRANSFER', 'CNY', 'REF613775');
+INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0003', 'INV0003', 'BP00003', 33425.75, '2026-08-03 10:00:00', 'BANK_TRANSFER', 'CNY', 'REF657007');
+INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0004', 'INV0004', 'BP00004', 9514.76, '2026-08-05 10:00:00', 'BANK_TRANSFER', 'CNY', 'REF355622');
+INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0005', 'INV0005', 'BP00005', 66885.35, '2026-08-05 10:00:00', 'BANK_TRANSFER', 'CNY', 'REF470403');
+INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0006', 'INV0006', 'BP00006', 11058.72, '2026-08-05 10:00:00', 'BANK_TRANSFER', 'CNY', 'REF246289');
+INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0007', 'INV0007', 'BP00007', 30172.32, '2026-08-05 10:00:00', 'BANK_TRANSFER', 'CNY', 'REF726581');
+INSERT INTO receipt (receipt_id, invoice_id, payer, receipt_amount, receipt_date, payment_method, currency, reference_no) VALUES ('RCP0008', 'INV0008', 'BP00008', 1819.17, '2026-08-03 10:00:00', 'BANK_TRANSFER', 'CNY', 'REF318492');
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+-- 21. Storage Locations (18)
+INSERT INTO storage_location (sloc_id, sloc_name, plant, warehouse_no, storage_type, storage_bin, description) VALUES
+('WH01-A01', 'Raw Material Shelf A01', 'PL01', 'WH01', 'RAW', 'A-01-01', 'Raw material storage area'),
+('WH01-A02', 'Raw Material Shelf A02', 'PL01', 'WH01', 'RAW', 'A-01-02', 'Raw material storage area'),
+('WH01-A03', 'Raw Material Shelf A03', 'PL01', 'WH01', 'RAW', 'A-01-03', 'Raw material storage area'),
+('WH01-B01', 'Semi-finished Shelf B01', 'PL01', 'WH01', 'SEMI', 'B-02-01', 'Semi-finished goods area'),
+('WH01-B02', 'Semi-finished Shelf B02', 'PL01', 'WH01', 'SEMI', 'B-02-02', 'Semi-finished goods area'),
+('WH01-C01', 'Finished Goods Shelf C01', 'PL01', 'WH01', 'FERT', 'C-03-01', 'Finished goods shipping area'),
+('WH01-C02', 'Finished Goods Shelf C02', 'PL01', 'WH01', 'FERT', 'C-03-02', 'Finished goods shipping area'),
+('WH01-C03', 'Finished Goods Shelf C03', 'PL01', 'WH01', 'FERT', 'C-03-03', 'Finished goods shipping area'),
+('WH02-A01', 'Bulk Storage Zone A', 'PL02', 'WH02', 'BULK', 'Z-A-01', 'Bulk chemical storage'),
+('WH02-A02', 'Bulk Storage Zone B', 'PL02', 'WH02', 'BULK', 'Z-A-02', 'Bulk chemical storage'),
+('WH02-B01', 'Hazardous Material Zone', 'PL02', 'WH02', 'HAZ', 'Z-B-01', 'Hazardous material segregated storage'),
+('WH02-C01', 'Cold Storage Room 1', 'PL02', 'WH02', 'COLD', 'Z-C-01', 'Temperature-controlled storage 2-8C'),
+('WH03-A01', 'High-rack Shelf 01', 'PL03', 'WH03', 'RACK', 'R-01-01', 'Automated high-rack storage'),
+('WH03-A02', 'High-rack Shelf 02', 'PL03', 'WH03', 'RACK', 'R-01-02', 'Automated high-rack storage'),
+('WH03-B01', 'Picking Zone Floor', 'PL03', 'WH03', 'PICK', 'P-01-01', 'Manual picking zone ground floor'),
+('1000-01', 'Main Warehouse Zone 1', '1000', 'WH01', 'FERT', 'M-01-01', 'Main plant storage zone 1'),
+('1000-02', 'Main Warehouse Zone 2', '1000', 'WH01', 'FERT', 'M-01-02', 'Main plant storage zone 2'),
+('1000-03', 'Outbound Staging Area', '1000', 'WH01', 'STAG', 'M-02-01', 'Outbound goods staging area');
 -- END --

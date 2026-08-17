@@ -1,18 +1,21 @@
 <template>
-  <MainLayout>
-    <div class="bp-page">
-      <!-- Header -->
-      <div class="page-header">
-        <h2 class="page-title">Create Business Partner</h2>
-        <button class="exit-btn" @click="handleExit">
-          <svg viewBox="0 0 20 20" width="16" height="16">
-            <path d="M6 6l8 8M14 6l-8 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-          Exit
-        </button>
+  <div class="bp-page">
+    <!-- Header -->
+    <div class="header-card">
+      <div class="hc-left">
+        <div class="hc-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="7" r="4" fill="none" stroke="#436850" stroke-width="1.8"/><path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2" fill="none" stroke="#436850" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="hc-text">
+          <h2 class="hc-title">Business Partner Master</h2>
+          <p class="hc-sub">Create and manage customers and vendors across the organization.</p>
+        </div>
       </div>
+      <div class="hc-right">
+      </div>
+    </div>
 
-      <!-- Top Form Row -->
+    <!-- Top Form Row -->
       <div class="form-card">
         <div class="form-row form-row-3">
           <div class="form-group">
@@ -21,11 +24,16 @@
           </div>
           <div class="form-group">
             <label class="form-label">Grouping</label>
-            <div class="input-with-f4"><select class="form-select" v-model="form.grouping">
-              <option value="">Select grouping</option>
-              <option value="EXT">External</option>
-              <option value="INT">Internal</option>
-            </select><button class="f4-trigger" @click="openF4('grouping')" title="F4 Search"><svg viewBox="0 0 20 20" width="14" height="14"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>
+            <div class="input-with-f4-inline">
+              <select class="form-select" v-model="form.grouping">
+                <option value="">Select grouping</option>
+                <option value="EXT">External</option>
+                <option value="INT">Internal</option>
+              </select>
+              <button class="f4-trigger-sm" @click="openF4('grouping')" title="F4 Search">
+                <svg viewBox="0 0 20 20" width="14" height="14"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 13l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label required">BP Role</label>
@@ -50,7 +58,6 @@
 
         <!-- Address Tab -->
         <div class="tab-content" v-show="activeTab === 'address'">
-          <!-- Basic Information -->
           <fieldset class="fieldset-block">
             <legend class="block-title">Basic Information</legend>
             <div class="form-row form-row-4">
@@ -79,7 +86,6 @@
             </div>
           </fieldset>
 
-          <!-- Standard Address -->
           <fieldset class="fieldset-block">
             <legend class="block-title">Standard Address</legend>
             <div class="form-row form-row-2">
@@ -111,7 +117,7 @@
                 <label class="form-label required">Postal Code</label>
                 <div class="input-with-indicator">
                   <input
-                    type="text" class="form-input"
+                    type="text" class="form-input postal-input"
                     v-model="form.postalCode"
                     @input="validatePostalCode"
                     placeholder="e.g. 100080"
@@ -123,65 +129,58 @@
                 </div>
               </div>
             </div>
+          </fieldset>
+        </div>
+
+        <!-- Address Overview Tab -->
+        <div class="tab-content" v-show="activeTab === 'address_overview'">
+          <div class="overview-grid">
+            <div class="overview-item">
+              <span class="ov-label">Main Address</span>
+              <div class="ov-value">
+                <p v-if="form.street || form.city">{{ form.street }} {{ form.houseNumber }}</p>
+                <p v-if="form.city || form.country">{{ form.postalCode }} {{ form.city }}, {{ form.country }}</p>
+                <p v-else class="text-muted">No address information entered yet.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Identification Tab -->
+        <div class="tab-content" v-show="activeTab === 'identification'">
+          <fieldset class="fieldset-block">
+            <legend class="block-title">Tax Numbers</legend>
             <div class="form-row form-row-2">
               <div class="form-group">
-                <label class="form-label">District</label>
-                <input type="text" class="form-input" v-model="form.district" placeholder="District / county" />
+                <label class="form-label">Tax ID 1 (VAT)</label>
+                <input type="text" class="form-input" v-model="form.taxId1" placeholder="Enter Tax ID" />
               </div>
               <div class="form-group">
-                <label class="form-label">Region</label>
-                <input type="text" class="form-input" v-model="form.region" placeholder="State / Province" />
+                <label class="form-label">Tax ID 2</label>
+                <input type="text" class="form-input" v-model="form.taxId2" placeholder="Enter Tax ID" />
               </div>
             </div>
           </fieldset>
-
-          <!-- PO Box Address -->
           <fieldset class="fieldset-block">
-            <legend class="block-title">PO Box Address</legend>
+            <legend class="block-title">ID Numbers</legend>
             <div class="form-row form-row-2">
               <div class="form-group">
-                <label class="form-label">PO Box</label>
-                <input type="text" class="form-input" v-model="form.poBox" placeholder="PO Box number" />
+                <label class="form-label">ID Type</label>
+                <select class="form-select" v-model="form.idType">
+                  <option value="">Select ID Type</option>
+                  <option value="CRM001">Business Registration</option>
+                  <option value="CRM002">Passport</option>
+                </select>
               </div>
               <div class="form-group">
-                <label class="form-label">PO Box Postal Code</label>
-                <input type="text" class="form-input" v-model="form.poBoxPostal" placeholder="PO Box postal code" />
-              </div>
-            </div>
-          </fieldset>
-
-          <!-- Communication -->
-          <fieldset class="fieldset-block">
-            <legend class="block-title">Communication</legend>
-            <div class="form-row form-row-4">
-              <div class="form-group">
-                <label class="form-label">Telephone</label>
-                <input type="text" class="form-input" v-model="form.telephone" placeholder="+86 10 1234 5678" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Mobile Phone</label>
-                <input type="text" class="form-input" v-model="form.mobilePhone" placeholder="Mobile number" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Email</label>
-                <input type="email" class="form-input" v-model="form.email" placeholder="contact@company.com" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Fax</label>
-                <input type="text" class="form-input" v-model="form.fax" placeholder="Fax number" />
-              </div>
-            </div>
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label class="form-label">Website</label>
-                <input type="text" class="form-input" v-model="form.website" placeholder="https://www.example.com" />
+                <label class="form-label">ID Number</label>
+                <input type="text" class="form-input" v-model="form.idNumber" />
               </div>
             </div>
           </fieldset>
         </div>
 
-        <!-- Placeholder for other tabs -->
-        <div class="tab-content tab-placeholder" v-show="activeTab !== 'address'">
+        <div class="tab-content tab-placeholder" v-show="!['address', 'address_overview', 'identification'].includes(activeTab)">
           <p>{{ activeTabLabel }} &mdash; content to be developed</p>
         </div>
       </div>
@@ -206,10 +205,10 @@
               <td colspan="6" class="loading-cell">Loading business partners...</td>
             </tr>
             <template v-else>
-              <tr v-for="bp in partners" :key="bp.bp_id">
-                <td class="mono">{{ bp.bp_id }}</td>
-                <td>{{ bp.bp_name }}</td>
-                <td>{{ bp.bp_role }}</td>
+              <tr v-for="bp in partners" :key="bp.bpId" class="clickable-row" @click="editPartner(bp)">
+                <td class="mono">{{ bp.bpId }}</td>
+                <td>{{ bp.bpName }}</td>
+                <td>{{ bp.bpRole }}</td>
                 <td>{{ bp.country }}</td>
                 <td>{{ bp.city }}</td>
                 <td><span class="status-tag">{{ bp.status }}</span></td>
@@ -238,24 +237,30 @@
         </div>
         <button class="btn btn-border" @click="handleCancel" :disabled="saving">Cancel</button>
       </div>
+
+      <F4SearchModal v-model:visible="showF4" @confirm="onF4Confirm" />
+      <SuccessModal v-model:visible="successVisible" :message="successMsg" @confirm="handleSuccessConfirm" />
     </div>
-    <F4SearchModal v-model:visible="showF4" @confirm="onF4Confirm" />
-    <SuccessModal v-model:visible="successVisible" :message="successMsg" @confirm="handleSuccessConfirm" />
-  </MainLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import MainLayout from '@/layout/MainLayout.vue'
 import F4SearchModal from '@/components/F4SearchModal.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
+import { alert } from '@/utils/toast'
 import { fetchPartners, createPartner } from '@/api'
 
 const router = useRouter()
-
 const successVisible = ref(false)
 const successMsg = ref('')
+const loading = ref(false)
+const saving = ref(false)
+const error = ref('')
+const partners = ref<any[]>([])
+const activeTab = ref('address')
+const postalStatus = ref('')
+const postalLabel = ref('')
 
 const form = reactive({
   bpId: '',
@@ -271,42 +276,8 @@ const form = reactive({
   city: '',
   district: '',
   postalCode: '',
-  region: '',
-  poBox: '',
-  poBoxPostal: '',
-  telephone: '',
-  mobilePhone: '',
-  email: '',
-  fax: '',
-  website: '',
+  status: 'ACTIVE'
 })
-
-const partners = ref<any[]>([])
-const loading = ref(false)
-const saving = ref(false)
-const error = ref('')
-
-async function loadPartners() {
-  loading.value = true
-  error.value = ''
-  try {
-    const res = await fetchPartners()
-    partners.value = res.items || []
-  } catch (err: any) {
-    error.value = err?.response?.data?.detail || err.message || 'Failed to load business partners'
-    console.error('Failed to fetch partners:', err)
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(() => {
-  loadPartners()
-})
-
-const activeTab = ref('address')
-const postalStatus = ref('')
-const postalLabel = ref('')
 
 const tabs = [
   { key: 'address', label: 'Address' },
@@ -318,312 +289,142 @@ const tabs = [
   { key: 'technical', label: 'Technical ID' },
 ]
 
-const activeTabLabel = computed(() => {
-  const t = tabs.find(t => t.key === activeTab.value)
-  return t ? t.label : ''
-})
+const activeTabLabel = computed(() => tabs.find(t => t.key === activeTab.value)?.label || '')
 
-function switchTab(key: string) {
-  activeTab.value = key
-}
-
-function validatePostalCode() {
-  const v = form.postalCode.trim()
-  if (!v) { postalStatus.value = ''; postalLabel.value = ''; return }
-  if (v.length < 4 || !/^\d+$/.test(v)) {
-    postalStatus.value = 'error'
-    postalLabel.value = 'Format Error'
-  } else if (v.length === 6) {
-    postalStatus.value = 'ok'
-    postalLabel.value = 'Available'
-  } else {
-    postalStatus.value = 'warn'
-    postalLabel.value = 'Format OK'
-  }
-}
-
-const showF4 = ref(false)
-const f4Field = ref('')
-
-function openF4(field: string) {
-  f4Field.value = field
-  showF4.value = true
-}
-function onF4Confirm(idx: number) {
-  showF4.value = false
-}
-
-function buildPayload() {
-  return {
-    bp_id: form.bpId || `BP${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
-    bp_type: form.grouping === 'INT' ? 'PERS' : 'ORG',
-    bp_role: form.bpRole,
-    bp_name: `${form.lastName} ${form.firstName}`.trim(),
-    country: form.country,
-    city: form.city,
-    district: form.district || form.region || undefined,
-    street: form.street,
-    house_number: form.houseNumber,
-    postal_code: form.postalCode,
-    telephone: form.telephone,
-    mobile_phone: form.mobilePhone,
-    fax: form.fax,
-    email: form.email,
-    website: form.website,
-    search_term: form.searchTerm,
-    status: 'ACTIVE',
+async function loadPartners() {
+  loading.value = true
+  error.value = ''
+  try {
+    const data = await fetchPartners()
+    partners.value = data.items || []
+  } catch (err: any) {
+    error.value = err.message
+  } finally {
+    loading.value = false
   }
 }
 
 async function handleSave() {
+  // 严格检查字段，确保名字和 form reactive 中的完全一致
   if (!form.bpRole || !form.lastName || !form.firstName || !form.city || !form.country || !form.postalCode) {
-    alert('Please fill in required fields: BP Role, Last Name, First Name, Country, City, Postal Code')
+    alert('Please fill in required fields: Role, Names, Country, City, Postal Code')
     return
   }
   saving.value = true
   try {
-    const res = await createPartner(buildPayload())
-    successMsg.value = `Business Partner ${res.bp_id} created successfully!`
+    const payload = {
+      ...form,
+      bpId: form.bpId || `BP${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
+      bpName: `${form.lastName} ${form.firstName}`.trim(),
+      bpType: form.grouping === 'INT' ? 'PERS' : 'ORG'
+    }
+    const data = await createPartner(payload)
+    successMsg.value = `Business Partner ${data.bpId} created successfully!`
     successVisible.value = true
     await loadPartners()
-    Object.keys(form).forEach(key => (form as any)[key] = '')
+    resetForm()
   } catch (err: any) {
-    alert('Save failed: ' + (err?.response?.data?.detail || err?.response?.data?.message || err.message))
+    alert('Save failed: ' + err.message)
   } finally {
     saving.value = false
   }
 }
 
-function handleSuccessConfirm() {
-  successVisible.value = false
+function resetForm() {
+  Object.assign(form, {
+    bpId: '', grouping: '', bpRole: '', salutation: '',
+    lastName: '', firstName: '', searchTerm: '', street: '',
+    houseNumber: '', country: '', city: '', district: '',
+    postalCode: '', status: 'ACTIVE'
+  })
 }
 
-async function handleSaveContinue() {
-  await handleSave()
+function validatePostalCode() {
+  const v = form.postalCode.trim()
+  if (!v) { postalStatus.value = ''; postalLabel.value = ''; return }
+  postalStatus.value = v.length === 6 ? 'ok' : 'error'
+  postalLabel.value = v.length === 6 ? 'Available' : 'Format Error'
 }
+
+const showF4 = ref(false)
+const f4Field = ref('')
+function openF4(field: string) { f4Field.value = field; showF4.value = true }
+function onF4Confirm() { showF4.value = false }
+function switchTab(key: string) { activeTab.value = key }
+function handleSuccessConfirm() { successVisible.value = false }
+function handleSaveContinue() { handleSave() }
 function handleCancel() { router.push('/') }
 function handleExit() { router.push('/') }
+
+function editPartner(bp: any) {
+  Object.assign(form, {
+    bpId: bp.bpId,
+    grouping: bp.bpType === 'PERS' ? 'INT' : 'EXT',
+    bpRole: bp.bpRole,
+    lastName: bp.bpName?.split(' ')[0] || '',
+    firstName: bp.bpName?.split(' ').slice(1).join(' ') || '',
+    country: bp.country,
+    city: bp.city,
+    postalCode: bp.postalCode || '',
+    status: bp.status || 'ACTIVE'
+  })
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+onMounted(loadPartners)
 </script>
 
 <style scoped>
-.bp-page {
-  padding: 32px 40px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-/* Header */
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
+.bp-page { padding: 32px 40px; max-width: 1200px; margin: 0 auto; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
 .page-title { font-size: 20px; font-weight: 700; color: #12372A; margin: 0; }
-.exit-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: none; border: 1px solid rgba(173, 188, 159, 0.4); border-radius: 8px;
-  padding: 8px 18px; font-size: 13px; color: rgba(18, 55, 42, 0.6);
-  cursor: pointer; transition: all 0.2s; font-family: inherit;
-}
-.exit-btn:hover { border-color: #D9534F; color: #D9534F; background: rgba(217, 83, 79, 0.04); }
-
-/* Form Card */
-.form-card {
-  background: linear-gradient(145deg, #fdfce8, #f7f5d1);
-  border-radius: 14px;
-  padding: 24px;
-  margin-bottom: 20px;
-  border: 1px solid rgba(173, 188, 159, 0.18);
-  box-shadow: 0 2px 6px rgba(173, 188, 159, 0.12);
-}
+.exit-btn { display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px solid rgba(173,188,159,0.4); border-radius: 8px; padding: 8px 18px; font-size: 13px; color: rgba(18,55,42,0.6); cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.exit-btn:hover { border-color: #D9534F; color: #D9534F; background: rgba(217,83,79,0.04); }
+.form-card { background: linear-gradient(145deg, #fdfce8, #f7f5d1); border-radius: 14px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(173, 188, 159, 0.18); box-shadow: 0 2px 6px rgba(173, 188, 159, 0.12); }
 .form-card-tabs { padding-top: 0; overflow: hidden; }
-
-/* Form Row */
 .form-row { display: grid; gap: 18px; margin-bottom: 16px; }
-.form-row:last-child { margin-bottom: 0; }
 .form-row-2 { grid-template-columns: 1fr 1fr; }
 .form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
 .form-row-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
-
 .form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-label {
-  font-size: 12px; font-weight: 600; color: rgba(18, 55, 42, 0.7);
-  letter-spacing: 0.3px;
-}
+.form-label { font-size: 12px; font-weight: 600; color: rgba(18, 55, 42, 0.7); letter-spacing: 0.3px; }
 .form-label.required::after { content: ' *'; color: #D9534F; font-weight: 700; }
-
-.form-input, .form-select {
-  height: 38px;
-  border: 1px solid rgba(173, 188, 159, 0.4);
-  border-radius: 8px;
-  padding: 0 12px;
-  font-size: 13px;
-  color: #12372A;
-  background: rgba(251, 250, 218, 0.4);
-  font-family: inherit;
-  transition: all 0.2s;
-  outline: none;
-  width: 100%;
-}
-.form-input:focus, .form-select:focus {
-  border-color: #436850;
-  box-shadow: 0 0 0 3px rgba(67, 104, 80, 0.08);
-  background: #fff;
-}
-.form-input::placeholder { color: rgba(18, 55, 42, 0.25); }
+.form-input, .form-select { height: 38px; border: 1px solid rgba(173, 188, 159, 0.4); border-radius: 8px; padding: 0 12px; font-size: 13px; color: #12372A; background: rgba(251, 250, 218, 0.4); font-family: inherit; transition: all 0.2s; outline: none; width: 100%; }
+.form-input:focus, .form-select:focus { border-color: #436850; box-shadow: 0 0 0 3px rgba(67, 104, 80, 0.08); background: #fff; }
+.postal-input { padding-right: 80px !important; }
 .form-select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 20 20' width='12' height='12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 7l5 5 5-5' fill='none' stroke='%2312372A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' opacity='0.4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; }
-
-.input-readonly {
-  height: 38px; display: flex; align-items: center; padding: 0 12px;
-  font-size: 13px; color: rgba(18, 55, 42, 0.35);
-  background: rgba(173, 188, 159, 0.12); border-radius: 8px;
-  border: 1px dashed rgba(173, 188, 159, 0.3);
-}
-
-/* Postal Code Indicator */
+.input-with-f4-inline { display: flex; align-items: center; gap: 0; }
+.input-with-f4-inline .form-select { border-radius: 8px 0 0 8px; }
+.f4-trigger-sm { width: 32px; height: 38px; border: 1px solid rgba(173,188,159,0.4); border-left: none; border-radius: 0 8px 8px 0; background: rgba(67,104,80,0.06); color: #436850; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.f4-trigger-sm:hover { background: rgba(67,104,80,0.12); }
 .input-with-indicator { position: relative; }
-.postal-indicator {
-  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
-  display: flex; align-items: center; gap: 6px;
-}
-.indicator-bar {
-  width: 4px; height: 20px; border-radius: 2px; transition: background 0.3s;
-  background: rgba(173, 188, 159, 0.3);
-}
-.indicator-bar.error { background: #D9534F; }
-.indicator-bar.warn { background: #F0AD4E; }
+.postal-indicator { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 6px; }
+.indicator-label { font-size: 10px; font-weight: 700; color: rgba(18, 55, 42, 0.4); text-transform: uppercase; }
+.indicator-bar { width: 4px; height: 16px; border-radius: 2px; transition: background 0.3s; background: rgba(173, 188, 159, 0.3); }
 .indicator-bar.ok { background: #436850; }
-.indicator-label { font-size: 10px; color: rgba(18, 55, 42, 0.4); white-space: nowrap; }
-
-/* Tabs */
-.tab-bar {
-  display: flex; gap: 0;
-  border-bottom: 1px solid rgba(173, 188, 159, 0.3);
-  margin: 0 -24px;
-  padding: 0 24px;
-  background: rgba(251, 250, 218, 0.3);
-  border-radius: 14px 14px 0 0;
-}
-.tab-btn {
-  padding: 12px 18px; font-size: 12px; font-weight: 500;
-  color: rgba(18, 55, 42, 0.5); background: none; border: none;
-  border-bottom: 2px solid transparent; cursor: pointer;
-  transition: all 0.2s; font-family: inherit; white-space: nowrap;
-}
-.tab-btn:hover { color: #12372A; }
-.tab-btn.active {
-  color: #436850; font-weight: 600; border-bottom-color: #436850;
-  background: linear-gradient(to bottom, transparent, rgba(67, 104, 80, 0.04));
-}
+.indicator-bar.error { background: #D9534F; }
+.tab-bar { display: flex; gap: 0; border-bottom: 1px solid rgba(173, 188, 159, 0.3); margin: 0 -24px; padding: 0 24px; background: rgba(251, 250, 218, 0.3); border-radius: 14px 14px 0 0; }
+.tab-btn { padding: 12px 18px; font-size: 12px; font-weight: 500; color: rgba(18, 55, 42, 0.5); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-family: inherit; white-space: nowrap; }
+.tab-btn.active { color: #436850; font-weight: 600; border-bottom-color: #436850; background: linear-gradient(to bottom, transparent, rgba(67, 104, 80, 0.04)); }
 .tab-content { padding-top: 22px; }
-.tab-placeholder {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 200px; color: rgba(18, 55, 42, 0.3); font-size: 14px;
-}
-
-/* Fieldsets */
-.fieldset-block {
-  border: none; padding: 0; margin: 0 0 22px;
-  border-bottom: 1px solid rgba(173, 188, 159, 0.15);
-  padding-bottom: 18px;
-}
-.fieldset-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-.block-title {
-  font-size: 13px; font-weight: 700; color: #436850;
-  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
-}
-.block-title::before {
-  content: ''; width: 4px; height: 14px; background: #436850;
-  border-radius: 2px; display: inline-block;
-}
-
-/* Action Bar */
-.action-bar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 24px;
-  background: linear-gradient(145deg, #fdfce8, #f7f5d1);
-  border-radius: 14px;
-  border: 1px solid rgba(173, 188, 159, 0.18);
-  box-shadow: 0 2px 6px rgba(173, 188, 159, 0.12);
-}
+.fieldset-block { border: none; padding: 0; margin: 0 0 22px; border-bottom: 1px solid rgba(173, 188, 159, 0.15); padding-bottom: 18px; }
+.block-title { font-size: 13px; font-weight: 700; color: #436850; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.block-title::before { content: ''; width: 4px; height: 14px; background: #436850; border-radius: 2px; display: inline-block; }
+.overview-grid { display: grid; gap: 16px; }
+.overview-item { background: rgba(255, 255, 255, 0.3); padding: 16px; border-radius: 10px; border: 1px solid rgba(173, 188, 159, 0.2); }
+.ov-label { font-size: 11px; font-weight: 700; color: rgba(18, 55, 42, 0.4); text-transform: uppercase; margin-bottom: 8px; display: block; }
+.ov-value p { margin: 0; font-size: 14px; color: #12372A; line-height: 1.5; }
+.text-muted { color: rgba(18, 55, 42, 0.4); font-style: italic; }
+.action-bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; background: linear-gradient(145deg, #fdfce8, #f7f5d1); border-radius: 14px; border: 1px solid rgba(173, 188, 159, 0.18); box-shadow: 0 2px 6px rgba(173, 188, 159, 0.12); }
 .action-left { display: flex; gap: 12px; }
-
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 11px 24px; font-size: 13px; font-weight: 600;
-  border-radius: 8px; cursor: pointer; transition: all 0.2s;
-  font-family: inherit; letter-spacing: 0.2px;
-}
-.btn-primary {
-  background: linear-gradient(135deg, #436850, #365440); color: #FBFADA;
-  border: none; box-shadow: 0 2px 8px rgba(67, 104, 80, 0.25);
-}
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(67, 104, 80, 0.3); }
-.btn-secondary {
-  background: rgba(173, 188, 159, 0.2); color: #436850;
-  border: 1px solid rgba(173, 188, 159, 0.35);
-}
-.btn-secondary:hover { background: rgba(173, 188, 159, 0.3); }
-.btn-border {
-  background: none; color: rgba(18, 55, 42, 0.5);
-  border: 1px solid rgba(173, 188, 159, 0.35);
-}
-.btn-border:hover { border-color: rgba(18, 55, 42, 0.3); color: #12372A; }
-.input-with-f4 { display: flex; gap: 4px; }
-.input-with-f4 .form-select, .input-with-f4 .form-input { flex: 1; }
-.f4-trigger {
-  width: 38px; height: 38px; border: 1px solid rgba(173,188,159,0.35); border-radius: 8px;
-  background: rgba(251,250,218,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center;
-  color: rgba(18,55,42,0.35); transition: all 0.2s; flex-shrink: 0;
-}
-.f4-trigger:hover { border-color: #436850; color: #436850; background: rgba(67,104,80,0.06); }
-
-.bp-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-.bp-table th {
-  text-align: left;
-  padding: 12px;
-  font-size: 11px;
-  color: rgba(18, 55, 42, 0.4);
-  text-transform: uppercase;
-  border-bottom: 1px solid rgba(173, 188, 159, 0.2);
-}
-.bp-table td {
-  padding: 12px;
-  font-size: 13px;
-  color: #12372A;
-  border-bottom: 1px solid rgba(173, 188, 159, 0.08);
-}
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 24px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.btn-primary { background: linear-gradient(135deg, #436850, #365440); color: #FBFADA; border: none; }
+.bp-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.bp-table th { text-align: left; padding: 12px; font-size: 11px; color: rgba(18, 55, 42, 0.4); text-transform: uppercase; border-bottom: 1px solid rgba(173, 188, 159, 0.2); }
+.bp-table td { padding: 12px; font-size: 13px; color: #12372A; border-bottom: 1px solid rgba(173, 188, 159, 0.08); }
+.clickable-row { cursor: pointer; transition: background 0.2s; }
+.clickable-row:hover { background: rgba(67, 104, 80, 0.04); }
 .mono { font-family: monospace; }
-.status-tag {
-  background: rgba(67, 104, 80, 0.1);
-  color: #436850;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-}
-.error-msg {
-  color: #D9534F;
-  font-size: 13px;
-  padding: 10px 12px;
-  background: rgba(217, 83, 79, 0.08);
-  border-radius: 8px;
-  margin-bottom: 12px;
-}
-.loading-cell, .empty-cell {
-  text-align: center;
-  padding: 20px;
-  color: rgba(18, 55, 42, 0.4);
-}
-.loading-cell { font-style: italic; }
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none !important;
-}
+.status-tag { background: rgba(67, 104, 80, 0.1); color: #436850; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.error-msg { color: #D9534F; font-size: 13px; padding: 10px 12px; background: rgba(217, 83, 79, 0.08); border-radius: 8px; margin-bottom: 12px; }
 </style>
