@@ -1,19 +1,36 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
+from app.core.database import get_db
 from app.schemas.assistant import ChatReply, ChatRequest
 from app.schemas.base import ResponseModel
 from app.services import assistant_service
+from app.services.flows import order_to_cash
 
 router = APIRouter()
 
 
 @router.post("/chat", response_model=ResponseModel[ChatReply])
-async def chat(request: ChatRequest):
+async def chat(request: ChatRequest, db: Session = Depends(get_db)):
     """In-app assistant chat endpoint.
 
-    Answers navigation / feature / workflow questions about the website.
-    Read-only: it never mutates business data.
+    Demo commands for the order-to-cash flow (picking -> settlement) are
+    handled deterministically by the scripted flow engine (no LLM involved);
+    other messages fall back to canned guidance, or to the LLM assistant when
+    order_to_cash.FALLBACK_TO_LLM is enabled.
     """
+    # 1) Scripted demo flow (deterministic, mutates business data for demo).
+    try:
+        result = order_to_cash.handle(db, request.message)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Demo flow failed: {exc}") from exc
+    if result is not None:
+        return ResponseModel(data=ChatReply(**result))
+
+    # 2) Unmatched: canned guidance by default; LLM only if explicitly enabled.
+    if not order_to_cash.FALLBACK_TO_LLM:
+        return ResponseModel(data=ChatReply(**order_to_cash.guidance_reply()))
+
     try:
         result = await assistant_service.chat(
             message=request.message,

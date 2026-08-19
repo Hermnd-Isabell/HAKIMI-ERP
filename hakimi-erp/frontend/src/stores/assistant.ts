@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 import {
   sendChatMessage,
+  type ChatStep,
   type NavigationTarget,
 } from '@/api/modules/assistant'
 
@@ -11,18 +12,23 @@ export interface ChatMessage {
   content: string
   navigation?: NavigationTarget | null
   suggestions?: string[]
+  steps?: ChatStep[]
   isError?: boolean
 }
 
 const WELCOME: ChatMessage = {
   role: 'assistant',
   content:
-    "Hi! I'm the HAKIMI assistant. Ask me where to find a page, what a feature does, or how the sales workflow fits together.",
+    "Hi! I'm the HAKIMI order-to-cash assistant. Give me a sales order number and I'll run it from picking all the way to settlement — or guide you step by step.",
   suggestions: [
-    'Where can I see unpaid receivables?',
-    'What is the order-to-cash process?',
-    'Where do I create a sales order?',
+    '把 SO00104 从拣配一路跑到平帐',
+    '先给 SO00105 拣 50 件',
+    '随便挑一笔开放订单跑全流程',
   ],
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 export const useAssistantStore = defineStore('assistant', () => {
@@ -65,12 +71,33 @@ export const useAssistantStore = defineStore('assistant', () => {
         currentPath,
       })
 
-      messages.value.push({
-        role: 'assistant',
-        content: reply.reply,
-        navigation: reply.navigation,
-        suggestions: reply.suggestions,
-      })
+      if (reply.steps && reply.steps.length > 0) {
+        // Scripted demo flow: reveal the execution steps one by one so the
+        // assistant looks like an agent working through tool calls.
+        messages.value.push({
+          role: 'assistant',
+          content: '',
+          navigation: null,
+          suggestions: [],
+          steps: [],
+        })
+        const live = messages.value[messages.value.length - 1]
+        for (const step of reply.steps) {
+          await sleep(650)
+          live.steps!.push(step)
+        }
+        await sleep(350)
+        live.content = reply.reply
+        live.navigation = reply.navigation
+        live.suggestions = reply.suggestions
+      } else {
+        messages.value.push({
+          role: 'assistant',
+          content: reply.reply,
+          navigation: reply.navigation,
+          suggestions: reply.suggestions,
+        })
+      }
     } catch (err: any) {
       messages.value.push({
         role: 'assistant',
