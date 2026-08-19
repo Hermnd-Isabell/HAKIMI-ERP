@@ -485,40 +485,147 @@ def _run_stage(db: Session, ctx: dict[str, Any], fn) -> None:
         fn(db, ctx)
 
 
-def handle(db: Session, message: str) -> Optional[dict[str, Any]]:
-    """Try to handle a chat message as a scripted order-to-cash demo command.
+# --- plan / confirm / execute ----------------------------------------------
 
-    Returns the reply contract dict, or None when the message does not match
-    any demo intent (caller decides: guidance reply or LLM fallback).
-    """
-    matched = match_intent(message)
-    if matched is None:
-        return None
+_CONFIRM_WORDS = ("确认执行", "确认", "执行", "confirm", "execute", "yes")
+_CANCEL_WORDS = ("取消", "cancel", "算了", "不用了", "先不")
+_NUM_ICONS = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣")
 
-    intent: str = matched["intent"]
+
+def _so_totals(so: SalesOrder) -> tuple[Decimal, Decimal]:
+    """(total order quantity, estimated gross amount incl. 13% tax)."""
+    total_qty = Decimal(0)
+    est = Decimal(0)
+    for item in so.items:
+        q = Decimal(str(item.order_quantity or 0))
+        p = Decimal(str(item.unit_price or 0))
+        total_qty += q
+        est += p * q
+    return total_qty, est * Decimal("1.13")
+
+
+def _plan_lines(db: Session, so: SalesOrder, delivery: Optional[Delivery],
+                intent: str, qty: Optional[Decimal]) -> list[str]:
+    """Human-readable preview of what a command would do (read-only)."""
+    n_items = len(so.items)
+    total_qty, est = _so_totals(so)
+
+    if delivery is not None:
+        base = f"复用发货单 {delivery.delivery_id}（当前状态 {delivery.delivery_status}），从当前进度继续执行"
+    else:
+        base = f"依据订单创建发货单（{n_items} 个行项目，共 {_qty_fmt(total_qty)} 件）"
+
+    if intent == "full":
+        return [
+            base,
+            "开始拣配，并批次拣配全部剩余数量",
+            "确认拣配 → 发货 → 发货过账（PGI），扣减库存",
+            f"依据发货单开具发票并挂应收（按订单价格预估 {_money(est)}，含 13% 税）",
+            "对发票全额收款核销：应收关闭、发票结清、销售订单关闭",
+        ]
+    if intent == "start":
+        lines = [] if delivery is not None else [base]
+        return lines + ["开始拣配：发货单状态 OPEN → PICKING"]
+    if intent == "pick":
+        lines = []
+        if delivery is None:
+            lines.append(f"{base}，并开始拣配")
+        elif delivery.delivery_status == "OPEN":
+            lines.append("开始拣配（发货单 OPEN → PICKING）")
+        if qty is not None:
+            lines.append(f"批次拣配 {_qty_fmt(qty)} 件（超出剩余数量时按剩余量拣）")
+        else:
+            rem = f"（{_qty_fmt(sum(_remaining_map(delivery).values()))} 件）" if delivery is not None else ""
+            lines.append(f"批次拣配全部剩余数量{rem}")
+        return lines
+    if intent == "confirm":
+        extra = ""
+        if delivery is not None:
+            picked = sum(Decimal(str(i.picked_quantity or 0)) for i in delivery.items)
+            needed = sum(Decimal(str(i.delivery_quantity or 0)) for i in delivery.items)
+            extra = f"（当前已拣 {_qty_fmt(picked)}/{_qty_fmt(needed)} 件）"
+        return [f"确认拣配：要求全部行项目拣齐{extra}，确认后状态 PICKING → SHIPPED"]
+    if intent == "ship":
+        return ["发货：状态 SHIPPED → IN_TRANSIT，生成承运商与跟踪号"]
+    if intent == "pgi":
+        return ["发货过账：状态 IN_TRANSIT → PGI_DONE，扣减库存"]
+    if intent == "invoice":
+        return [f"依据发货单开具发票并挂应收（按订单价格预估 {_money(est)}，含 13% 税）"]
+    # settle
+    invoice = (
+        db.query(Invoice)
+        .filter(Invoice.sales_order_id == so.sales_order_id)
+        .order_by(Invoice.invoice_id.desc())
+        .first()
+    )
+    if invoice is not None:
+        ar = db.query(OpenAccountReceivable).filter(OpenAccountReceivable.invoice_id == invoice.invoice_id).first()
+        if ar is not None:
+            remaining = Decimal(str(ar.receivable_amount)) - Decimal(str(ar.received_amount or 0))
+            return [f"对发票 {invoice.invoice_id} 全额收款核销 {_money(remaining)}：应收关闭、发票结清、销售订单关闭"]
+        return [f"发票 {invoice.invoice_id} 无未清应收，无需收款（将如实跳过）"]
+    return ["对发票全额收款核销（该订单尚无发票，执行时将如实提示）"]
+
+
+def _error_reply(text: str) -> dict[str, Any]:
+    return {
+        "reply": text,
+        "steps": [],
+        "navigation": {"label": "销售订单", "route": "/sales/orders"},
+        "suggestions": ["随便挑一笔开放订单跑全流程"],
+    }
+
+
+def _plan(db: Session, intent: str, so_id: Optional[str], qty: Optional[Decimal]) -> dict[str, Any]:
+    """Build a read-only execution plan and ask the user to confirm."""
     try:
-        so = _find_so(db, matched["so_id"])
+        so = _find_so(db, so_id)
     except StageBlocked as exc:
-        return {
-            "reply": str(exc),
-            "steps": [],
-            "navigation": {"label": "销售订单", "route": "/sales/orders"},
-            "suggestions": ["随便挑一笔开放订单跑全流程"],
-        }
+        return _error_reply(str(exc))
+
+    delivery = _latest_delivery(db, so.sales_order_id)
+    steps: list[dict[str, str]] = []
+    label = "拣配 → 发货 → 开票 → 平帐 全流程" if intent == "full" else f"单步操作：{_STAGE_LABEL.get(intent, intent)}"
+    _step(steps, "🔍", f"识别指令：对销售订单 {so.sales_order_id} 执行{label}"
+           + (f"（本批 {_qty_fmt(qty)} 件）" if qty else ""))
+    _step(steps, "📄", f"找到销售订单 {so.sales_order_id}（客户 {so.customer_id}，净值 {_money(so.net_value)}，状态 {so.status}）")
+    for i, line in enumerate(_plan_lines(db, so, delivery, intent, qty)):
+        _step(steps, _NUM_ICONS[i] if i < len(_NUM_ICONS) else "▫️", line)
+
+    return {
+        "reply": "以上是执行计划。操作将真实修改业务数据，确认后我立即执行。",
+        "steps": steps,
+        "navigation": None,
+        "suggestions": [],
+        "pending_action": {
+            "intent": intent,
+            "so_id": so.sales_order_id,
+            "qty": str(qty) if qty is not None else None,
+        },
+    }
+
+
+def _execute(db: Session, intent: str, so_id: Optional[str], qty: Optional[Decimal]) -> dict[str, Any]:
+    """Run a confirmed action through the state-guarded stage chain."""
+    try:
+        so = _find_so(db, so_id)
+    except StageBlocked as exc:
+        return _error_reply(str(exc))
 
     ctx: dict[str, Any] = {
         "so": so,
         "steps": [],
-        "qty": matched.get("qty"),
+        "qty": qty,
         # single-step commands report "already done / not ready" as a blocked
         # note; the full flow skips completed stages and keeps going.
         "strict": intent != "full",
     }
     steps = ctx["steps"]
 
-    label = "拣配 → 发货 → 开票 → 平帐 全流程" if intent == "full" else f"单步操作：{intent}"
-    _step(steps, "🔍", f"识别指令：对销售订单 {so.sales_order_id} 执行{label}"
-           + (f"（本批 {_qty_fmt(ctx['qty'])} 件）" if ctx.get("qty") else ""))
+    label = "拣配 → 发货 → 开票 → 平帐 全流程" if intent == "full" else f"单步操作：{_STAGE_LABEL.get(intent, intent)}"
+    _step(steps, "✅", "用户已确认，开始执行")
+    _step(steps, "🔍", f"执行内容：对销售订单 {so.sales_order_id} {label}"
+           + (f"（本批 {_qty_fmt(qty)} 件）" if qty else ""))
     _step(steps, "📄", f"找到销售订单 {so.sales_order_id}（客户 {so.customer_id}，净值 {_money(so.net_value)}，状态 {so.status}）")
 
     stage_names = [name for name, _ in _ALL_STAGES] if intent == "full" else _SINGLE_STAGE[intent]
@@ -537,20 +644,60 @@ def handle(db: Session, message: str) -> Optional[dict[str, Any]]:
     return _finalize(ctx, intent, blocked)
 
 
+def handle(db: Session, message: str, pending_action: Any = None) -> Optional[dict[str, Any]]:
+    """Try to handle a chat message as a scripted order-to-cash demo command.
+
+    Two-phase protocol: a matched command first returns a read-only plan with
+    a ``pending_action`` payload; the frontend echoes that payload back
+    together with a confirm word to actually execute. State is re-validated
+    at execution time by the stage guards, so a stale plan can never do
+    anything the current data does not allow.
+
+    Returns the reply contract dict, or None when the message does not match
+    any demo intent (caller decides: guidance reply or LLM fallback).
+    """
+    if pending_action is not None and match_intent(message) is None:
+        # A new command supersedes the pending plan; only react to explicit
+        # confirm / cancel words here.
+        low = message.strip().lower()
+        if any(w in low for w in _CANCEL_WORDS):
+            return {
+                "reply": "好的，已取消该操作，未修改任何业务数据。",
+                "steps": [],
+                "navigation": None,
+                "suggestions": ["随便挑一笔开放订单跑全流程"],
+            }
+        if any(w in low for w in _CONFIRM_WORDS):
+            try:
+                intent = pending_action.intent
+                if intent not in INTENTS:
+                    raise ValueError(f"unknown intent {intent}")
+                qty = Decimal(pending_action.qty) if pending_action.qty else None
+            except Exception:
+                return _error_reply("待确认的操作已失效，请重新下达指令。")
+            return _execute(db, intent, pending_action.so_id, qty)
+
+    matched = match_intent(message)
+    if matched is None:
+        return None
+
+    return _plan(db, matched["intent"], matched["so_id"], matched.get("qty"))
+
+
 def guidance_reply() -> dict[str, Any]:
     """Canned reply for messages outside the demo script."""
     return {
         "reply": (
             "我是订单到收款（Order-to-Cash）流程助手，可以直接帮你把销售订单"
             "从拣配一路执行到收款平帐。只要告诉我订单号即可，例如：\n"
-            "「把 SO00104 从拣配一路跑到平帐」\n"
+            "「把 SO00107 从拣配一路跑到平帐」\n"
             "也可以分步来：开始拣配 → 批次拣配 → 确认拣配 → 发货 → 过账 → 开票 → 收款平帐。"
         ),
         "steps": [],
         "navigation": None,
         "suggestions": [
             "随便挑一笔开放订单跑全流程",
-            "把 SO00104 从拣配一路跑到平帐",
-            "先给 SO00105 拣 50 件",
+            "把 SO00107 从拣配一路跑到平帐",
+            "先给 SO00108 拣 50 件",
         ],
     }
