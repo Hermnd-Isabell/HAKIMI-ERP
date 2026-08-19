@@ -19,7 +19,15 @@ class NavigationTarget(BaseModel):
     route: str
 
 
+class ChatStep(BaseModel):
+    """One scripted execution step shown by the demo assistant."""
+
+    icon: str
+    text: str
+
+
 class ChatReply(BaseModel):
     reply: str
     navigation: Optional[NavigationTarget] = None
     suggestions: List[str] = Field(default_factory=list)
+    steps: List[ChatStep] = Field(default_factory=list)

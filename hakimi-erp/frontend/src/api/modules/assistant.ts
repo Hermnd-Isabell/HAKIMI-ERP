@@ -12,10 +12,16 @@ export interface NavigationTarget {
   route: string
 }
 
+export interface ChatStep {
+  icon: string
+  text: string
+}
+
 export interface ChatReply {
   reply: string
   navigation: NavigationTarget | null
   suggestions: string[]
+  steps: ChatStep[]
 }
 
 export function sendChatMessage(payload: {

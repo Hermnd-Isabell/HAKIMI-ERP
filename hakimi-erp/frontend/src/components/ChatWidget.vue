@@ -59,7 +59,13 @@
             :class="msg.role"
           >
             <div class="msg-bubble" :class="{ 'msg-error': msg.isError }">
-              <p class="msg-text">{{ msg.content }}</p>
+              <ul v-if="msg.steps?.length" class="msg-steps">
+                <li v-for="(st, k) in msg.steps" :key="k" class="msg-step">
+                  <span class="msg-step-icon">{{ st.icon }}</span>
+                  <span class="msg-step-text">{{ st.text }}</span>
+                </li>
+              </ul>
+              <p v-if="msg.content" class="msg-text">{{ msg.content }}</p>
 
               <button
                 v-if="msg.navigation"
@@ -251,6 +257,13 @@ watch(
   () => [store.messages.length, store.loading, store.isOpen],
   scrollToBottom,
 )
+
+// step-by-step playback mutates the last message in place; keep scrolling
+watch(
+  () => store.messages,
+  scrollToBottom,
+  { deep: true },
+)
 </script>
 
 <style scoped>
@@ -397,6 +410,32 @@ watch(
   color: #D9534F;
 }
 .msg-text { margin: 0; white-space: pre-wrap; word-break: break-word; }
+
+/* Step-by-step execution playback */
+.msg-steps {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0 0 8px;
+  border-bottom: 1px dashed rgba(173, 188, 159, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.msg-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #2d4a38;
+  animation: step-in 0.25s ease-out;
+}
+.msg-step-icon { flex-shrink: 0; }
+.msg-step-text { flex: 1; word-break: break-word; }
+@keyframes step-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 /* Navigation button */
 .msg-nav-btn {
