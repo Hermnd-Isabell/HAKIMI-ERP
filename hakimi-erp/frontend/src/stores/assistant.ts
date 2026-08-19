@@ -5,6 +5,7 @@ import {
   sendChatMessage,
   type ChatStep,
   type NavigationTarget,
+  type PendingAction,
 } from '@/api/modules/assistant'
 
 export interface ChatMessage {
@@ -13,16 +14,17 @@ export interface ChatMessage {
   navigation?: NavigationTarget | null
   suggestions?: string[]
   steps?: ChatStep[]
+  pendingAction?: PendingAction | null
   isError?: boolean
 }
 
 const WELCOME: ChatMessage = {
   role: 'assistant',
   content:
-    "Hi! I'm the HAKIMI order-to-cash assistant. Give me a sales order number and I'll run it from picking all the way to settlement — or guide you step by step.",
+    "Hi! I'm the HAKIMI order-to-cash assistant. Give me a sales order number and I'll plan the run from picking all the way to settlement — nothing is executed until you confirm.",
   suggestions: [
-    '把 SO00104 从拣配一路跑到平帐',
-    '先给 SO00105 拣 50 件',
+    '把 SO00107 从拣配一路跑到平帐',
+    '先给 SO00108 拣 50 件',
     '随便挑一笔开放订单跑全流程',
   ],
 }
@@ -52,10 +54,18 @@ export const useAssistantStore = defineStore('assistant', () => {
     messages.value = [{ ...WELCOME }]
   }
 
-  async function ask(question: string, currentPath?: string) {
+  /** Hide every outstanding confirm/cancel bar (plan answered or superseded). */
+  function clearPendingActions() {
+    for (const m of messages.value) {
+      if (m.pendingAction) m.pendingAction = null
+    }
+  }
+
+  async function ask(question: string, currentPath?: string, pendingAction?: PendingAction | null) {
     const text = question.trim()
     if (!text || loading.value) return
 
+    clearPendingActions()
     messages.value.push({ role: 'user', content: text })
     loading.value = true
     try {
@@ -69,6 +79,7 @@ export const useAssistantStore = defineStore('assistant', () => {
         message: text,
         history,
         currentPath,
+        pendingAction: pendingAction ?? undefined,
       })
 
       if (reply.steps && reply.steps.length > 0) {
@@ -80,6 +91,7 @@ export const useAssistantStore = defineStore('assistant', () => {
           navigation: null,
           suggestions: [],
           steps: [],
+          pendingAction: null,
         })
         const live = messages.value[messages.value.length - 1]
         for (const step of reply.steps) {
@@ -90,12 +102,14 @@ export const useAssistantStore = defineStore('assistant', () => {
         live.content = reply.reply
         live.navigation = reply.navigation
         live.suggestions = reply.suggestions
+        live.pendingAction = reply.pendingAction ?? null
       } else {
         messages.value.push({
           role: 'assistant',
           content: reply.reply,
           navigation: reply.navigation,
           suggestions: reply.suggestions,
+          pendingAction: reply.pendingAction ?? null,
         })
       }
     } catch (err: any) {
@@ -109,5 +123,23 @@ export const useAssistantStore = defineStore('assistant', () => {
     }
   }
 
-  return { isOpen, loading, messages, open, close, toggle, reset, ask }
+  /** User clicked "confirm" on a planned action: execute it server-side. */
+  async function confirmPending(msg: ChatMessage, currentPath?: string) {
+    const action = msg.pendingAction
+    if (!action || loading.value) return
+    await ask('确认执行', currentPath, action)
+  }
+
+  /** User clicked "cancel": dismiss locally, nothing was ever sent. */
+  function cancelPending() {
+    clearPendingActions()
+    messages.value.push({ role: 'user', content: '取消' })
+    messages.value.push({
+      role: 'assistant',
+      content: '好的，已取消该操作，未修改任何业务数据。',
+      suggestions: ['随便挑一笔开放订单跑全流程'],
+    })
+  }
+
+  return { isOpen, loading, messages, open, close, toggle, reset, ask, confirmPending, cancelPending }
 })

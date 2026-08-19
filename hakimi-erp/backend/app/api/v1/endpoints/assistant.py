@@ -20,8 +20,10 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
     order_to_cash.FALLBACK_TO_LLM is enabled.
     """
     # 1) Scripted demo flow (deterministic, mutates business data for demo).
+    #    Two-phase: commands return a plan + pending_action first; execution
+    #    only happens when the client echoes pending_action with a confirm.
     try:
-        result = order_to_cash.handle(db, request.message)
+        result = order_to_cash.handle(db, request.message, request.pending_action)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Demo flow failed: {exc}") from exc
     if result is not None:

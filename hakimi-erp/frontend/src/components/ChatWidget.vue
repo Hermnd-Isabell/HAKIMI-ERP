@@ -67,6 +67,15 @@
               </ul>
               <p v-if="msg.content" class="msg-text">{{ msg.content }}</p>
 
+              <div v-if="msg.pendingAction && !loading" class="msg-confirm-bar">
+                <button class="msg-confirm-btn" @click="store.confirmPending(msg, route.path)">
+                  ✅ 确认执行
+                </button>
+                <button class="msg-cancel-btn" @click="store.cancelPending()">
+                  ❌ 取消
+                </button>
+              </div>
+
               <button
                 v-if="msg.navigation"
                 class="msg-nav-btn"
@@ -436,6 +445,37 @@ watch(
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Confirm / cancel bar for planned actions */
+.msg-confirm-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.msg-confirm-btn,
+.msg-cancel-btn {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.msg-confirm-btn {
+  color: #FBFADA;
+  background: linear-gradient(135deg, #436850, #365440);
+  border: none;
+  box-shadow: 0 2px 8px rgba(67, 104, 80, 0.25);
+}
+.msg-confirm-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(67, 104, 80, 0.35); }
+.msg-cancel-btn {
+  color: #436850;
+  background: transparent;
+  border: 1px solid rgba(67, 104, 80, 0.35);
+}
+.msg-cancel-btn:hover { background: rgba(67, 104, 80, 0.08); }
 
 /* Navigation button */
 .msg-nav-btn {

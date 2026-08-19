@@ -18,15 +18,15 @@ from app.models.sales import SalesOrder, SalesOrderItem
 
 # (so_id, customer, plant, payment_terms, [(material, qty, unit, price, plant)])
 DEMO_ORDERS = [
-    ("SO00104", "BP00001", "PL01", "NET30", [
+    ("SO00107", "BP00001", "PL01", "NET30", [
         ("MAT0002", 20, "PC", Decimal("170.20"), "PL02"),
         ("MAT0006", 30, "BARREL", Decimal("304.00"), "PL01"),
     ]),
-    ("SO00105", "BP00002", "PL02", "NET30", [
+    ("SO00108", "BP00002", "PL02", "NET30", [
         ("MAT0013", 60, "BOX", Decimal("78.20"), "PL02"),
         ("MAT0004", 40, "SET", Decimal("1254.40"), "PL01"),
     ]),
-    ("SO00106", "BP00003", "PL03", "NET30", [
+    ("SO00109", "BP00003", "PL03", "NET30", [
         ("MAT0012", 12, "SET", Decimal("2327.50"), "PL01"),
     ]),
 ]
